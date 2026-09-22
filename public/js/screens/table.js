@@ -79,7 +79,7 @@ export function renderTable(app, navigate) {
     ((s.field && s.field.defender === p.seat) || (!s.field && s.turnSeat === p.seat))
   ))?.seat;
 
-  // Лобби
+  // ==================== ЛОББИ ====================
   let lobbyBar = '';
   if (s.phase === 'lobby') {
     const playersCount = s.players.length;
@@ -101,21 +101,21 @@ export function renderTable(app, navigate) {
       </div>`;
   }
 
-  // Баннер сверху
+  // ==================== БАННЕР ====================
   let passNotice = '';
   if (s.field && !s.pendingPass && !s.pendingSwap && !s.pendingFalsh) {
-    if (bothPassed) passNotice = `<div class="pass-notice">⛔ Оба атакующих закрыты</div>`;
+    if (bothPassed) passNotice = `<div class="pass-notice">⛔ Оба атакующих пасанули</div>`;
     else if (attackerPassed && !partnerOutV && !partnerPassed)
-      passNotice = `<div class="pass-notice info">⏳ Атакующий сказал «Хватит» — ждём партнёра</div>`;
+      passNotice = `<div class="pass-notice info">⏳ Атакующий пасанул — ждём партнёра</div>`;
     else if (partnerPassed && !attackerOut && !attackerPassed)
-      passNotice = `<div class="pass-notice info">⏳ Партнёр атакующего сказал «Хватит»</div>`;
+      passNotice = `<div class="pass-notice info">⏳ Партнёр атакующего пасанул — ждём атакующего</div>`;
   }
   if (waitingForSeat !== undefined) {
     const wname = s.players.find(p => p.seat === waitingForSeat)?.name || '?';
     passNotice = `<div class="pass-notice wait">⏳ Ждём ${esc(wname)} — отошёл</div>`;
   }
 
-  // Сиденья
+  // ==================== СИДЕНЬЯ ====================
   const seats = s.players.filter(p => p.seat !== mySeat).map(p => {
     const isThisInPassed = passedSeats.includes(p.seat);
     const offlineBadge = !p.connected ? '<div class="badge-off">⚠ отошёл</div>' : '';
@@ -129,12 +129,12 @@ export function renderTable(app, navigate) {
         <div class="avatar">${getAvatar(p.seat)}</div>
         <div>${esc(p.name)} ${p.team===myTeam?'★':'✗'}</div>
         ${st ? `<div class="state ${stCls}">${st}</div>` : ''}
-        ${isThisInPassed ? '<div class="pass-badge">⛔ Хватит</div>' : ''}
+        ${isThisInPassed ? '<div class="pass-badge">⛔ Пас</div>' : ''}
         ${offlineBadge}
       </div>`;
   }).join('');
 
-  // Колода
+  // ==================== КОЛОДА ====================
   let deckArea = '';
   if (isPlaying || s.phase === 'roundEnd' || s.phase === 'gameEnd') {
     const stack = Array.from({ length: 4 }).map((_, i) =>
@@ -150,7 +150,7 @@ export function renderTable(app, navigate) {
       </div>`;
   }
 
-  // Поле боя
+  // ==================== ПОЛЕ ====================
   const fieldHtml = s.field
     ? s.field.cards.map(e => {
         const canBeTarget = canDefend && !e.beatenBy && e.card.r !== myDoc;
@@ -163,64 +163,97 @@ export function renderTable(app, navigate) {
       }).join('')
     : `<div style="opacity:.5">— поле пусто —</div>`;
 
-  // Флаги
+  // ==================== ФЛАГИ ====================
   const onlyDocsNow = s.myHand.length > 0 && s.myHand.every(c => c.r === myDoc);
-  const canAttack = isMyTurn && !iAmOut && !s.field && !s.pendingPass && !s.pendingSwap && !s.pendingStart && waitingForSeat === undefined && !s.pendingFalsh;
-  const canAdd = !iAmOut && s.field && (isAttacker || isPartnerOfAttacker) && !iHavePassed && !s.pendingPass && !s.pendingSwap && !s.pendingFalsh;
-  const canSayEnd = !iAmOut && s.field && (isAttacker || isPartnerOfAttacker) && !iHavePassed && !s.pendingPass && !s.pendingSwap && !s.pendingFalsh;
-  const canBito = canDefend && bothPassed && s.field.cards.every(x => x.beatenBy)
-                  && !s.field.cards.some(x => x.card.r === myDoc)
-                  && !s.pendingPass && !s.pendingSwap && !s.pendingFalsh;
-  const canPickUp = canDefend && !s.pendingPass && !s.pendingSwap && !s.pendingFalsh;
-  const canThrow = isMyTurn && !iAmOut && onlyDocsNow && !s.pendingPass && !s.pendingSwap && partnerIsOut && !s.pendingFalsh;
-  const canPassDocs = isMyTurn && !iAmOut && onlyDocsNow && !s.field && !s.pendingPass && !s.pendingSwap && !partnerIsOut && !s.pendingFalsh;
-  const canSwapInitiate = isMyTurn && !iAmOut && !s.field && !s.pendingPass && !s.pendingSwap
-                          && partnerIsOut && !s.swapUsedByTeam[myTeam] && !s.pendingFalsh;
-  const canSwapAsk = iAmOut && !partnerIsOut && !s.pendingPass && !s.pendingSwap
-                     && !s.swapUsedByTeam[myTeam] && s.turnSeat === myPartnerSeat && !s.pendingFalsh;
+  const hasUnbeaten = s.field && s.field.cards.some(x => !x.beatenBy);
+  const allBeaten = s.field && s.field.cards.length > 0 && s.field.cards.every(x => x.beatenBy);
 
-  const selectedOppDocs = s.myHand.filter(c => state.selected.has(c.id) && c.r === oppDoc && oppDoc !== myDoc);
-  const isOnlyOppDocs = state.selected.size > 0 && selectedOppDocs.length === state.selected.size;
+  // ==================== ОСНОВНАЯ КНОПКА ====================
+  let centerActionBtn = '';
+  let centerActionCls = 'b2';
+  let centerActionId = '';
 
-  // Рука — веер
+  if (canDefend && s.field && s.field.cards.length > 0) {
+    centerActionBtn = '📥<br>ПОДНЯТЬ';
+    centerActionCls = 'b3';
+    centerActionId = 'pickUpBtn';
+  }
+  else if (isMyTurn && !iAmOut && !s.field && partnerIsOut && onlyDocsNow) {
+    centerActionBtn = '🏆<br>БРОСИТЬ';
+    centerActionCls = 'b1';
+    centerActionId = 'throwBtn';
+  }
+  else if (isMyTurn && !iAmOut && !s.field && partnerIsOut && !s.swapUsedByTeam[myTeam] && !onlyDocsNow && s.myHand.length > 0) {
+    centerActionBtn = '🔄<br>ОТДАТЬ';
+    centerActionCls = 'b5';
+    centerActionId = 'swapInitBtn';
+  }
+  else if (iAmOut && !partnerIsOut && s.turnSeat === myPartnerSeat && !s.field && !s.swapUsedByTeam[myTeam]) {
+    centerActionBtn = '🔄<br>ВЕРНУТЬСЯ';
+    centerActionCls = 'b5';
+    centerActionId = 'swapAskBtn';
+  }
+  else if (isMyTurn && !iAmOut && !s.field && !partnerIsOut && onlyDocsNow) {
+    centerActionBtn = '📤<br>ПЕРЕДАТЬ';
+    centerActionCls = 'b2';
+    centerActionId = 'passBtn';
+  }
+  else if ((isAttacker || isPartnerOfAttacker) && !iHavePassed) {
+    centerActionBtn = '✋<br>ПАС';
+    centerActionCls = 'b2';
+    centerActionId = 'pasBtn';
+  }
+
+  // ==================== ДОП. КНОПКИ ====================
+  const extraActions = [];
+
+  if (canDefend && allBeaten && bothPassed && !s.pendingPass && !s.pendingSwap && !s.pendingFalsh) {
+    extraActions.push(`<button class="b1" id="bitoBtn">✔ БИТО</button>`);
+  }
+
+  if (canDefend && state.defendTarget) {
+    extraActions.push(`<button class="b4" id="falshBtn">🃏 ФАЛЬШ</button>`);
+  }
+
+  // ==================== РУКА ====================
   const sortedHand = sortHand(s.myHand, myDoc, s.trumpSuit);
   const handHtml = renderHandFan(sortedHand, { myDoc, oppDoc, selected: state.selected, isDealing });
 
-  // Подсказка
+  // ==================== ПОДСКАЗКИ ====================
   let hintHtml = '';
-  if (isOnlyOppDocs) {
-    hintHtml = `<div class="hint" style="color:#e74c3c;">⚠ Навязываете документ противника — не бьётся</div>`;
-  } else if (waitingForSeat !== undefined) {
+
+  if (waitingForSeat !== undefined) {
     hintHtml = `<div class="hint">⏳ Ждём игрока — скоро вернётся</div>`;
-  } else if (canDefend && !bothPassed && !s.pendingPass && !s.pendingSwap && !s.pendingFalsh) {
+  }
+  else if (canDefend && !bothPassed && !s.pendingPass && !s.pendingSwap && !s.pendingFalsh) {
     const hasMyDoc = s.field.cards.some(x => !x.beatenBy && x.card.r === myDoc);
     if (hasMyDoc) hintHtml = `<div class="hint">⚠ На столе ваш документ — нужно поднять всё</div>`;
-    else hintHtml = `<div class="hint">👆 Тяните карту на карту врага — бить. Тап по врагу — фальш</div>`;
-  } else if (canDefend && bothPassed) {
-    hintHtml = `<div class="hint">✋ Атакующие закрыты — решите: «Бито» или «Поднять»</div>`;
-  } else if (canAttack) {
-    hintHtml = `<div class="hint">👆 Тяните карту в поле — атака</div>`;
+    else if (state.defendTarget) hintHtml = `<div class="hint">👆 Ты защищаешься — жми ФАЛЬШ или тяни карту на карту врага</div>`;
+    else hintHtml = `<div class="hint">👆 Ты защищаешься — тапни карту врага для фальша, или тяни свою — бить</div>`;
+  }
+  else if (canDefend && bothPassed) {
+    hintHtml = `<div class="hint">✋ Все пасанули — жми БИТО или ПОДНЯТЬ</div>`;
+  }
+  else if (iAmOut && !partnerIsOut && s.turnSeat === myPartnerSeat && !s.field) {
+    hintHtml = `<div class="hint">👆 Ты вышел — попроси партнёра вернуть тебя</div>`;
+  }
+  else if (isMyTurn && !iAmOut && !s.field && onlyDocsNow && partnerIsOut) {
+    hintHtml = `<div class="hint">👆 Брось документы — это победа в кону!</div>`;
+  }
+  else if (isMyTurn && !iAmOut && !s.field && onlyDocsNow && !partnerIsOut) {
+    hintHtml = `<div class="hint">👆 Передай документы союзнику</div>`;
+  }
+  else if (isMyTurn && !iAmOut && !s.field && partnerIsOut && !onlyDocsNow) {
+    hintHtml = `<div class="hint">👆 Ты ходишь — тяни карту в поле (или отдай карты партнёру)</div>`;
+  }
+  else if (isAttacker || isPartnerOfAttacker) {
+    hintHtml = `<div class="hint">👆 Ты ходишь — тяни карту в поле</div>`;
+  }
+  else if (isMyTurn) {
+    hintHtml = `<div class="hint">👆 Твой ход — тяни карту в поле</div>`;
   }
 
-  // Кнопка действия
-  let centerActionBtn = '';
-  let centerActionCls = 'b1';
-  if (canAttack || canAdd) {
-    if (isOnlyOppDocs) { centerActionBtn = `📤 Навязать<br><small>(${selectedOppDocs.length})</small>`; centerActionCls = 'b4'; }
-    else if (canAttack) { centerActionBtn = '⚔<br>Атаковать'; centerActionCls = 'b1'; }
-    else                { centerActionBtn = '➕<br>Подкинуть'; centerActionCls = 'b1'; }
-  } else if (canPickUp) { centerActionBtn = '📥<br>Поднять'; centerActionCls = 'b3'; }
-  else if (canBito)     { centerActionBtn = '✔<br>Бито'; centerActionCls = 'b1'; }
-  else if (canSayEnd)   { centerActionBtn = '✋<br>Хватит'; centerActionCls = 'b2'; }
-
-  // Доп. кнопки
-  const extraActions = [];
-  if (canThrow) extraActions.push(`<button class="b1" id="throwBtn">🏆 Бросить док.</button>`);
-  if (canPassDocs) extraActions.push(`<button class="b2" id="passBtn">📤 Передать</button>`);
-  if (canSwapInitiate) extraActions.push(`<button class="b5" id="swapInitBtn">🔄 Отдать</button>`);
-  if (canSwapAsk) extraActions.push(`<button class="b5" id="swapAskBtn">🔄 Вернуться</button>`);
-
-  // Дуга
+  // ==================== ДУГА ====================
   const arcBtn = isPlaying ? `
     <div class="icon-arc">
       <button class="arc-btn arc-1" id="sortBtn" title="Сортировка">🔄</button>
@@ -235,6 +268,7 @@ export function renderTable(app, navigate) {
 
   const overlays = buildOverlays();
 
+  // ==================== РЕНДЕР ====================
   app.innerHTML = `
     <div class="table" id="table">
       ${lobbyBar}
@@ -246,30 +280,32 @@ export function renderTable(app, navigate) {
       ${seats}
       <div class="center">${fieldHtml}</div>
 
-      ${arcBtn}
-
-      <div class="action-cluster">
-        ${centerActionBtn ? `<button class="action-center ${centerActionCls}" id="centerActionBtn">${centerActionBtn}</button>` : ''}
-      </div>
-
-      <div class="extra-actions">${extraActions.join('')}</div>
-
-      <div class="info-panel">
-        Козырь: <b>${esc(s.trumpSuit || '—')}</b><br>
-        Мой док: <b>${esc(myDoc)}</b><br>
-        Их док: <b>${esc(oppDoc)}</b><br>
-        Счёт: <b>${s.roundWins[0]} : ${s.roundWins[1]}</b>
-      </div>
-
       ${overlays}
       ${emojiPanel}
     </div>
-    <div class="hand" id="hand">${handHtml}</div>
+
+    <div class="bottom-bar">
+      <div class="info-panel">
+        <div>Козырь: <b>${esc(s.trumpSuit || '—')}</b></div>
+        <div>Мой док: <b>${esc(myDoc)}</b></div>
+        <div>Их док: <b>${esc(oppDoc)}</b></div>
+        <div>Счёт: <b>${s.roundWins[0]} : ${s.roundWins[1]}</b></div>
+      </div>
+
+      <div class="hand" id="hand">${handHtml}</div>
+
+      ${arcBtn}
+
+      <div class="extra-actions">${extraActions.join('')}</div>
+
+      ${centerActionBtn ? `<button class="action-center ${centerActionCls}" id="${centerActionId}">${centerActionBtn}</button>` : ''}
+    </div>
+
     <div class="actions">${hintHtml}</div>
     <div class="err" id="err"></div>
   `;
 
-  // ============ ОБРАБОТЧИКИ ============
+  // ==================== ОБРАБОТЧИКИ ====================
   const err = m => { const e = document.getElementById('err'); if (e) e.textContent = m; };
   const g = id => document.getElementById(id);
 
@@ -284,7 +320,8 @@ export function renderTable(app, navigate) {
       const entry = s.field.cards.find(x => x.card.id === fid);
       if (!entry || entry.beatenBy) return;
       if (entry.card.r === myDoc) return err('Ваш документ — только поднять');
-      socket.emit('falsh', { cardId: fid });
+      state.defendTarget = (state.defendTarget === fid) ? null : fid;
+      renderTable(app, navigate);
     };
   }
 
@@ -295,23 +332,19 @@ export function renderTable(app, navigate) {
   };
   const st = g('startBtn'); if (st) st.onclick = () => socket.emit('startGame');
 
-  const ca = g('centerActionBtn');
-  if (ca) ca.onclick = () => {
-    if (canAttack || canAdd) {
-      if (!state.selected.size) return err('Выберите карты (тап по карте)');
-      socket.emit('attack', { cardIds: [...state.selected] });
-      state.selected.clear();
-      return;
-    }
-    if (canPickUp) socket.emit('pickUp');
-    if (canBito)   socket.emit('bito');
-    if (canSayEnd) socket.emit('endAttack');
-  };
-
-  const th = g('throwBtn'); if (th) th.onclick = () => socket.emit('throwDocs');
-  const ps = g('passBtn'); if (ps) ps.onclick = () => socket.emit('passDocsRequest');
+  const pu = g('pickUpBtn');   if (pu) pu.onclick = () => { socket.emit('pickUp'); state.defendTarget = null; };
+  const th = g('throwBtn');    if (th) th.onclick = () => socket.emit('throwDocs');
   const si = g('swapInitBtn'); if (si) si.onclick = () => socket.emit('swapInitiate');
-  const sa = g('swapAskBtn'); if (sa) sa.onclick = () => socket.emit('swapAsk');
+  const sa = g('swapAskBtn');  if (sa) sa.onclick = () => socket.emit('swapAsk');
+  const ps = g('passBtn');     if (ps) ps.onclick = () => socket.emit('passDocsRequest');
+  const pas = g('pasBtn');     if (pas) pas.onclick = () => socket.emit('endAttack');
+
+  const bi = g('bitoBtn');     if (bi) bi.onclick = () => socket.emit('bito');
+  const fl = g('falshBtn');    if (fl) fl.onclick = () => {
+    if (!state.defendTarget) return err('Сначала тапните карту врага');
+    socket.emit('falsh', { cardId: state.defendTarget });
+    state.defendTarget = null;
+  };
 
   const sortBtn = g('sortBtn');
   if (sortBtn) sortBtn.onclick = () => {

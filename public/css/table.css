@@ -6,11 +6,11 @@
   overflow: hidden;
 }
 
-/* ==================== КОЛОДА + КОЗЫРЬ (левый верх) ==================== */
+/* ==================== КОЛОДА + КОЗЫРЬ ==================== */
 .deck-area {
   position: absolute;
-  top: 12px;
-  left: 12px;
+  top: calc(12px * var(--scale));
+  left: calc(12px * var(--scale));
   display: flex;
   align-items: flex-start;
   gap: 6px;
@@ -23,11 +23,8 @@
   height: calc(var(--card-h) + 10px);
 }
 .deck-stack {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: var(--card-w);
-  height: var(--card-h);
+  position: absolute; top: 0; left: 0;
+  width: var(--card-w); height: var(--card-h);
   z-index: 2;
   filter: drop-shadow(0 2px 5px rgba(0,0,0,.6));
 }
@@ -38,9 +35,7 @@
   left: calc(var(--card-w) * 0.75);
   width: calc(var(--card-h) * 0.9);
   height: calc(var(--card-w) * 1.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   z-index: 1;
   transform: rotate(55deg);
 }
@@ -49,19 +44,16 @@
 /* ==================== СИДЕНЬЯ ==================== */
 .seat {
   position: absolute;
-  padding: 8px 12px;
-  border-radius: 12px;
-  font-size: 12px;
+  padding: calc(8px * var(--scale)) calc(12px * var(--scale));
+  border-radius: calc(12px * var(--scale));
+  font-size: calc(12px * var(--scale));
   text-align: center;
   background: rgba(0,0,0,.6);
   color: #fff;
-  min-width: 100px;
+  min-width: calc(100px * var(--scale));
   z-index: 10;
   line-height: 1.3;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
 }
 [data-theme="paper"] .seat { background: rgba(0,0,0,.18); color: #333; }
 .seat.active { outline: 3px solid var(--acc); box-shadow: 0 0 20px rgba(241,196,15,.6); }
@@ -69,46 +61,38 @@
 .seat.offline { opacity: .6; border: 1px dashed #e74c3c; }
 
 .seat .avatar {
-  width: 56px;
-  height: 56px;
+  width: calc(56px * var(--scale)); height: calc(56px * var(--scale));
   border-radius: 50%;
   background: rgba(255,255,255,.15);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 34px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: calc(34px * var(--scale));
   border: 3px solid rgba(255,255,255,.3);
 }
 .seat.active .avatar {
   border-color: var(--acc);
   box-shadow: 0 0 16px rgba(241,196,15,.8);
 }
-.seat .state { font-size: 11px; opacity: .9; font-style: italic; font-weight: 600; }
+.seat .state { font-size: calc(11px * var(--scale)); opacity: .9; font-style: italic; font-weight: 600; }
 .seat .state.beat    { color: #2ecc71; }
 .seat .state.think   { color: #f1c40f; }
 .seat .state.pickup  { color: #e74c3c; }
 .seat .state.move    { color: #3498db; }
 .seat .state.out     { color: #888; }
-.seat .badge-off { color: #e74c3c; font-size: 11px; font-weight: 700; }
-.seat .pass-badge { color: #e74c3c; font-weight: 700; font-size: 11px; }
+.seat .badge-off { color: #e74c3c; font-size: calc(11px * var(--scale)); font-weight: 700; }
+.seat .pass-badge { color: #e74c3c; font-weight: 700; font-size: calc(11px * var(--scale)); }
 
-.seat.top    { top: 14px;  left: 50%; transform: translateX(-50%); }
-.seat.left   { top: 50%;   left: 14px; transform: translateY(-50%); }
-.seat.right  { top: 50%;   right: 14px; transform: translateY(-50%); }
+.seat.top    { top: calc(14px * var(--scale));  left: 50%; transform: translateX(-50%); }
+.seat.left   { top: 50%;   left: calc(14px * var(--scale)); transform: translateY(-50%); }
+.seat.right  { top: 50%;   right: calc(14px * var(--scale)); transform: translateY(-50%); }
 
 /* ==================== ПОЛЕ БОЯ ==================== */
 .center {
   position: absolute;
-  top: 48%;
-  left: 50%;
+  top: 48%; left: 50%;
   transform: translate(-50%, -50%);
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  max-width: 55%;
-  justify-content: center;
-  z-index: 5;
-  padding: 10px;
+  display: flex; gap: calc(24px * var(--scale));
+  flex-wrap: wrap; max-width: 55%; justify-content: center;
+  z-index: 5; padding: 10px;
 }
 .slot {
   position: relative;
@@ -119,107 +103,129 @@
 .slot .card {
   width: calc(var(--card-w) * 1.25) !important;
   height: calc(var(--card-h) * 1.25) !important;
-  position: absolute;
-  top: 0;
-  left: 0;
+  position: absolute; top: 0; left: 0;
   transition: top .2s, left .2s, transform .2s;
+  transform: rotate(-4deg);
+  box-shadow: 0 4px 10px rgba(0,0,0,.6);
 }
 @keyframes fieldIn {
-  from { transform: scale(.6); opacity: 0; }
-  to   { transform: scale(1);  opacity: 1; }
+  from { transform: rotate(-4deg) scale(.6); opacity: 0; }
+  to   { transform: rotate(-4deg) scale(1);  opacity: 1; }
 }
+
+/* Битая карта перекрывает карту врага со сдвигом вправо-вверх */
 .slot .card.beaten {
-  top: calc(var(--card-w) * -0.5);
-  left: calc(var(--card-w) * 0.53);
-  transform: rotate(9deg);
+  top: calc(-8px * var(--scale));
+  left: calc(12px * var(--scale));
+  transform: rotate(8deg);
   z-index: 2;
-  box-shadow: 0 8px 16px rgba(0,0,0,.75);
+  box-shadow: 0 8px 16px rgba(0,0,0,.85);
   outline: 3px solid #2ecc71;
   outline-offset: -3px;
 }
 .slot.tappable { cursor: pointer; }
 .slot.tappable .card:first-child {
-  outline: 3px dashed rgba(241,196,15,.8);
-  outline-offset: -3px;
+  outline: 3px dashed rgba(241,196,15,.8); outline-offset: -3px;
 }
 .slot.drag-over { outline: 4px solid #2ecc71; outline-offset: -4px; border-radius: 8px; }
 
-/* ==================== ИНФО-ПАНЕЛЬ (левый низ) ==================== */
-.info-panel {
-  position: absolute;
-  bottom: 12px;
-  left: 12px;
-  font-size: 11px;
-  line-height: 1.55;
-  background: rgba(0,0,0,.7);
-  padding: 8px 12px;
-  border-radius: 10px;
-  color: #fff;
-  text-align: left;
-  z-index: 20;
-}
-[data-theme="paper"] .info-panel { background: rgba(0,0,0,.2); color: #333; }
-.info-panel b { color: var(--acc); }
-
-/* ==================== НАСТРОЙКА (правый верх) ==================== */
+/* ==================== НАСТРОЙКА ==================== */
 .settings-btn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: rgba(0,0,0,.65);
-  color: #fff;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: absolute; top: 0; right: 0;
+  width: calc(44px * var(--scale)); height: calc(44px * var(--scale));
+  border-radius: 0 0 0 calc(12px * var(--scale));
+  background: rgba(0,0,0,.7); color: #fff;
+  border: none; font-size: calc(22px * var(--scale));
+  cursor: pointer; z-index: 20;
+  display: flex; align-items: center; justify-content: center;
 }
 [data-theme="paper"] .settings-btn { background: rgba(0,0,0,.2); color: #333; }
 
-/* ==================== КНОПКА ДЕЙСТВИЯ (правый низ) ==================== */
-.action-cluster {
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
-  z-index: 30;
+/* ==================== НИЖНЯЯ ПОЛОСА ==================== */
+.bottom-bar {
+  position: relative;
+  width: 100%;
+  height: calc(var(--card-h) + 40px);
+  background: rgba(0,0,0,.15);
+  flex-shrink: 0;
+  overflow: visible;
+  z-index: 15;
 }
 
+/* Инфо-панель — столбик, 12px */
+.info-panel {
+  position: absolute;
+  bottom: 4px; left: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  background: rgba(0,0,0,.75);
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: #fff;
+  text-align: left;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+[data-theme="paper"] .info-panel { background: rgba(0,0,0,.25); color: #333; }
+.info-panel b { color: var(--acc); }
+
+/* Рука */
+.hand {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 100%;
+  background: transparent;
+  overflow: visible;
+  pointer-events: none;
+  touch-action: none;
+}
+.hand .card {
+  position: absolute;
+  bottom: calc(8px * var(--scale));
+  left: 50%;
+  margin-left: calc(var(--card-w) / -2);
+  pointer-events: auto;
+  transform-origin: center bottom;
+  transition: transform .18s ease-out;
+  cursor: grab;
+  touch-action: none;
+  will-change: transform;
+}
+.hand .card:active { cursor: grabbing; }
+
+/* ==================== КНОПКА ДЕЙСТВИЯ (круглая) ==================== */
 .action-center {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
+  position: absolute;
+  bottom: 4px; right: 4px;
+  width: calc(120px * var(--scale));
+  height: calc(120px * var(--scale));
+  border-radius: calc(120px * var(--scale));
   border: none;
   font-weight: 900;
-  font-size: 15px;
+  font-size: calc(13px * var(--scale));
   cursor: pointer;
-  background: radial-gradient(circle, #56d4ff 0%, #3498db 100%);
+  background: radial-gradient(circle at 40% 40%, #56d4ff 0%, #3498db 100%);
   color: #fff;
   box-shadow: 0 6px 24px rgba(52,152,219,.7), inset 0 -4px 8px rgba(0,0,0,.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  line-height: 1.15;
-  padding: 8px;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center; line-height: 1.15; padding: 8px;
   text-shadow: 0 1px 2px rgba(0,0,0,.4);
+  z-index: 30;
 }
 .action-center:active { transform: scale(.95); }
-.action-center.b1 { background: radial-gradient(circle, #f7d154 0%, #f39c12 100%); color: #000; text-shadow: none; }
-.action-center.b2 { background: radial-gradient(circle, #b6bec2 0%, #7f8c8d 100%); color: #000; text-shadow: none; }
-.action-center.b3 { background: radial-gradient(circle, #ff6b6b 0%, #c0392b 100%); }
-.action-center.b4 { background: radial-gradient(circle, #bb6bd9 0%, #8e44ad 100%); }
-.action-center.b5 { background: radial-gradient(circle, #5dade2 0%, #2874a6 100%); }
+.action-center.b1 { background: radial-gradient(circle at 40% 40%, #f7d154 0%, #f39c12 100%); color: #000; text-shadow: none; }
+.action-center.b2 { background: radial-gradient(circle at 40% 40%, #b6bec2 0%, #7f8c8d 100%); color: #000; text-shadow: none; }
+.action-center.b3 { background: radial-gradient(circle at 40% 40%, #ff6b6b 0%, #c0392b 100%); }
+.action-center.b4 { background: radial-gradient(circle at 40% 40%, #bb6bd9 0%, #8e44ad 100%); }
+.action-center.b5 { background: radial-gradient(circle at 40% 40%, #5dade2 0%, #2874a6 100%); }
 
-/* ==================== ДОП. КНОПКИ (над кнопкой действия) ==================== */
+/* ==================== ДОП. КНОПКИ — ПРЯМОУГОЛЬНЫЕ ==================== */
 .extra-actions {
   position: absolute;
-  bottom: 145px;
-  right: 12px;
+  bottom: calc(120px * var(--scale) + 8px);
+  right: 4px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -227,62 +233,81 @@
   z-index: 25;
 }
 .extra-actions button {
-  padding: 9px 12px;
-  border-radius: 10px;
-  border: none;
-  font-weight: 700;
-  font-size: 11px;
+  min-width: calc(120px * var(--scale));
+  padding: calc(10px * var(--scale)) calc(14px * var(--scale));
+  border-radius: calc(10px * var(--scale));
+  border: 2px solid rgba(255,255,255,.4);
+  font-weight: 800;
+  font-size: calc(13px * var(--scale));
   cursor: pointer;
-  min-width: 110px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.6);
+  text-align: center;
+  line-height: 1.15;
 }
+.extra-actions button:active { transform: scale(.95); }
+.extra-actions .b1 { background: #f39c12; color: #000; }
+.extra-actions .b4 { background: #8e44ad; color: #fff; }
 
 /* ==================== ДУГА ИКОНОК ==================== */
 .icon-arc {
   position: absolute;
-  bottom: 12px;
-  right: 12px;
-  width: 260px;
-  height: 260px;
+  bottom: 4px; right: 4px;
+  width: calc(280px * var(--scale));
+  height: calc(280px * var(--scale));
   pointer-events: none;
   z-index: 28;
 }
 .icon-arc .arc-btn {
   position: absolute;
-  width: 44px;
-  height: 44px;
+  width: calc(44px * var(--scale));
+  height: calc(44px * var(--scale));
   border-radius: 50%;
   border: none;
   background: rgba(0,0,0,.75);
   color: #fff;
-  font-size: 18px;
+  font-size: calc(18px * var(--scale));
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   box-shadow: 0 2px 8px rgba(0,0,0,.5);
   pointer-events: auto;
 }
 .icon-arc .arc-btn:active { transform: scale(.9); }
 .icon-arc .arc-btn.active { background: var(--acc); color: #000; }
 
-.icon-arc .arc-1 { right: 155px; bottom: 175px; }
-.icon-arc .arc-2 { right: 195px; bottom: 105px; }
-.icon-arc .arc-3 { right: 195px; bottom: 30px;  }
-.icon-arc .arc-4 { right: 155px; bottom: -40px; }
+.icon-arc .arc-1 { right: calc(160px * var(--scale)); bottom: calc(-25px * var(--scale)); }
+.icon-arc .arc-2 { right: calc(180px * var(--scale)); bottom: calc(25px * var(--scale));  }
+.icon-arc .arc-3 { right: calc(180px * var(--scale)); bottom: calc(80px * var(--scale));  }
+.icon-arc .arc-4 { right: calc(160px * var(--scale)); bottom: calc(130px * var(--scale)); }
+
+/* ==================== ПОДСКАЗКА ==================== */
+.actions {
+  display: flex; gap: 6px; padding: 4px 8px;
+  justify-content: center; flex-wrap: wrap;
+  background: rgba(0,0,0,.3);
+  min-height: 26px; align-items: center;
+  flex-shrink: 0;
+}
+[data-theme="paper"] .actions { background: rgba(0,0,0,.1); }
+.hint {
+  font-size: calc(12px * var(--scale));
+  color: var(--acc); font-weight: 600;
+  padding: 2px 12px; text-align: center;
+  width: 100%;
+}
 
 /* ==================== ОКНО ОЖИДАНИЯ ==================== */
 .waiting {
-  position: absolute;
-  top: 50%;
-  left: 50%;
+  position: absolute; top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   background: rgba(0,0,0,.8);
   border: 2px solid var(--acc);
   border-radius: 16px;
-  padding: 24px 28px;
-  text-align: center;
-  min-width: 260px;
-  max-width: 90vw;
+  padding: 24px 28px; text-align: center;
+  min-width: 260px; max-width: 90vw;
   z-index: 50;
 }
 [data-theme="paper"] .waiting { background: rgba(255,255,255,.9); }
@@ -310,20 +335,39 @@
   color: #000; font-weight: 700; border: none; cursor: pointer;
 }
 
+/* ==================== LANDSCAPE ==================== */
 @media (orientation: landscape) and (max-height: 500px) {
-  .seat { font-size: 10px; padding: 5px 8px; min-width: 80px; }
-  .seat .avatar { width: 40px; height: 40px; font-size: 22px; }
-  .info-panel { font-size: 9px; padding: 5px 8px; bottom: 8px; left: 8px; }
-  .settings-btn { width: 34px; height: 34px; font-size: 16px; top: 6px; right: 6px; }
+  .seat { font-size: calc(10px * var(--scale)); padding: 5px 8px; min-width: 80px; }
+  .seat .avatar { width: calc(40px * var(--scale)); height: calc(40px * var(--scale)); font-size: calc(22px * var(--scale)); }
+  .settings-btn { width: calc(34px * var(--scale)); height: calc(34px * var(--scale)); font-size: calc(16px * var(--scale)); }
   .deck-area { top: 8px; left: 8px; }
-  .action-cluster { bottom: 8px; right: 8px; }
-  .action-center { width: 90px; height: 90px; font-size: 12px; }
-  .extra-actions { bottom: 105px; right: 8px; }
-  .extra-actions button { padding: 6px 9px; font-size: 10px; min-width: 88px; }
-  .icon-arc { bottom: 8px; right: 8px; width: 200px; height: 200px; }
-  .icon-arc .arc-btn { width: 36px; height: 36px; font-size: 15px; }
-  .icon-arc .arc-1 { right: 120px; bottom: 140px; }
-  .icon-arc .arc-2 { right: 150px; bottom: 85px;  }
-  .icon-arc .arc-3 { right: 150px; bottom: 25px;  }
-  .icon-arc .arc-4 { right: 120px; bottom: -30px; }
+
+  .action-center {
+    width: calc(90px * var(--scale));
+    height: calc(90px * var(--scale));
+    border-radius: calc(90px * var(--scale));
+    font-size: calc(11px * var(--scale));
+  }
+  .extra-actions { bottom: calc(90px * var(--scale) + 6px); }
+  .extra-actions button {
+    min-width: calc(100px * var(--scale));
+    padding: calc(7px * var(--scale)) calc(10px * var(--scale));
+    font-size: calc(11px * var(--scale));
+  }
+
+  .icon-arc {
+    width: calc(220px * var(--scale));
+    height: calc(220px * var(--scale));
+  }
+  .icon-arc .arc-btn {
+    width: calc(36px * var(--scale));
+    height: calc(36px * var(--scale));
+    font-size: calc(15px * var(--scale));
+  }
+  .icon-arc .arc-1 { right: calc(125px * var(--scale)); bottom: calc(-20px * var(--scale)); }
+  .icon-arc .arc-2 { right: calc(140px * var(--scale)); bottom: calc(20px * var(--scale));  }
+  .icon-arc .arc-3 { right: calc(140px * var(--scale)); bottom: calc(65px * var(--scale));  }
+  .icon-arc .arc-4 { right: calc(125px * var(--scale)); bottom: calc(105px * var(--scale)); }
+
+  .info-panel { font-size: 11px; padding: 4px 7px; }
 }

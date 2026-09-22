@@ -26,7 +26,7 @@ export function registerGameHandlers(io, socket, ctx) {
       const attacker = r.field.attacker;
       const partnerSeat = partnerOf(attacker);
       if (p.seat !== attacker && p.seat !== partnerSeat) return err('Только атакующий или партнёр');
-      if (r.field.passedSeats.includes(p.seat)) return err('Вы уже сказали «Хватит»');
+      if (r.field.passedSeats.includes(p.seat)) return err('Вы уже сказали «Пас»');
       defenderSeat = r.field.defender;
     } else {
       if (r.turnSeat !== p.seat) return err('Не ваш ход');
@@ -101,30 +101,36 @@ export function registerGameHandlers(io, socket, ctx) {
     const r = rooms.get(getRid()); if (!r || !r.pendingFalsh) return;
     const p = getMe(); if (!p) return;
     if (p.seat !== r.pendingFalsh.owner) return err('Только хозяин карты решает');
+
     const cardId = r.pendingFalsh.cardId;
     const defenderSeat = r.pendingFalsh.defender;
+    const attackerSeat = r.field.attacker;
+
     const idx = r.field.cards.findIndex(x => x.card.id === cardId && !x.beatenBy);
     if (idx < 0) { r.pendingFalsh = null; return broadcast(r); }
     const entry = r.field.cards[idx];
     const card = entry.card;
     const owner = r.players[entry.fromSeat];
     const defender = r.players[defenderSeat];
+
     owner.hand.push(card);
     if (owner.out) owner.out = false;
     r.field.cards.splice(idx, 1);
     r.pendingFalsh = null;
-    r.players.forEach(x => io.to(x.id).emit('falsh', {
+
+        r.players.forEach(x => io.to(x.id).emit('falsh', {
       byName: defender ? defender.name : '?',
       targetName: owner.name,
       card: { r: card.r, s: card.s },
     }));
+
     if (r.field.cards.length === 0) {
-      const attackerSeat = r.field.attacker;
       r.field = null;
+      // ✅ Ход атакующему, и он ОБЯЗАН атаковать ТОГО ЖЕ защитника
       r.turnSeat = attackerSeat;
-      r.forcedTarget = null;
+      r.forcedTarget = defenderSeat;
     }
-    log(r, `${p.name} принял фальш → ${card.r}${card.s} уходит обратно`);
+    log(r, `${p.name} принял фальш → ${card.r}${card.s} уходит обратно. Ход у атакующего, цель та же`);
     broadcast(r);
   });
 
@@ -158,7 +164,7 @@ export function registerGameHandlers(io, socket, ctx) {
     broadcast(r);
   });
 
-  // ==================== ХВАТИТ ====================
+  // ==================== ПАС ====================
   socket.on('endAttack', () => {
     const r = rooms.get(getRid()); if (!r || !r.field) return;
     const p = getMe(); if (!p) return;
@@ -167,7 +173,7 @@ export function registerGameHandlers(io, socket, ctx) {
     if (p.seat !== attacker && p.seat !== partnerSeat) return err('Только атакующий или партнёр');
     if (r.field.passedSeats.includes(p.seat)) return;
     r.field.passedSeats.push(p.seat);
-    log(r, `${p.name}: «Хватит!»`);
+    log(r, `${p.name}: «Пас»`);
     broadcast(r);
   });
 
@@ -176,7 +182,7 @@ export function registerGameHandlers(io, socket, ctx) {
     const r = rooms.get(getRid()); if (!r || !r.field) return;
     const p = getMe(); if (!p) return;
     if (r.field.defender !== p.seat) return err('Не вы защищаетесь');
-    if (!bothPartnersPassed(r)) return err('Ждём «Хватит» от обоих атакующих');
+    if (!bothPartnersPassed(r)) return err('Ждём «Пас» от обоих атакующих');
     if (r.field.cards.some(x => !x.beatenBy)) return err('Не все карты отбиты');
     if (hasDefenderDoc(r)) return err('На столе ваш документ — нужно поднять');
     const attackerSeat = r.field.attacker;
