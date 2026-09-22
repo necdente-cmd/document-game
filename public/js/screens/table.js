@@ -8,11 +8,123 @@ import { openSettings } from '../ui/settings.js';
 import { openChat } from '../ui/chat.js';
 import { initDrag } from '../drag.js';
 
-const EMOJIS = ['👍','😂','😡','😭','🔥','💪','🤔','😎','👏','😱','🤝','🎯','😤','🙈','💯','⚡'];
+const EMOJIS = ['👍','😂','😡','😭','🔥','💪','🤔','😎','👏','🎯'];
 
 let sortMode = 0;
 let infoOpen = false;
+let iconsVisible = false;
+let iconsTimer = null;
 
+// ==================== СВАЙП-ИКОНКИ ====================
+function ensureSwipeIcons() {
+  let el = document.getElementById('swipeIcons');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'swipeIcons';
+    el.className = 'swipe-icons';
+    el.innerHTML = `
+      <button class="icon-btn" id="sortBtn" title="Сортировка">🔄</button>
+      <button class="icon-btn" id="emojiToggle" title="Смайлик">😀</button>
+      <button class="icon-btn" id="chatBtn" title="Чат">💬</button>
+      <button class="icon-btn ${infoOpen?'active':''}" id="infoBtn" title="Сведения">📊</button>
+    `;
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+function showSwipeIcons() {
+  const el = document.getElementById('swipeIcons');
+  if (!el) return;
+  iconsVisible = true;
+  el.classList.add('show');
+  if (iconsTimer) clearTimeout(iconsTimer);
+  iconsTimer = setTimeout(hideSwipeIcons, 3000);
+}
+
+function hideSwipeIcons() {
+  const el = document.getElementById('swipeIcons');
+  if (!el) return;
+  iconsVisible = false;
+  el.classList.remove('show');
+  if (iconsTimer) { clearTimeout(iconsTimer); iconsTimer = null; }
+}
+
+let swipeSetupDone = false;
+function setupSwipe() {
+  if (swipeSetupDone) return;
+  swipeSetupDone = true;
+
+  let startY = 0;
+  let started = false;
+
+  document.addEventListener('touchstart', (e) => {
+    if (e.target.closest('.card')) return;
+    if (e.target.closest('.swipe-icons')) return;
+    if (e.target.closest('.emoji-bar')) return;
+    if (e.target.closest('.chat-panel')) return;
+    if (e.target.closest('.info-modal')) return;
+    const y = e.touches[0].clientY;
+    if (y > window.innerHeight - 50) {
+      startY = y;
+      started = true;
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (e) => {
+    if (!started) return;
+    const y = e.touches[0].clientY;
+    const dy = startY - y;
+    if (dy > 50) {
+      showSwipeIcons();
+      started = false;
+    } else if (dy < -30 && iconsVisible) {
+      hideSwipeIcons();
+      started = false;
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', () => {
+    started = false;
+  }, { passive: true });
+
+  document.addEventListener('click', (e) => {
+    if (!iconsVisible) return;
+    if (e.target.closest('.swipe-icons')) return;
+    if (e.target.closest('.emoji-bar')) return;
+    if (e.target.closest('.chat-panel')) return;
+    if (e.target.closest('.info-modal')) return;
+    hideSwipeIcons();
+  }, true);
+}
+
+// ==================== МОДАЛКА СВЕДЕНИЙ ====================
+function showInfoModal() {
+  const s = state.server;
+  if (!s) return;
+  const myTeam = s.myTeam;
+  const myDoc = s.docs[myTeam];
+  const oppDoc = s.docs[1 - myTeam];
+  const el = document.createElement('div');
+  el.className = 'info-modal';
+  el.id = 'infoModal';
+  el.innerHTML = `
+    <div class="info-modal-inner">
+      <h3>📊 Сведения</h3>
+      <div class="info-row"><span>Козырь</span><b>${esc(s.trumpSuit || '—')}</b></div>
+      <div class="info-row"><span>Мой док</span><b>${esc(myDoc)}</b></div>
+      <div class="info-row"><span>Их док</span><b>${esc(oppDoc)}</b></div>
+      <div class="info-row"><span>Счёт</span><b>${s.roundWins[0]} : ${s.roundWins[1]}</b></div>
+      <button class="info-modal-close" id="infoClose">Закрыть</button>
+    </div>
+  `;
+  document.body.appendChild(el);
+  const close = () => el.remove();
+  el.onclick = (e) => { if (e.target === el) close(); };
+  document.getElementById('infoClose').onclick = close;
+}
+
+// ==================== СОРТИРОВКА РУКИ ====================
 function sortHand(hand, myDoc, trumpSuit) {
   const RV = { '6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14 };
   const SO = { '♠':0, '♥':1, '♦':2, '♣':3 };
@@ -45,6 +157,7 @@ export function renderTable(app, navigate) {
   if (!s) return;
 
   applyTheme(s.opts.theme);
+  setupSwipe();
 
   const mySeat = s.mySeat;
   const myTeam = s.myTeam;
@@ -80,7 +193,6 @@ export function renderTable(app, navigate) {
     ((s.field && s.field.defender === p.seat) || (!s.field && s.turnSeat === p.seat))
   ))?.seat;
 
-  // Лобби
   let lobbyBar = '';
   if (s.phase === 'lobby') {
     const playersCount = s.players.length;
@@ -102,7 +214,6 @@ export function renderTable(app, navigate) {
       </div>`;
   }
 
-  // Баннер
   let passNotice = '';
   if (s.field && !s.pendingPass && !s.pendingSwap && !s.pendingFalsh) {
     if (bothPassed) passNotice = `<div class="pass-notice">⛔ Оба атакующих пасанули</div>`;
@@ -116,10 +227,9 @@ export function renderTable(app, navigate) {
     passNotice = `<div class="pass-notice wait">⏳ Ждём ${esc(wname)} — отошёл</div>`;
   }
 
-  // Сиденья: имя → состояние → аватарка (снизу)
   const seats = s.players.filter(p => p.seat !== mySeat).map(p => {
     const isThisInPassed = passedSeats.includes(p.seat);
-    const offlineBadge = !p.connected ? '<div class="badge-off">⚠</div>' : '';
+    const offlineBadge = !p.connected ? '<div class="badge-off">⚠ отошёл</div>' : '';
     const posArr = ['bottom','right','top','left'];
     const pos = posArr[((p.seat - mySeat + 4) % 4)] || 'top';
     const st = playerState(s, p.seat);
@@ -128,14 +238,13 @@ export function renderTable(app, navigate) {
     return `
       <div class="seat ${pos} ${p.seat===s.turnSeat?'active':''} ${p.out?'out':''} ${!p.connected?'offline':''}">
         <div class="name">${esc(p.name)} ${p.team===myTeam?'★':'✗'}</div>
+        <div class="avatar">${getAvatar(p.seat)}</div>
         ${st ? `<div class="state ${stCls}">${st}</div>` : ''}
         ${isThisInPassed ? '<div class="pass-badge">⛔ Пас</div>' : ''}
         ${offlineBadge}
-        <div class="avatar">${getAvatar(p.seat)}</div>
       </div>`;
   }).join('');
 
-  // Колода + козырь под ней
   let deckArea = '';
   if (isPlaying || s.phase === 'roundEnd' || s.phase === 'gameEnd') {
     const stack = Array.from({ length: 4 }).map((_, i) =>
@@ -151,7 +260,6 @@ export function renderTable(app, navigate) {
       </div>`;
   }
 
-  // Поле боя
   const fieldHtml = s.field
     ? s.field.cards.map(e => {
         const canBeTarget = canDefend && !e.beatenBy && e.card.r !== myDoc;
@@ -164,11 +272,9 @@ export function renderTable(app, navigate) {
       }).join('')
     : `<div style="opacity:.5">— поле пусто —</div>`;
 
-  // Флаги
   const onlyDocsNow = s.myHand.length > 0 && s.myHand.every(c => c.r === myDoc);
   const allBeaten = s.field && s.field.cards.length > 0 && s.field.cards.every(x => x.beatenBy);
 
-  // ============ ОСНОВНАЯ КНОПКА ============
   let centerActionBtn = '';
   let centerActionCls = 'b2';
   let centerActionId = '';
@@ -204,7 +310,6 @@ export function renderTable(app, navigate) {
     centerActionId = 'pasBtn';
   }
 
-  // Доп. кнопки
   const extraActions = [];
   if (canDefend && allBeaten && bothPassed && !s.pendingPass && !s.pendingSwap && !s.pendingFalsh) {
     extraActions.push(`<button class="b1" id="bitoBtn">✔ БИТО</button>`);
@@ -213,11 +318,9 @@ export function renderTable(app, navigate) {
     extraActions.push(`<button class="b4" id="falshBtn">🃏 ФАЛЬШ</button>`);
   }
 
-  // Рука
   const sortedHand = sortHand(s.myHand, myDoc, s.trumpSuit);
   const handHtml = renderHandFan(sortedHand, { myDoc, oppDoc, selected: state.selected, isDealing });
 
-  // Подсказка
   let hintHtml = '';
   if (waitingForSeat !== undefined) {
     hintHtml = `<div class="hint">⏳ Ждём игрока — скоро вернётся</div>`;
@@ -233,20 +336,6 @@ export function renderTable(app, navigate) {
   } else if (isMyTurn) {
     hintHtml = `<div class="hint">👆 Твой ход</div>`;
   }
-
-  // Иконки слева (снизу вверх: 🔄 😀 💬 📊)
-    const chatUnread = state.chatUnread || 0;
-  const leftIcons = isPlaying ? `
-    <div class="left-icons">
-      <button class="icon-btn" id="sortBtn" title="Сортировка">🔄</button>
-      <button class="icon-btn" id="emojiToggle" title="Смайлик">😀</button>
-      <button class="icon-btn ${chatUnread > 0 ? 'has-notify' : ''}" id="chatBtn" title="Чат">
-        💬
-        ${chatUnread > 0 ? `<span class="notify-badge">${chatUnread > 99 ? '99+' : chatUnread}</span>` : ''}
-      </button>
-      <button class="icon-btn ${infoOpen?'active':''}" id="infoBtn" title="Сведения">📊</button>
-    </div>
-  ` : '';
 
   const emojiPanel = state.emojiOpen ? `<div class="emoji-bar" id="emojiBar">
     ${EMOJIS.map(e => `<button data-e="${e}">${e}</button>`).join('')}</div>` : '';
@@ -269,15 +358,6 @@ export function renderTable(app, navigate) {
     </div>
 
     <div class="bottom-bar">
-      ${leftIcons}
-
-      <div class="info-panel ${infoOpen?'open':''}" id="infoPanel">
-        <div>Козырь: <b>${esc(s.trumpSuit || '—')}</b></div>
-        <div>Мой док: <b>${esc(myDoc)}</b></div>
-        <div>Их док: <b>${esc(oppDoc)}</b></div>
-        <div>Счёт: <b>${s.roundWins[0]} : ${s.roundWins[1]}</b></div>
-      </div>
-
       <div class="hand" id="hand">${handHtml}</div>
 
       <div class="extra-actions">${extraActions.join('')}</div>
@@ -288,6 +368,15 @@ export function renderTable(app, navigate) {
     <div class="actions">${hintHtml}</div>
     <div class="err" id="err"></div>
   `;
+
+  // Свайп-иконки — всегда в DOM, вне #app
+  ensureSwipeIcons();
+  bindSwipeIconHandlers(app, navigate);
+
+  if (iconsVisible) {
+    const el = document.getElementById('swipeIcons');
+    if (el) el.classList.add('show');
+  }
 
   // ============ ОБРАБОТЧИКИ ============
   const err = m => { const e = document.getElementById('err'); if (e) e.textContent = m; };
@@ -316,7 +405,6 @@ export function renderTable(app, navigate) {
   };
   const st = g('startBtn'); if (st) st.onclick = () => socket.emit('startGame');
 
-  // Основные
   const pu = g('pickUpBtn');   if (pu) pu.onclick = () => { socket.emit('pickUp'); state.defendTarget = null; };
   const th = g('throwBtn');    if (th) th.onclick = () => socket.emit('throwDocs');
   const si = g('swapInitBtn'); if (si) si.onclick = () => socket.emit('swapInitiate');
@@ -324,29 +412,12 @@ export function renderTable(app, navigate) {
   const ps = g('passBtn');     if (ps) ps.onclick = () => socket.emit('passDocsRequest');
   const pas = g('pasBtn');     if (pas) pas.onclick = () => socket.emit('endAttack');
 
-  // Доп.
   const bi = g('bitoBtn');     if (bi) bi.onclick = () => socket.emit('bito');
   const fl = g('falshBtn');    if (fl) fl.onclick = () => {
     if (!state.defendTarget) return err('Сначала тапните карту врага');
     socket.emit('falsh', { cardId: state.defendTarget });
     state.defendTarget = null;
   };
-
-  // Левые иконки
-  const sortBtn = g('sortBtn');
-  if (sortBtn) sortBtn.onclick = () => {
-    sortMode = (sortMode + 1) % 3;
-    renderTable(app, navigate);
-  };
-  const emojiToggle = g('emojiToggle');
-  if (emojiToggle) emojiToggle.onclick = () => { state.emojiOpen = !state.emojiOpen; renderTable(app, navigate); };
-    const chatBtn = g('chatBtn'); if (chatBtn) chatBtn.onclick = () => {
-    openChat();
-    // После открытия — перерисуем, чтобы счётчик исчез
-    setTimeout(() => renderTable(app, navigate), 50);
-  };
-  const infoBtn = g('infoBtn');
-  if (infoBtn) infoBtn.onclick = () => { infoOpen = !infoOpen; renderTable(app, navigate); };
 
   const eb = g('emojiBar');
   if (eb) eb.onclick = e => {
@@ -361,4 +432,32 @@ export function renderTable(app, navigate) {
 
   bindOverlays();
   maybeShowChampion(navigate);
+}
+
+// Обработчики свайп-иконок
+function bindSwipeIconHandlers(app, navigate) {
+  const sortBtn = document.getElementById('sortBtn');
+  if (sortBtn) sortBtn.onclick = () => {
+    hideSwipeIcons();
+    sortMode = (sortMode + 1) % 3;
+    renderTable(app, navigate);
+  };
+  const emojiToggle = document.getElementById('emojiToggle');
+  if (emojiToggle) emojiToggle.onclick = () => {
+    hideSwipeIcons();
+    state.emojiOpen = !state.emojiOpen;
+    renderTable(app, navigate);
+  };
+  const chatBtn = document.getElementById('chatBtn');
+  if (chatBtn) chatBtn.onclick = () => {
+    hideSwipeIcons();
+    openChat();
+  };
+  const infoBtn = document.getElementById('infoBtn');
+  if (infoBtn) infoBtn.onclick = () => {
+    hideSwipeIcons();
+    infoOpen = !infoOpen;
+    if (infoOpen) showInfoModal();
+    else { const m = document.getElementById('infoModal'); if (m) m.remove(); }
+  };
 }
