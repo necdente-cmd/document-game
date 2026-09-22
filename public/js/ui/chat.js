@@ -4,6 +4,31 @@ import { esc } from '../card.js';
 
 const messages = [];
 
+// Глобальный слушатель — добавляется ОДИН раз
+window.addEventListener('chat', (e) => {
+  const { name, text, time } = e.detail;
+  messages.push({ name, text, time });
+  // Обновляем только если чат открыт
+  const box = document.getElementById('chatMessages');
+  if (box) {
+    box.innerHTML = renderMessagesHtml();
+    box.scrollTop = box.scrollHeight;
+  }
+});
+
+function renderMessagesHtml() {
+  if (messages.length === 0) {
+    return '<div style="opacity:.5;font-size:13px;">Сообщений пока нет…</div>';
+  }
+  return messages.map(m => `
+    <div class="chat-msg">
+      <span class="author">${esc(m.name)}:</span>
+      ${esc(m.text)}
+      <span class="time">${new Date(m.time).toLocaleTimeString().slice(0,5)}</span>
+    </div>
+  `).join('');
+}
+
 export function openChat() {
   let panel = document.getElementById('chatPanel');
   if (!panel) {
@@ -34,28 +59,12 @@ export function openChat() {
       socket.emit('chat', { text });
       input.value = '';
     };
-
-    window.addEventListener('chat', (e) => {
-      const { name, text, time } = e.detail;
-      messages.push({ name, text, time });
-      renderMessages();
-    });
   }
 
   panel.classList.add('open');
-  renderMessages();
-  setTimeout(() => document.getElementById('chatInput')?.focus(), 100);
-}
 
-function renderMessages() {
   const box = document.getElementById('chatMessages');
-  if (!box) return;
-  box.innerHTML = messages.map(m => `
-    <div class="chat-msg">
-      <span class="author">${esc(m.name)}:</span>
-      ${esc(m.text)}
-      <span class="time">${new Date(m.time).toLocaleTimeString().slice(0,5)}</span>
-    </div>
-  `).join('');
+  box.innerHTML = renderMessagesHtml();
   box.scrollTop = box.scrollHeight;
+  setTimeout(() => document.getElementById('chatInput')?.focus(), 100);
 }

@@ -1,5 +1,5 @@
-import { state } from '../state.js';
-import { esc, getAvatar } from '../card.js';
+import { state, getAvatar } from '../state.js';
+import { esc } from '../card.js';
 
 export function openModal(title, bodyHtml) {
   const el = document.createElement('div');

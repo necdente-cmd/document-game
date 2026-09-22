@@ -1,12 +1,10 @@
 import { state } from './state.js';
 
-// Экранирование HTML
 export const esc = (t) =>
   String(t).replace(/[&<>"]/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;',
   }[c]));
 
-// Стили карт → путь к PNG
 export function cardPath(card, opts) {
   const style = (opts && opts.deckStyle) || 'figures';
   const suitMap = { '♠':'spade', '♥':'heart', '♦':'diamond', '♣':'club' };
@@ -16,23 +14,22 @@ export function cardPath(card, opts) {
   return `/cards/card_${s}_${r}.png`;
 }
 
-// Путь к рубашке
 export function backPath(opts) {
   const color = (opts && opts.backColor) || 'blue';
   return `/cards/${color}_back_suits_dark.png`;
 }
 
-// Рендер одной карты
 export function cardHtml(card, options = {}) {
   const opts = options.deckStyle ? options : (state.server ? state.server.opts : {});
   const file = cardPath(card, opts);
   const cls = ['card', options.cls || ''].filter(Boolean).join(' ');
-  return `<div class="${cls}" data-id="${card.id}">
+  const style = options.style ? ` style="${options.style}"` : '';
+  const dataAttrs = `data-id="${card.id}"` + (options.dataIndex !== undefined ? ` data-index="${options.dataIndex}"` : '');
+  return `<div class="${cls}" ${dataAttrs}${style}>
     <img src="${file}" alt="${card.r}${card.s}" draggable="false">
   </div>`;
 }
 
-// Логика "бьёт ли карта карту" (для UI)
 export function beatsUI(card, target, trumpSuit) {
   const RV = { '6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14 };
   const kA = card.s === trumpSuit;
@@ -43,7 +40,6 @@ export function beatsUI(card, target, trumpSuit) {
   return RV[card.r] > RV[target.r];
 }
 
-// Позиция места игрока относительно меня
 export function posClass(seat) {
   if (!state.server) return 'top';
   const mySeat = state.server.mySeat;
@@ -51,7 +47,6 @@ export function posClass(seat) {
 }
 
 // ==================== ВЕЕР КАРТ ====================
-// Рендер руки в виде веера: карты по дуге, крайние ниже, центральные выше
 export function renderHandFan(cards, options = {}) {
   const n = cards.length;
   if (n === 0) return '';
@@ -61,19 +56,16 @@ export function renderHandFan(cards, options = {}) {
   const selected = options.selected || new Set();
   const isDealing = options.isDealing || false;
 
-  // Параметры веера (меняем от количества карт)
-  const maxSpread = 320;           // максимальная ширина разворота (px)
-  const cardW = 64;                // ширина карты (примерно)
-  const angleStep = n > 1 ? Math.min(6, 40 / n) : 0;  // угол наклона между картами
-  const arcHeight = 24;            // высота дуги
-  const overlap = Math.min(cardW * 0.5, n > 1 ? maxSpread / (n - 1) : 0);
+  // Параметры веера
+  const maxSpread = Math.min(340, n * 56);  // ширина разворота
+  const angleStep = n > 1 ? Math.min(5, 35 / n) : 0;  // наклон между картами
+  const arcHeight = 14;                     // высота дуги
 
   return cards.map((c, i) => {
-    // Позиция от левого края
-    const t = n > 1 ? i / (n - 1) : 0.5;          // 0..1
-    const x = (t - 0.5) * maxSpread;              // -160..160
-    const angle = (t - 0.5) * angleStep * 2 * n / 5;  // наклон
-    const lift = -Math.sin(t * Math.PI) * arcHeight;  // подъём центральных
+    const t = n > 1 ? i / (n - 1) : 0.5;             // 0..1
+    const x = (t - 0.5) * maxSpread;                 // -170..170
+    const angle = (t - 0.5) * angleStep * n / 2;     // наклон
+    const lift = Math.sin(t * Math.PI) * arcHeight;  // подъём центральных
 
     const cls = [
       selected.has(c.id) ? 'sel' : '',
@@ -82,10 +74,9 @@ export function renderHandFan(cards, options = {}) {
       isDealing ? 'deal' : ''
     ].filter(Boolean).join(' ');
 
-    return cardHtml(c, {
-      cls,
-      style: `left: calc(50% + ${x}px - var(--card-w)/2); bottom: ${-lift}px; transform: rotate(${angle}deg); z-index: ${i + 1};`,
-      dataIndex: i,
-    });
+    // Наклон + смещение вверх для центральных карт
+    const style = `transform: translateX(${x.toFixed(1)}px) translateY(${(-lift).toFixed(1)}px) rotate(${angle.toFixed(1)}deg); z-index: ${i + 1};`;
+
+    return cardHtml(c, { cls, style, dataIndex: i });
   }).join('');
 }
