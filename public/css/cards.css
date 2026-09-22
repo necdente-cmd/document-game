@@ -71,23 +71,23 @@
 .hand .card.deal:nth-child(8) { animation-delay: .7s;  }
 .hand .card.deal:nth-child(9) { animation-delay: .8s;  }
 
-/* ==================== РУКА-ВЕЕР (видна только верхняя часть) ==================== */
+/* ==================== РУКА-ВЕЕР ==================== */
 .hand {
   position: relative;
   width: 100%;
-  height: calc(var(--card-h) * 0.68); /* 68% высоты карты — видна верхняя часть */
+  height: calc(var(--card-h) + 24px);
   background: transparent;
-  overflow: hidden;                    /* обрезаем низ карт */
+  overflow: visible;
   pointer-events: none;
   touch-action: none;
 }
 .hand .card {
   position: absolute;
-  top: 0;
+  bottom: 0;
   left: 50%;
   margin-left: calc(var(--card-w) / -2);
   pointer-events: auto;
-  transform-origin: center top;
+  transform-origin: center bottom;
   transition: transform .18s ease-out;
   cursor: grab;
   touch-action: none;
@@ -103,18 +103,10 @@
   justify-content: center;
   flex-wrap: wrap;
   background: rgba(0,0,0,.3);
-  min-height: 32px;
+  min-height: 28px;
   align-items: center;
 }
 [data-theme="paper"] .actions { background: rgba(0,0,0,.1); }
-.actions button {
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: none;
-  font-weight: 700;
-  font-size: 12px;
-  cursor: pointer;
-}
 .hint {
   font-size: 12px;
   color: var(--acc);
@@ -145,9 +137,4 @@
   cursor: pointer;
   padding: 4px;
   border-radius: 6px;
-}
-
-@media (orientation: landscape) and (max-height: 500px) {
-  .actions { min-height: 26px; padding: 2px; }
-  .hint { font-size: 11px; }
 }

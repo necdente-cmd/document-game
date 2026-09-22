@@ -115,7 +115,7 @@ export function renderTable(app, navigate) {
     passNotice = `<div class="pass-notice wait">⏳ Ждём ${esc(wname)} — отошёл</div>`;
   }
 
-  // Сиденья других игроков (без моего)
+  // Сиденья
   const seats = s.players.filter(p => p.seat !== mySeat).map(p => {
     const isThisInPassed = passedSeats.includes(p.seat);
     const offlineBadge = !p.connected ? '<div class="badge-off">⚠ отошёл</div>' : '';
@@ -134,7 +134,7 @@ export function renderTable(app, navigate) {
       </div>`;
   }).join('');
 
-  // Колода слева вверху
+  // Колода
   let deckArea = '';
   if (isPlaying || s.phase === 'roundEnd' || s.phase === 'gameEnd') {
     const stack = Array.from({ length: 4 }).map((_, i) =>
@@ -182,7 +182,7 @@ export function renderTable(app, navigate) {
   const selectedOppDocs = s.myHand.filter(c => state.selected.has(c.id) && c.r === oppDoc && oppDoc !== myDoc);
   const isOnlyOppDocs = state.selected.size > 0 && selectedOppDocs.length === state.selected.size;
 
-  // Рука — веер (с сортировкой)
+  // Рука — веер
   const sortedHand = sortHand(s.myHand, myDoc, s.trumpSuit);
   const handHtml = renderHandFan(sortedHand, { myDoc, oppDoc, selected: state.selected, isDealing });
 
@@ -202,7 +202,7 @@ export function renderTable(app, navigate) {
     hintHtml = `<div class="hint">👆 Тяните карту в поле — атака</div>`;
   }
 
-  // Центральная кнопка действия
+  // Кнопка действия
   let centerActionBtn = '';
   let centerActionCls = 'b1';
   if (canAttack || canAdd) {
@@ -213,14 +213,14 @@ export function renderTable(app, navigate) {
   else if (canBito)     { centerActionBtn = '✔<br>Бито'; centerActionCls = 'b1'; }
   else if (canSayEnd)   { centerActionBtn = '✋<br>Хватит'; centerActionCls = 'b2'; }
 
-  // Дополнительные кнопки
+  // Доп. кнопки
   const extraActions = [];
   if (canThrow) extraActions.push(`<button class="b1" id="throwBtn">🏆 Бросить док.</button>`);
   if (canPassDocs) extraActions.push(`<button class="b2" id="passBtn">📤 Передать</button>`);
   if (canSwapInitiate) extraActions.push(`<button class="b5" id="swapInitBtn">🔄 Отдать</button>`);
   if (canSwapAsk) extraActions.push(`<button class="b5" id="swapAskBtn">🔄 Вернуться</button>`);
 
-  // Дуга иконок
+  // Дуга
   const arcBtn = isPlaying ? `
     <div class="icon-arc">
       <button class="arc-btn arc-1" id="sortBtn" title="Сортировка">🔄</button>
@@ -241,14 +241,7 @@ export function renderTable(app, navigate) {
       ${passNotice}
       ${deckArea}
 
-      <div class="top-bar">
-        <div class="info-panel">
-          Козырь: <b>${esc(s.trumpSuit || '—')}</b><br>
-          Мой док: <b>${esc(myDoc)}</b> · Их док: <b>${esc(oppDoc)}</b><br>
-          Счёт: ${s.roundWins[0]} : ${s.roundWins[1]}
-        </div>
-        <button class="settings-btn" id="settingsBtn" title="Настройки">⚙️</button>
-      </div>
+      <button class="settings-btn" id="settingsBtn" title="Настройки">⚙️</button>
 
       ${seats}
       <div class="center">${fieldHtml}</div>
@@ -260,6 +253,13 @@ export function renderTable(app, navigate) {
       </div>
 
       <div class="extra-actions">${extraActions.join('')}</div>
+
+      <div class="info-panel">
+        Козырь: <b>${esc(s.trumpSuit || '—')}</b><br>
+        Мой док: <b>${esc(myDoc)}</b><br>
+        Их док: <b>${esc(oppDoc)}</b><br>
+        Счёт: <b>${s.roundWins[0]} : ${s.roundWins[1]}</b>
+      </div>
 
       ${overlays}
       ${emojiPanel}
@@ -273,10 +273,8 @@ export function renderTable(app, navigate) {
   const err = m => { const e = document.getElementById('err'); if (e) e.textContent = m; };
   const g = id => document.getElementById(id);
 
-  // Drag-and-drop
   initDrag(() => renderTable(app, navigate));
 
-  // Тап по карте врага = фальш
   const centerEl = document.querySelector('.center');
   if (centerEl) {
     centerEl.onclick = e => {
@@ -290,7 +288,6 @@ export function renderTable(app, navigate) {
     };
   }
 
-  // Лобби
   const cc = g('copyCode');
   if (cc) cc.onclick = async () => {
     const code = document.getElementById('roomCode').textContent;
@@ -298,7 +295,6 @@ export function renderTable(app, navigate) {
   };
   const st = g('startBtn'); if (st) st.onclick = () => socket.emit('startGame');
 
-  // Центральная кнопка
   const ca = g('centerActionBtn');
   if (ca) ca.onclick = () => {
     if (canAttack || canAdd) {
@@ -312,13 +308,11 @@ export function renderTable(app, navigate) {
     if (canSayEnd) socket.emit('endAttack');
   };
 
-  // Доп. кнопки
   const th = g('throwBtn'); if (th) th.onclick = () => socket.emit('throwDocs');
   const ps = g('passBtn'); if (ps) ps.onclick = () => socket.emit('passDocsRequest');
   const si = g('swapInitBtn'); if (si) si.onclick = () => socket.emit('swapInitiate');
   const sa = g('swapAskBtn'); if (sa) sa.onclick = () => socket.emit('swapAsk');
 
-  // Дуга иконок
   const sortBtn = g('sortBtn');
   if (sortBtn) sortBtn.onclick = () => {
     sortMode = (sortMode + 1) % 3;
@@ -334,7 +328,6 @@ export function renderTable(app, navigate) {
     renderTable(app, navigate);
   };
 
-  // Эмодзи-бар
   const eb = g('emojiBar');
   if (eb) eb.onclick = e => {
     const b = e.target.closest('[data-e]'); if (!b) return;
@@ -343,13 +336,9 @@ export function renderTable(app, navigate) {
     renderTable(app, navigate);
   };
 
-  // ⚙️ Настройки
   const sb = g('settingsBtn');
   if (sb) sb.onclick = () => openSettings(() => renderTable(app, navigate));
 
-  // Оверлеи
   bindOverlays();
-
-  // Экран чемпиона
   maybeShowChampion(navigate);
 }

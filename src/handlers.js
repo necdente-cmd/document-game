@@ -28,6 +28,7 @@ export function setupHandlers(io, broadcast) {
         hand: [], connected: true, out: false,
       });
       socket.join(pid);
+      socket.join(r.id);
       cb({ ok: true, roomId: r.id, playerId: pid });
       broadcast(r);
     });
@@ -46,6 +47,7 @@ export function setupHandlers(io, broadcast) {
           existing.connected = true;
           if (name) existing.name = name;
           socket.join(pid);
+          socket.join(r.id);
           log(r, `${existing.name} вернулся`);
           cb({ ok: true, roomId: r.id, playerId: pid, reconnected: true });
           broadcast(r);
@@ -64,6 +66,7 @@ export function setupHandlers(io, broadcast) {
         team: seat % 2, hand: [], connected: true, out: false,
       });
       socket.join(pid);
+      socket.join(r.id);
       cb({ ok: true, roomId: r.id, playerId: pid });
       broadcast(r);
     });

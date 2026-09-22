@@ -78,7 +78,7 @@ export function registerGameHandlers(io, socket, ctx) {
     broadcast(r);
   });
 
-  // ==================== ФАЛЬШ (с подтверждением хозяина) ====================
+  // ==================== ФАЛЬШ ====================
   socket.on('falsh', ({ cardId }) => {
     const r = rooms.get(getRid()); if (!r || !r.field) return;
     const p = getMe(); if (!p || r.field.defender !== p.seat) return err('Не вы защищаетесь');
@@ -355,7 +355,7 @@ export function registerGameHandlers(io, socket, ctx) {
     broadcast(r);
   });
 
-    // ==================== ЧАТ ====================
+  // ==================== ЧАТ ====================
   socket.on('chat', ({ text }) => {
     const r = rooms.get(getRid()); if (!r) return;
     const p = getMe(); if (!p) return;
@@ -363,7 +363,7 @@ export function registerGameHandlers(io, socket, ctx) {
     const clean = text.trim().slice(0, 200);
     if (!clean) return;
     const msg = { seat: p.seat, name: p.name, text: clean, time: Date.now() };
-    r.players.forEach(x => io.to(x.id).emit('chat', msg));
+    io.to(r.id).emit('chat', msg);
   });
 
   // ==================== ЭМОДЗИ ====================
