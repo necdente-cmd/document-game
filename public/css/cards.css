@@ -1,0 +1,175 @@
+/* ==================== КАРТЫ ==================== */
+.card {
+  width: var(--card-w);
+  height: var(--card-h);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  padding: 0;
+  flex: 0 0 auto;
+  box-shadow: 0 3px 6px rgba(0,0,0,.55);
+  transition: transform .12s, box-shadow .12s;
+  user-select: none;
+  position: relative;
+}
+.card img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+.card.sel {
+  transform: translateY(-18px);
+  box-shadow: 0 0 0 4px var(--acc), 0 3px 12px rgba(0,0,0,.8);
+}
+.card.doc {
+  box-shadow: 0 0 0 3px var(--acc), 0 3px 8px rgba(0,0,0,.6);
+}
+.card.opp-doc {
+  box-shadow: 0 0 0 3px #e74c3c, 0 3px 8px rgba(0,0,0,.6);
+}
+.card.opp-doc::before {
+  content: '⚠';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  font-size: 14px;
+  color: #e74c3c;
+  background: rgba(255,255,255,.9);
+  border-radius: 3px;
+  padding: 0 3px;
+  z-index: 5;
+  font-weight: 900;
+}
+
+/* ==================== АНИМАЦИЯ РАЗДАЧИ ==================== */
+@keyframes dealIn {
+  0%   { transform: translateY(-250px) rotate(-25deg) scale(.3); opacity: 0; }
+  100% { transform: translateY(0) rotate(0) scale(1); opacity: 1; }
+}
+.hand .card.deal { animation: dealIn .55s cubic-bezier(.2,.8,.3,1) backwards; }
+.hand .card.deal:nth-child(1) { animation-delay: 0s;   }
+.hand .card.deal:nth-child(2) { animation-delay: .1s;  }
+.hand .card.deal:nth-child(3) { animation-delay: .2s;  }
+.hand .card.deal:nth-child(4) { animation-delay: .3s;  }
+.hand .card.deal:nth-child(5) { animation-delay: .4s;  }
+.hand .card.deal:nth-child(6) { animation-delay: .5s;  }
+.hand .card.deal:nth-child(7) { animation-delay: .6s;  }
+.hand .card.deal:nth-child(8) { animation-delay: .7s;  }
+.hand .card.deal:nth-child(9) { animation-delay: .8s;  }
+
+/* ==================== РУКА ИГРОКА ==================== */
+.hand {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  overflow-x: auto;
+  height: var(--hand-h);
+  align-items: flex-end;
+  background: rgba(0,0,0,.18);
+}
+[data-theme="paper"] .hand { background: rgba(0,0,0,.06); }
+
+/* ==================== ПАНЕЛЬ ДЕЙСТВИЙ ==================== */
+.actions {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  background: rgba(0,0,0,.3);
+  min-height: 56px;
+  align-items: center;
+}
+[data-theme="paper"] .actions { background: rgba(0,0,0,.1); }
+.actions button {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.hint {
+  font-size: 13px;
+  color: var(--acc);
+  font-weight: 600;
+  padding: 4px 12px;
+  text-align: center;
+  width: 100%;
+}
+
+/* ==================== ЭМОДЗИ ПАНЕЛЬ ==================== */
+.emoji-bar {
+  position: fixed;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  padding: 8px;
+  background: rgba(0,0,0,.7);
+  border-radius: 12px;
+  z-index: 200;
+}
+.emoji-bar button {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+}
+.emoji-toggle {
+  position: fixed;
+  right: 12px;
+  bottom: 210px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--acc);
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  z-index: 199;
+}
+.history-btn {
+  position: fixed;
+  right: 12px;
+  bottom: 270px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #8e44ad;
+  color: #fff;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  z-index: 199;
+}
+.exit-btn {
+  position: fixed;
+  left: 8px;
+  top: 8px;
+  z-index: 200;
+  background: rgba(231,76,60,.85);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* ==================== LANDSCAPE ==================== */
+@media (orientation: landscape) and (max-height: 500px) {
+  .actions { min-height: 40px; padding: 4px; }
+  .actions button { padding: 7px 10px; font-size: 12px; }
+  .hint { font-size: 11px; padding: 2px 6px; }
+  .emoji-toggle { bottom: 150px; }
+  .history-btn  { bottom: 200px; }
+}

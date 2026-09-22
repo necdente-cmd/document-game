@@ -1,0 +1,211 @@
+/* ==================== ИГРОВОЙ СТОЛ ==================== */
+.table {
+  flex: 1;
+  position: relative;
+  background: var(--felt);
+  overflow: hidden;
+}
+
+/* ==================== СИДЕНЬЯ ИГРОКОВ ==================== */
+.seat {
+  position: absolute;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  text-align: center;
+  background: rgba(0,0,0,.45);
+  color: #fff;
+  min-width: 70px;
+  z-index: 10;
+}
+[data-theme="paper"] .seat { background: rgba(0,0,0,.18); color: #333; }
+.seat.top    { top: 8px;   left: 50%; transform: translateX(-50%); }
+.seat.left   { top: 40%;   left: 8px; }
+.seat.right  { top: 40%;   right: 8px; }
+.seat.bottom { bottom: var(--seat-bottom); left: 50%; transform: translateX(-50%); }
+.seat.active { outline: 2px solid var(--acc); }
+.seat.out    { opacity: .35; text-decoration: line-through; }
+.seat.offline { opacity: .6; border: 1px dashed #e74c3c; }
+.seat .badge-off { color: #e74c3c; font-size: 10px; font-weight: 700; }
+.seat .pass-badge { color: #e74c3c; font-weight: 700; font-size: 10px; }
+
+/* ==================== КОЛОДА + КОЗЫРЬ ==================== */
+.deck-area {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 5;
+  pointer-events: none;
+}
+.deck-wrapper {
+  position: relative;
+  width: calc(var(--card-w) * 2);
+  height: calc(var(--card-h) * 1.7);
+}
+.deck-stack {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: var(--card-w);
+  height: var(--card-h);
+  z-index: 2;
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,.6));
+}
+.deck-stack .card { position: absolute; top: 0; left: 0; }
+.trump-under {
+  position: absolute;
+  top: calc(var(--card-h) * 0.74);
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(var(--card-w) * 1.75);
+  height: calc(var(--card-h) * 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+.trump-under .card {
+  transform: rotate(90deg);
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,.6));
+}
+
+/* ==================== ПОЛЕ БОЯ ==================== */
+.center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: calc(var(--card-w) * 1.1);
+  flex-wrap: wrap;
+  max-width: 95%;
+  justify-content: center;
+  z-index: 5;
+  padding: 20px;
+}
+.slot {
+  position: relative;
+  width: var(--card-w);
+  height: var(--card-h);
+  animation: fieldIn .25s ease-out;
+}
+@keyframes fieldIn {
+  from { transform: scale(.6); opacity: 0; }
+  to   { transform: scale(1);  opacity: 1; }
+}
+.slot .card {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transition: top .2s, left .2s, transform .2s;
+}
+.slot .card.beaten {
+  top: calc(var(--card-w) * -0.5);
+  left: calc(var(--card-w) * 0.53);
+  transform: rotate(9deg);
+  z-index: 2;
+  box-shadow: 0 8px 16px rgba(0,0,0,.75);
+  outline: 3px solid #2ecc71;
+  outline-offset: -3px;
+}
+.slot.tappable { cursor: pointer; }
+.slot.tappable .card:first-child {
+  outline: 3px dashed rgba(241,196,15,.8);
+  outline-offset: -3px;
+}
+.slot.selected .card:first-child {
+  box-shadow: 0 0 0 4px #ffb84d, 0 0 16px rgba(255,184,77,.95);
+  transform: scale(1.06);
+}
+
+/* ==================== ПРАВАЯ ПАНЕЛЬ ==================== */
+.side {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 11px;
+  text-align: right;
+  line-height: 1.55;
+  background: rgba(0,0,0,.45);
+  padding: 6px 8px;
+  border-radius: 8px;
+  color: #fff;
+  z-index: 15;
+}
+[data-theme="paper"] .side { background: rgba(0,0,0,.15); color: #333; }
+
+/* ==================== ОКНО ОЖИДАНИЯ (ЛОББИ) ==================== */
+.waiting {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,.8);
+  border: 2px solid var(--acc);
+  border-radius: 16px;
+  padding: 24px 28px;
+  text-align: center;
+  min-width: 260px;
+  max-width: 90vw;
+  z-index: 50;
+}
+[data-theme="paper"] .waiting { background: rgba(255,255,255,.9); }
+.waiting-title { font-size: 13px; opacity: .8; margin-bottom: 4px; }
+.waiting-code {
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: 8px;
+  color: var(--acc);
+  margin: 4px 0 12px;
+  font-family: 'Courier New', monospace;
+}
+[data-theme="paper"] .waiting-code { color: #b8860b; }
+.copy-btn {
+  background: rgba(255,255,255,.15);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.3);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-bottom: 14px;
+  font-weight: 600;
+}
+.waiting-info { font-size: 14px; margin-bottom: 10px; }
+.waiting-players {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0 12px;
+  font-size: 13px;
+}
+.waiting-player {
+  padding: 6px 10px;
+  background: rgba(255,255,255,.08);
+  border-radius: 6px;
+}
+.waiting-player.host { background: rgba(241,196,15,.2); }
+.waiting-hint { font-size: 12px; opacity: .7; margin-top: 8px; }
+.start-big {
+  padding: 14px 24px;
+  font-size: 16px;
+  border-radius: 12px;
+  margin-top: 8px;
+  width: 100%;
+  background: var(--acc);
+  color: #000;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+}
+
+/* ==================== LANDSCAPE ==================== */
+@media (orientation: landscape) and (max-height: 500px) {
+  .seat { font-size: 10px; padding: 3px 6px; min-width: 56px; }
+  .side { font-size: 10px; padding: 4px 6px; }
+}
