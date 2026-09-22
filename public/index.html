@@ -1,0 +1,858 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Документ</title>
+<style>
+  :root { --bg:#0d3b2e; --felt:#0d3b2e; --acc:#f1c40f; --text:#fff;
+          --card-w:64px; --card-h:92px; --hand-h:145px; --seat-bottom:170px; }
+  [data-theme="classic"] { --bg:#0d3b2e; --felt:#0d3b2e; --acc:#f1c40f; --text:#fff; }
+  [data-theme="dark"]    { --bg:#101418; --felt:#101418; --acc:#ffb84d; --text:#e6e6e6; }
+  [data-theme="neon"]    { --bg:#0a001a; --felt:#0a001a; --acc:#00e5ff; --text:#fff; }
+  [data-theme="paper"]   { --bg:#f4ecd8; --felt:#e8dcc0; --acc:#b8860b; --text:#333; }
+
+  /* Landscape — уменьшаем всё */
+  @media (orientation: landscape) and (max-height: 500px) {
+    :root { --card-w:44px; --card-h:64px; --hand-h:90px; --seat-bottom:110px; }
+  }
+  @media (orientation: landscape) and (max-height: 400px) {
+    :root { --card-w:38px; --card-h:56px; --hand-h:76px; --seat-bottom:90px; }
+  }
+  @media (orientation: landscape) and (max-height: 340px) {
+    :root { --card-w:34px; --card-h:50px; --hand-h:66px; --seat-bottom:80px; }
+  }
+
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; font-family:system-ui,sans-serif; background:var(--bg); color:var(--text); overflow:hidden; }
+  #app { height:100dvh; display:flex; flex-direction:column; }
+
+  .lobby { padding:24px; display:flex; flex-direction:column; gap:12px; max-width:520px; margin:0 auto; width:100%; overflow-y:auto; }
+  .lobby h2 { margin:0 0 8px; font-size:26px; }
+  .lobby label { font-size:13px; opacity:.85; margin-bottom:-4px; margin-top:6px; font-weight:600; }
+  .lobby input,.lobby select,.lobby button { padding:12px; border-radius:10px; border:none; font-size:16px; font-family:inherit; }
+  .lobby input,.lobby select { background:rgba(255,255,255,.1); color:var(--text); }
+  [data-theme="paper"] .lobby input,[data-theme="paper"] .lobby select { background:rgba(0,0,0,.05); }
+  .lobby button { background:var(--acc); color:#000; font-weight:700; cursor:pointer; }
+  .err { color:#ffb84d; font-size:13px; min-height:18px; padding:4px 0; }
+  .choice-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
+  .choice { padding:8px 12px; border-radius:8px; border:2px solid rgba(255,255,255,.25);
+    cursor:pointer; font-size:13px; font-weight:600; background:rgba(255,255,255,.06); }
+  .choice.sel { border-color:var(--acc); background:rgba(241,196,15,.2); }
+  .choice.preview-card { width:64px; height:92px; padding:0; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+  .choice.preview-card img { width:100%; height:100%; object-fit:cover; }
+  .choice.back-swatch { width:44px; height:64px; padding:0; overflow:hidden; border-radius:6px; display:flex; align-items:center; justify-content:center; }
+  .choice.back-swatch img { width:100%; height:100%; object-fit:cover; }
+
+  .table { flex:1; position:relative; background:var(--felt); overflow:hidden; }
+  .seat { position:absolute; padding:4px 10px; border-radius:8px; font-size:12px;
+    text-align:center; background:rgba(0,0,0,.45); color:#fff; min-width:70px; z-index:10; }
+  [data-theme="paper"] .seat { background:rgba(0,0,0,.18); color:#333; }
+  .seat.top    { top:8px;   left:50%; transform:translateX(-50%); }
+  .seat.left   { top:40%;   left:8px; }
+  .seat.right  { top:40%;   right:8px; }
+  .seat.bottom { bottom:var(--seat-bottom); left:50%; transform:translateX(-50%); }
+  .seat.active { outline:2px solid var(--acc); }
+  .seat.out    { opacity:.35; text-decoration:line-through; }
+  .seat.offline { opacity:.6; border:1px dashed #e74c3c; }
+  .seat .badge-off { color:#e74c3c; font-size:10px; font-weight:700; }
+  .seat .pass-badge { color:#e74c3c; font-weight:700; font-size:10px; }
+
+  .deck-area { position:absolute; top:70px; left:50%; transform:translateX(-50%);
+    display:flex; flex-direction:column; align-items:center; z-index:5; pointer-events:none; }
+  .deck-wrapper { position:relative; width:calc(var(--card-w)*2); height:calc(var(--card-h)*1.7); }
+  .deck-stack { position:absolute; top:0; left:50%; transform:translateX(-50%);
+    width:var(--card-w); height:var(--card-h); z-index:2; filter: drop-shadow(0 2px 5px rgba(0,0,0,.6)); }
+  .deck-stack .card { position:absolute; top:0; left:0; }
+  .trump-under { position:absolute; top:calc(var(--card-h) * 0.74); left:50%; transform:translateX(-50%);
+    width:calc(var(--card-w)*1.75); height:calc(var(--card-h)*0.78);
+    display:flex; align-items:center; justify-content:center; z-index:1; }
+  .trump-under .card { transform: rotate(90deg); filter: drop-shadow(0 2px 5px rgba(0,0,0,.6)); }
+
+  .center { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    display:flex; gap:calc(var(--card-w) * 1.1); flex-wrap:wrap; max-width:95%; justify-content:center; z-index:5; padding:20px; }
+  .slot { position:relative; width:var(--card-w); height:var(--card-h); animation: fieldIn .25s ease-out; }
+  @keyframes fieldIn { from { transform: scale(.6); opacity:0; } to { transform: scale(1); opacity:1; } }
+  .slot .card { position:absolute; top:0; left:0; transition: top .2s, left .2s, transform .2s; }
+  .slot .card.beaten { top:calc(var(--card-w) * -0.5); left:calc(var(--card-w) * 0.53); transform: rotate(9deg); z-index:2;
+    box-shadow: 0 8px 16px rgba(0,0,0,.75); outline:3px solid #2ecc71; outline-offset:-3px; }
+  .slot.tappable { cursor: pointer; }
+  .slot.tappable .card:first-child { outline: 3px dashed rgba(241,196,15,.8); outline-offset:-3px; }
+  .slot.selected .card:first-child { box-shadow: 0 0 0 4px #ffb84d, 0 0 16px rgba(255,184,77,.95); transform: scale(1.06); }
+
+  .hint { font-size: 13px; color: var(--acc); font-weight: 600; padding: 4px 12px; text-align: center; width: 100%; }
+  .pass-notice { position:absolute; top:14px; left:50%; transform:translateX(-50%);
+    background: rgba(231,76,60,.9); color:#fff; font-weight:700; font-size:13px;
+    padding: 6px 16px; border-radius: 20px; z-index:20;
+    box-shadow: 0 3px 10px rgba(0,0,0,.5); animation: pulseNotice 1.5s ease-in-out infinite; }
+  .pass-notice.info { background: rgba(241,196,15,.9); color:#000; }
+  .pass-notice.wait { background: rgba(255,184,77,.95); color:#000; }
+  @keyframes pulseNotice { 0%,100%{opacity:1} 50%{opacity:.75} }
+
+  .overlay { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    background: rgba(0,0,0,.9); border: 2px solid #f1c40f; border-radius: 16px;
+    padding: 20px 24px; z-index: 60; text-align: center; min-width: 300px; max-width: 92vw;
+    box-shadow: 0 10px 40px rgba(0,0,0,.7); }
+  [data-theme="paper"] .overlay { background: rgba(255,255,255,.97); color:#333; }
+  .ov-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; color: #f1c40f; }
+  [data-theme="paper"] .ov-title { color: #b8860b; }
+  .ov-cards { display: flex; gap: 8px; justify-content: center; margin-bottom: 14px; flex-wrap:wrap; }
+  .ov-wait { color: #ccc; font-size: 12px; margin-top: 8px; }
+  [data-theme="paper"] .ov-wait { color: #666; }
+  .ov-buttons { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+  .ov-buttons button { padding:10px 16px; border:none; border-radius:10px; font-weight:700; cursor:pointer; font-size:14px; }
+
+  .side { position:absolute; top:8px; right:8px; font-size:11px; text-align:right;
+    line-height:1.55; background:rgba(0,0,0,.45); padding:6px 8px;
+    border-radius:8px; color:#fff; z-index:15; }
+  [data-theme="paper"] .side { background:rgba(0,0,0,.15); color:#333; }
+
+  .waiting { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    background:rgba(0,0,0,.8); border:2px solid var(--acc); border-radius:16px;
+    padding:24px 28px; text-align:center; min-width:260px; max-width:90vw; z-index:50; }
+  [data-theme="paper"] .waiting { background:rgba(255,255,255,.9); }
+  .waiting-title { font-size:13px; opacity:.8; margin-bottom:4px; }
+  .waiting-code { font-size:42px; font-weight:900; letter-spacing:8px;
+    color:var(--acc); margin:4px 0 12px; font-family:'Courier New', monospace; }
+  [data-theme="paper"] .waiting-code { color:#b8860b; }
+  .copy-btn { background:rgba(255,255,255,.15); color:#fff;
+    border:1px solid rgba(255,255,255,.3); padding:8px 14px; border-radius:8px;
+    font-size:13px; cursor:pointer; margin-bottom:14px; font-weight:600; }
+  .waiting-info { font-size:14px; margin-bottom:10px; }
+  .waiting-players { display:flex; flex-direction:column; gap:4px; margin:8px 0 12px; font-size:13px; }
+  .waiting-player { padding:6px 10px; background:rgba(255,255,255,.08); border-radius:6px; }
+  .waiting-player.host { background:rgba(241,196,15,.2); }
+  .waiting-hint { font-size:12px; opacity:.7; margin-top:8px; }
+  .start-big { padding:14px 24px; font-size:16px; border-radius:12px; margin-top:8px; width:100%; background:var(--acc); color:#000; font-weight:700; border:none; cursor:pointer; }
+
+  .card { width:var(--card-w); height:var(--card-h); border-radius:8px; overflow:hidden;
+    background:#fff; padding:0; flex:0 0 auto; box-shadow:0 3px 6px rgba(0,0,0,.55);
+    transition: transform .12s, box-shadow .12s; user-select:none; position:relative; }
+  .card img { width:100%; height:100%; display:block; object-fit:cover; pointer-events:none; -webkit-user-drag:none; }
+  .card.sel { transform:translateY(-18px); box-shadow: 0 0 0 4px var(--acc), 0 3px 12px rgba(0,0,0,.8); }
+  .card.doc { box-shadow: 0 0 0 3px var(--acc), 0 3px 8px rgba(0,0,0,.6); }
+
+  @keyframes dealIn {
+    0%   { transform: translateY(-250px) rotate(-25deg) scale(.3); opacity: 0; }
+    100% { transform: translateY(0) rotate(0) scale(1); opacity: 1; }
+  }
+  .hand .card.deal { animation: dealIn .55s cubic-bezier(.2,.8,.3,1) backwards; }
+  .hand .card.deal:nth-child(1) { animation-delay: 0s;   }
+  .hand .card.deal:nth-child(2) { animation-delay: .1s;  }
+  .hand .card.deal:nth-child(3) { animation-delay: .2s;  }
+  .hand .card.deal:nth-child(4) { animation-delay: .3s;  }
+  .hand .card.deal:nth-child(5) { animation-delay: .4s;  }
+  .hand .card.deal:nth-child(6) { animation-delay: .5s;  }
+  .hand .card.deal:nth-child(7) { animation-delay: .6s;  }
+  .hand .card.deal:nth-child(8) { animation-delay: .7s;  }
+  .hand .card.deal:nth-child(9) { animation-delay: .8s;  }
+
+  .hand { display:flex; gap:8px; padding:8px; overflow-x:auto; height:var(--hand-h);
+    align-items:flex-end; background:rgba(0,0,0,.18); }
+  [data-theme="paper"] .hand { background:rgba(0,0,0,.06); }
+
+  .actions { display:flex; gap:6px; padding:8px; justify-content:center; flex-wrap:wrap;
+    background:rgba(0,0,0,.3); min-height:56px; align-items:center; }
+  [data-theme="paper"] .actions { background:rgba(0,0,0,.1); }
+  @media (orientation: landscape) and (max-height: 500px) {
+    .actions { min-height:40px; padding:4px; }
+    .actions button { padding:7px 10px; font-size:12px; }
+    .seat { font-size:10px; padding:3px 6px; min-width:56px; }
+    .side { font-size:10px; padding:4px 6px; }
+    .hint { font-size:11px; padding:2px 6px; }
+  }
+  .actions button { padding:10px 14px; border-radius:10px; border:none;
+    font-weight:700; font-size:13px; cursor:pointer; }
+  .b1 { background:var(--acc); color:#000; }
+  .b2 { background:#95a5a6; color:#000; }
+  .b3 { background:#e74c3c; color:#fff; }
+  .b4 { background:#8e44ad; color:#fff; }
+  .b5 { background:#3498db; color:#fff; }
+
+  .emoji-bar { position:fixed; right:8px; top:50%; transform:translateY(-50%);
+    display:grid; grid-template-columns:repeat(2,1fr); gap:4px; padding:8px;
+    background:rgba(0,0,0,.7); border-radius:12px; z-index:200; }
+  .emoji-bar button { background:none; border:none; font-size:22px; cursor:pointer; padding:4px; border-radius:6px; }
+  .emoji-toggle { position:fixed; right:12px; bottom:210px; width:44px; height:44px;
+    border-radius:50%; background:var(--acc); border:none; font-size:22px; cursor:pointer; z-index:199; }
+  .history-btn { position:fixed; right:12px; bottom:270px; width:44px; height:44px;
+    border-radius:50%; background:#8e44ad; color:#fff; border:none; font-size:20px; cursor:pointer; z-index:199; }
+  @media (orientation: landscape) and (max-height: 500px) {
+    .emoji-toggle { bottom:150px; }
+    .history-btn { bottom:200px; }
+  }
+
+  .reaction { position:absolute; font-size:32px; pointer-events:none; z-index:100;
+    animation: pop 2s ease-out forwards; }
+  @keyframes pop {
+    0%   { transform: translateY(0) scale(.6); opacity:0; }
+    15%  { transform: translateY(-10px) scale(1.3); opacity:1; }
+    70%  { transform: translateY(-30px) scale(1); opacity:1; }
+    100% { transform: translateY(-60px) scale(.8); opacity:0; }
+  }
+  .falsh-banner { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(.5);
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color:#fff; font-weight:900; padding: 24px 40px; border-radius: 20px;
+    font-size: 26px; text-align:center; z-index: 500; pointer-events:none;
+    animation: falshPop 2s ease-out forwards; }
+  @keyframes falshPop {
+    0%   { transform: translate(-50%,-50%) scale(.3); opacity:0; }
+    15%  { transform: translate(-50%,-50%) scale(1.15); opacity:1; }
+    80%  { transform: translate(-50%,-50%) scale(1); opacity:1; }
+    100% { transform: translate(-50%,-50%) scale(.9); opacity:0; }
+  }
+
+  .champ-overlay { position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:1000;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:24px; text-align:center; color:#fff; overflow-y:auto; }
+  .champ-title { font-size:32px; font-weight:900; color:#f1c40f; margin-bottom:16px;
+    text-shadow:0 0 20px rgba(241,196,15,.7); }
+  .champ-names { font-size:20px; margin-bottom:20px; }
+  .champ-stats { font-size:15px; line-height:1.8; margin-bottom:20px; opacity:.9; }
+  .champ-best { font-size:16px; color:#2ecc71; font-weight:700; margin-bottom:20px; }
+  .champ-buttons { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+  .champ-buttons button { padding:14px 28px; border:none; border-radius:12px;
+    font-size:16px; font-weight:700; cursor:pointer; }
+  .history-list { max-height:50vh; overflow-y:auto; text-align:left; margin-bottom:14px; }
+  .history-row { padding:8px 12px; border-bottom:1px solid rgba(255,255,255,.15); font-size:14px; }
+  [data-theme="paper"] .history-row { border-color:rgba(0,0,0,.15); }
+  .exit-btn { position:fixed; left:8px; top:8px; z-index:200;
+    background:rgba(231,76,60,.85); color:#fff; border:none; border-radius:50%;
+    width:36px; height:36px; font-size:16px; cursor:pointer; }
+</style>
+</head>
+<body data-theme="classic">
+<div id="app"></div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+const app = document.getElementById('app');
+let state = null, me = JSON.parse(localStorage.getItem('me') || 'null');
+let selected = new Set();
+let defendTarget = null;
+let emojiOpen = false, historyOpen = false;
+let dealKey = 0, lastPhaseForDeal = null;
+
+const EMOJIS = ['👍','😂','😡','😭','🔥','💪','🤔','😎','👏','😱','🤝','🎯','😤','🙈','💯','⚡'];
+const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const applyTheme = theme => { document.body.dataset.theme = theme || 'classic'; };
+
+function cardPath(c, opts) {
+  const style = (opts && opts.deckStyle) || 'figures';
+  const suitMap = { '♠':'spade', '♥':'heart', '♦':'diamond', '♣':'club' };
+  const rankMap = { '6':'6','7':'7','8':'8','9':'9','10':'10','J':'11','Q':'12','K':'13','A':'1' };
+  const s = suitMap[c.s], r = rankMap[c.r];
+  if (style === 'simple') return `/cards/simplecard_${s}_${r}.png`;
+  return `/cards/card_${s}_${r}.png`;
+}
+function backPath(opts) {
+  const color = (opts && opts.backColor) || 'blue';
+  return `/cards/${color}_back_suits_dark.png`;
+}
+function cardHtml(c, opts = {}) {
+  const file = cardPath(c, opts.deckStyle ? opts : (state ? state.opts : {}));
+  const cls = ['card', opts.cls || ''].filter(Boolean).join(' ');
+  return `<div class="${cls}" data-id="${c.id}"><img src="${file}" alt="${c.r}${c.s}" draggable="false"></div>`;
+}
+function beatsUI(card, target, trumpSuit) {
+  const RV = { '6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14 };
+  const kA = card.s === trumpSuit, kB = target.s === trumpSuit;
+  if (kA && !kB) return true;
+  if (!kA && kB) return false;
+  if (card.s !== target.s) return false;
+  return RV[card.r] > RV[target.r];
+}
+function posClass(seat) {
+  return ['bottom','right','top','left'][((seat - state.mySeat + 4) % 4)] || 'top';
+}
+
+function renderWelcome() {
+  app.innerHTML = `
+    <div class="lobby" style="justify-content:center; min-height:100dvh;">
+      <h2 style="text-align:center; font-size:28px; margin-bottom:24px;">🃏 Документ</h2>
+      <button id="goCreate" style="padding:20px; font-size:18px;">🎮 Создать игру</button>
+      <button id="goJoin" style="padding:20px; font-size:18px; background:#95a5a6; color:#000;">🔗 Войти по коду</button>
+      <div class="err" id="err"></div>
+    </div>`;
+  document.getElementById('goCreate').onclick = renderCreate;
+  document.getElementById('goJoin').onclick = renderJoin;
+}
+
+function renderCreate() {
+  const savedName = (me?.name) || localStorage.getItem('lastName') || '';
+  const savedOpts = JSON.parse(localStorage.getItem('opts') || '{}');
+  const deckStyle = savedOpts.deckStyle || 'figures';
+  const backColor = savedOpts.backColor || 'blue';
+  const docSet    = savedOpts.docSet    || 'classic';
+  const theme     = savedOpts.theme     || 'classic';
+  const backColors = ['black','blue','green','orange','purple','red'];
+  const backs = backColors.map(c => `
+    <div class="choice back-swatch ${c===backColor?'sel':''}" data-back="${c}">
+      <img src="/cards/${c}_back_suits_dark.png" alt="${c}">
+    </div>`).join('');
+  const styles = `
+    <div class="choice preview-card ${deckStyle==='figures'?'sel':''}" data-deck="figures">
+      <img src="/cards/card_heart_12.png" alt="figures">
+    </div>
+    <div class="choice preview-card ${deckStyle==='simple'?'sel':''}" data-deck="simple">
+      <img src="/cards/simplecard_heart_12.png" alt="simple">
+    </div>`;
+  app.innerHTML = `
+    <div class="lobby">
+      <h2 style="text-align:center;">Настройки игры</h2>
+      <label>Ваше имя</label>
+      <input id="name" placeholder="Имя" value="${esc(savedName)}">
+      <label>Стиль колоды</label>
+      <div class="choice-row" id="deckPick">${styles}</div>
+      <label>Рубашка</label>
+      <div class="choice-row" id="backPick">${backs}</div>
+      <label>Ступени документов</label>
+      <select id="docSet">
+        <option value="classic" ${docSet==='classic'?'selected':''}>6 · 10 · J · Q · K · A</option>
+        <option value="short"   ${docSet==='short'  ?'selected':''}>6 · 10 · Q · A</option>
+      </select>
+      <label>Тема стола</label>
+      <select id="theme">
+        <option value="classic" ${theme==='classic'?'selected':''}>Классика</option>
+        <option value="dark"    ${theme==='dark'   ?'selected':''}>Тёмная</option>
+        <option value="neon"    ${theme==='neon'   ?'selected':''}>Неон</option>
+        <option value="paper"   ${theme==='paper'  ?'selected':''}>Бумага</option>
+      </select>
+      <button id="createBtn" style="padding:16px; margin-top:12px;">🎮 Создать комнату</button>
+      <button id="backBtn" style="background:#95a5a6; color:#000;">← Назад</button>
+      <div class="err" id="err"></div>
+    </div>`;
+  let pickedDeck = deckStyle, pickedBack = backColor;
+  document.getElementById('deckPick').onclick = e => {
+    const el = e.target.closest('[data-deck]'); if (!el) return;
+    pickedDeck = el.dataset.deck;
+    [...document.querySelectorAll('#deckPick .choice')].forEach(x => x.classList.toggle('sel', x === el));
+  };
+  document.getElementById('backPick').onclick = e => {
+    const el = e.target.closest('[data-back]'); if (!el) return;
+    pickedBack = el.dataset.back;
+    [...document.querySelectorAll('#backPick .choice')].forEach(x => x.classList.toggle('sel', x === el));
+  };
+  document.getElementById('backBtn').onclick = renderWelcome;
+  document.getElementById('createBtn').onclick = () => {
+    const name = document.getElementById('name').value.trim() || 'Игрок';
+    const opts = {
+      maxPlayers: 4, docSet: document.getElementById('docSet').value,
+      theme: document.getElementById('theme').value,
+      deckStyle: pickedDeck, backColor: pickedBack, handSize: 6,
+    };
+    localStorage.setItem('lastName', name);
+    localStorage.setItem('opts', JSON.stringify(opts));
+    socket.emit('createRoom', { name, opts }, async r => {
+      if (!r.ok) return document.getElementById('err').textContent = r.err;
+      me = { name, id: r.playerId, roomId: r.roomId };
+      localStorage.setItem('me', JSON.stringify(me));
+      try { await navigator.clipboard.writeText(r.roomId); } catch {}
+    });
+  };
+}
+
+function renderJoin() {
+  const savedName = (me?.name) || localStorage.getItem('lastName') || '';
+  app.innerHTML = `
+    <div class="lobby" style="justify-content:center; min-height:100dvh;">
+      <h2 style="text-align:center;">Войти в игру</h2>
+      <label>Ваше имя</label>
+      <input id="name" placeholder="Имя" value="${esc(savedName)}">
+      <label>Код комнаты</label>
+      <input id="rid" placeholder="ABCD" style="text-transform:uppercase; letter-spacing:4px; text-align:center; font-size:22px; font-weight:700;">
+      <button id="joinBtn">Войти</button>
+      <button id="backBtn" style="background:#95a5a6; color:#000;">← Назад</button>
+      <div class="err" id="err"></div>
+    </div>`;
+  document.getElementById('backBtn').onclick = renderWelcome;
+  document.getElementById('joinBtn').onclick = () => {
+    const name = document.getElementById('name').value.trim() || 'Игрок';
+    const rid = document.getElementById('rid').value.trim();
+    if (!rid) return document.getElementById('err').textContent = 'Введите код';
+    localStorage.setItem('lastName', name);
+    socket.emit('joinRoom', { roomId: rid, name, playerId: me?.id }, r => {
+      if (!r.ok) return document.getElementById('err').textContent = r.err;
+      me = { name, id: r.playerId, roomId: r.roomId };
+      localStorage.setItem('me', JSON.stringify(me));
+    });
+  };
+}
+
+function renderTable() {
+  const s = state;
+  applyTheme(s.opts.theme);
+  const myTeam = s.myTeam;
+  const myDoc = s.docs[myTeam];
+  const oppDoc = s.docs[1 - myTeam];
+  const isMyTurn = s.turnSeat === s.mySeat;
+  const meP = s.players.find(p => p.seat === s.mySeat);
+  const iAmOut = meP?.out;
+  const isDealing = dealKey > 0;
+  const canDefend = s.field && s.field.defender === s.mySeat;
+  const isPlaying = s.phase === 'playing';
+
+  const attackerSeat = s.field?.attacker;
+  const partnerSeat = attackerSeat !== undefined ? (attackerSeat + 2) % 4 : -1;
+  const attackerP = attackerSeat !== undefined ? s.players.find(p => p.seat === attackerSeat) : null;
+  const partnerP  = partnerSeat !== -1 ? s.players.find(p => p.seat === partnerSeat) : null;
+  const attackerOut = attackerP?.out || false;
+  const partnerOutV = partnerP?.out || false;
+  const isAttacker = attackerSeat === s.mySeat && !iAmOut;
+  const isPartnerOfAttacker = partnerSeat === s.mySeat && !iAmOut;
+  const passedSeats = s.field?.passedSeats || [];
+  const iHavePassed = passedSeats.includes(s.mySeat);
+  const attackerPassed = attackerOut || (attackerSeat !== undefined && passedSeats.includes(attackerSeat));
+  const partnerPassed = partnerOutV || (partnerSeat !== -1 && passedSeats.includes(partnerSeat));
+  const bothPassed = !!(s.field && attackerPassed && partnerPassed);
+  const myPartnerSeat = (s.mySeat + 2) % 4;
+  const myPartner = s.players.find(p => p.seat === myPartnerSeat);
+  const partnerIsOut = myPartner ? myPartner.out : true;
+
+  const passPending = s.pendingPass;
+  const requester = passPending ? s.players.find(p => p.seat === passPending.seat) : null;
+  const requesterTeam = requester ? requester.team : -1;
+  const iAmRequester = passPending && passPending.seat === s.mySeat;
+  const iAmPartner = passPending && ((passPending.seat + 2) % 4) === s.mySeat;
+  const iCanConfirmPass = passPending && !iAmRequester && !iAmPartner && myTeam !== requesterTeam;
+
+  const swapPending = s.pendingSwap;
+  const iAmSwapFrom = swapPending && swapPending.from === s.mySeat;
+  const iAmSwapTo = swapPending && swapPending.to === s.mySeat;
+  const iCanConfirmSwap = swapPending && swapPending.stage === 'opponentConfirm' && myTeam !== swapPending.team;
+  const iCanDecideSwapAsk = swapPending && swapPending.stage === 'partnerConfirm' && swapPending.to === s.mySeat;
+
+  const startPending = s.pendingStart;
+  const iCanChooseStart = startPending && myTeam === startPending.winningTeam;
+
+  // Кто-то offline и сейчас его очередь/защита?
+  const nextDefenderSeat = (() => {
+    if (r_fieldExists(s)) return s.field.defender;
+    if (s.turnSeat === s.mySeat) {
+      const opp = opponentsOfView(s, s.mySeat);
+      return opp[0] ?? null;
+    }
+    return null;
+  })();
+  const waitingForSeat = s.players.find(p => !p.connected && !p.out && (
+    (s.phase === 'playing') &&
+    ((s.field && s.field.defender === p.seat) || (!s.field && s.turnSeat === p.seat))
+  ))?.seat;
+
+  let lobbyBar = '';
+  if (s.phase === 'lobby') {
+    const playersCount = s.players.length;
+    const maxP = s.opts.maxPlayers;
+    const isHost = meP?.isHost;
+    lobbyBar = `
+      <div class="waiting">
+        <div class="waiting-title">Код комнаты</div>
+        <div class="waiting-code" id="roomCode">${esc(s.id)}</div>
+        <button class="copy-btn" id="copyCode">📋 Скопировать</button>
+        <div class="waiting-info">Игроков: <b>${playersCount} / ${maxP}</b></div>
+        <div class="waiting-players">
+          ${s.players.map(p => `<div class="waiting-player ${p.isHost?'host':''}">${esc(p.name)}${p.isHost?' (хост)':''}</div>`).join('')}
+        </div>
+        ${isHost && playersCount === maxP
+          ? `<button class="start-big" id="startBtn">▶ Начать игру</button>`
+          : isHost ? `<div class="waiting-hint">Ждём игроков…</div>`
+          : `<div class="waiting-hint">Ждём хоста…</div>`}
+      </div>`;
+  }
+
+  let passNotice = '';
+  if (s.field && !passPending && !swapPending) {
+    if (bothPassed) passNotice = `<div class="pass-notice">⛔ Оба атакующих закрыты</div>`;
+    else if (attackerPassed && !partnerOutV && !partnerPassed)
+      passNotice = `<div class="pass-notice info">⏳ Атакующий сказал «Хватит» — ждём партнёра</div>`;
+    else if (partnerPassed && !attackerOut && !attackerPassed)
+      passNotice = `<div class="pass-notice info">⏳ Партнёр атакующего сказал «Хватит» — ждём атакующего</div>`;
+  }
+  if (waitingForSeat !== undefined) {
+    const wname = s.players.find(p => p.seat === waitingForSeat)?.name || '?';
+    passNotice = `<div class="pass-notice wait">⏳ Ждём ${esc(wname)} — отошёл, скоро вернётся</div>`;
+  }
+
+  let passOverlay = '';
+  if (passPending) {
+    passOverlay = `
+      <div class="overlay">
+        <div class="ov-title">📢 ${esc(requester?.name || '?')} передаёт документы партнёру</div>
+        <div class="ov-cards">${passPending.cards.map(c => cardHtml(c)).join('')}</div>
+        ${iCanConfirmPass ? `<div class="ov-buttons">
+          <button class="b1" id="confirmPassBtn">✅ Подтвердить</button>
+          <button class="b2" id="cancelPassBtn">✖ Отклонить</button>
+        </div>` : iAmRequester ? `<div class="ov-wait">Ожидание подтверждения…</div>`
+          : iAmPartner ? `<div class="ov-wait">Ждём подтверждения противника…</div>`
+          : `<div class="ov-wait">Ожидание…</div>`}
+      </div>`;
+  }
+
+  let swapOverlay = '';
+  if (swapPending) {
+    const fromP = s.players.find(p => p.seat === swapPending.from);
+    const toP = s.players.find(p => p.seat === swapPending.to);
+    let inner = '';
+    if (swapPending.stage === 'partnerConfirm') {
+      inner = iCanDecideSwapAsk
+        ? `<div class="ov-wait">Партнёр просит вернуть его. Отдадите все свои карты?</div>
+           <div class="ov-buttons">
+             <button class="b1" id="swapAcceptBtn">✅ Да</button>
+             <button class="b2" id="swapRejectBtn">✖ Нет</button>
+           </div>`
+        : `<div class="ov-wait">Ожидание решения партнёра…</div>`;
+    } else {
+      inner = `
+        <div class="ov-cards">${(swapPending.cards || []).map(c => cardHtml(c)).join('')}</div>
+        ${iCanConfirmSwap ? `<div class="ov-buttons">
+          <button class="b1" id="swapConfirmBtn">✅ Подтвердить</button>
+          <button class="b2" id="swapCancelBtn">✖ Отклонить</button>
+        </div>` : `<div class="ov-wait">Ожидание…</div>`}`;
+    }
+    swapOverlay = `
+      <div class="overlay">
+        <div class="ov-title">🔄 Своп: ${esc(fromP?.name || '?')} ↔ ${esc(toP?.name || '?')}</div>
+        ${inner}
+      </div>`;
+  }
+
+  let startOverlay = '';
+  if (startPending && iCanChooseStart && s.phase === 'roundEnd') {
+    const partner = s.players.find(p => p.seat === (s.mySeat + 2) % 4);
+    startOverlay = `
+      <div class="overlay">
+        <div class="ov-title">🏆 Вы выиграли кон! Кто зайдёт в следующем?</div>
+        <div class="ov-buttons">
+          <button class="b1" id="startMeBtn">Я (${esc(meP?.name || '')})</button>
+          <button class="b1" id="startPartnerBtn">Партнёр (${esc(partner?.name || '?')})</button>
+        </div>
+      </div>`;
+  }
+
+  const seats = s.players.filter(p => p.seat !== s.mySeat).map(p => {
+    const isThisInPassed = passedSeats.includes(p.seat);
+    const offlineBadge = !p.connected ? '<div class="badge-off">⚠ отошёл</div>' : '';
+    return `
+      <div class="seat ${posClass(p.seat)} ${p.seat===s.turnSeat?'active':''} ${p.out?'out':''} ${!p.connected?'offline':''}"
+           data-seat="${p.seat}">
+        ${esc(p.name)} ${p.team===myTeam?'★':'✗'}
+        ${isThisInPassed ? '<div class="pass-badge">⛔ Хватит</div>' : ''}
+        ${offlineBadge}
+      </div>`;
+  }).join('');
+
+  let deckArea = '';
+  if (isPlaying || s.phase === 'roundEnd' || s.phase === 'gameEnd') {
+    const stack = Array.from({ length: 4 }).map((_, i) =>
+      `<div class="card back ${isDealing ? 'deal' : ''}" style="top:${i*3}px;left:${i*3}px;z-index:${10+i}">
+        <img src="${backPath(s.opts)}" alt="•" draggable="false">
+      </div>`).join('');
+    deckArea = `
+      <div class="deck-area">
+        <div class="deck-wrapper">
+          <div class="deck-stack">${stack}</div>
+          ${s.trumpCard ? `<div class="trump-under">${cardHtml(s.trumpCard)}</div>` : ''}
+        </div>
+      </div>`;
+  }
+
+  const fieldHtml = s.field
+    ? s.field.cards.map(e => {
+        const isTarget = defendTarget === e.card.id;
+        const canBeTarget = canDefend && !e.beatenBy && e.card.r !== myDoc;
+        const cls = ['slot'];
+        if (canBeTarget) cls.push('tappable');
+        if (isTarget)    cls.push('selected');
+        return `<div class="${cls.join(' ')}" data-field-card="${e.card.id}">
+          ${cardHtml(e.card)}
+          ${e.beatenBy ? cardHtml(e.beatenBy, { cls:'beaten' }) : ''}
+        </div>`;
+      }).join('')
+    : `<div style="opacity:.5">— поле пусто —</div>`;
+
+  const onlyDocsNow = s.myHand.length > 0 && s.myHand.every(c => c.r === myDoc);
+  const canAttack = isMyTurn && !iAmOut && !s.field && !passPending && !swapPending && !startPending && waitingForSeat === undefined;
+  const canAdd = !iAmOut && s.field && (isAttacker || isPartnerOfAttacker) && !iHavePassed && !passPending && !swapPending;
+  const canSayEnd = !iAmOut && s.field && (isAttacker || isPartnerOfAttacker) && !iHavePassed && !passPending && !swapPending;
+  const canBito = canDefend && bothPassed && s.field.cards.every(x => x.beatenBy)
+                  && !s.field.cards.some(x => x.card.r === myDoc)
+                  && !passPending && !swapPending;
+  const canPickUp = canDefend && !passPending && !swapPending;
+  const canFalsh = canDefend && defendTarget && !passPending && !swapPending;
+  const canThrow = isMyTurn && !iAmOut && onlyDocsNow && !passPending && !swapPending && partnerIsOut;
+  const canPassDocs = isMyTurn && !iAmOut && onlyDocsNow && !s.field && !passPending && !swapPending && !partnerIsOut;
+  const canSwapInitiate = isMyTurn && !iAmOut && !s.field && !passPending && !swapPending
+                          && partnerIsOut && !s.swapUsedByTeam[myTeam];
+  const canSwapAsk = iAmOut && !partnerIsOut && !passPending && !swapPending
+                     && !s.swapUsedByTeam[myTeam] && s.turnSeat === myPartnerSeat;
+
+  const emojiPanel = emojiOpen ? `<div class="emoji-bar" id="emojiBar">
+    ${EMOJIS.map(e => `<button data-e="${e}">${e}</button>`).join('')}</div>` : '';
+  const emojiBtn = isPlaying ? `<button class="emoji-toggle" id="emojiToggle">😀</button>${emojiPanel}` : '';
+  const historyBtn = isPlaying ? `<button class="history-btn" id="historyBtn">📜</button>` : '';
+
+  const handHtml = s.myHand.map(c => cardHtml(c, {
+    cls: [selected.has(c.id) ? 'sel' : '', c.r === myDoc ? 'doc' : '', isDealing ? 'deal' : '']
+      .filter(Boolean).join(' ')
+  })).join('');
+
+  let hintHtml = '';
+  if (waitingForSeat !== undefined) {
+    hintHtml = `<div class="hint">⏳ Ждём игрока — скоро вернётся</div>`;
+  } else if (canDefend && !bothPassed && !passPending && !swapPending) {
+    const hasMyDoc = s.field.cards.some(x => !x.beatenBy && x.card.r === myDoc);
+    if (hasMyDoc) hintHtml = `<div class="hint">⚠ На столе ваш документ — нужно поднять всё</div>`;
+    else if (defendTarget) hintHtml = `<div class="hint">👆 Выберите свою карту или «Фальш»</div>`;
+    else hintHtml = `<div class="hint">👆 Выберите карту врага на столе</div>`;
+  } else if (canDefend && bothPassed && !passPending) {
+    hintHtml = `<div class="hint">✋ Атакующие закрыты — решите: «Бито» или «Поднять»</div>`;
+  }
+
+  app.innerHTML = `
+    <div class="table" id="table">
+      ${lobbyBar}
+      ${passNotice}
+      ${deckArea}
+      <button class="exit-btn" id="exitBtn" title="Выйти">✕</button>
+      <div class="side">
+        Козырь: <b>${esc(s.trumpSuit || '—')}</b><br>
+        Мой док: <b>${esc(myDoc)}</b><br>
+        Их док: <b>${esc(oppDoc)}</b><br>
+        Счёт: ${s.roundWins[0]} : ${s.roundWins[1]}
+      </div>
+      ${seats}
+      <div class="center">${fieldHtml}</div>
+      ${passOverlay}
+      ${swapOverlay}
+      ${startOverlay}
+      ${emojiBtn}
+      ${historyBtn}
+    </div>
+    <div class="hand" id="hand">${handHtml}</div>
+    <div class="actions">
+      ${hintHtml}
+      ${canAttack ? `<button class="b1" id="attackBtn">Атаковать</button>` : ''}
+      ${canAdd ? `<button class="b1" id="attackBtn">Подкинуть</button>` : ''}
+      ${canSayEnd ? `<button class="b2" id="endBtn">Хватит</button>` : ''}
+      ${canPickUp ? `<button class="b3" id="pickBtn">Поднять всё</button>` : ''}
+      ${canFalsh ? `<button class="b4" id="falshBtn">🃏 Фальш</button>` : ''}
+      ${canBito ? `<button class="b1" id="bitoBtn">✔ Бито</button>` : ''}
+      ${canThrow ? `<button class="b1" id="throwBtn">🏆 Бросить документы</button>` : ''}
+      ${canPassDocs ? `<button class="b2" id="passBtn">Передать партнёру</button>` : ''}
+      ${canSwapInitiate ? `<button class="b5" id="swapInitBtn">🔄 Отдать партнёру</button>` : ''}
+      ${canSwapAsk ? `<button class="b5" id="swapAskBtn">🔄 Вернуться в игру</button>` : ''}
+    </div>
+    <div class="err" id="err"></div>
+  `;
+
+  const err = m => { const e = document.getElementById('err'); if (e) e.textContent = m; };
+  const g = id => document.getElementById(id);
+
+  document.getElementById('hand').onclick = e => {
+    const el = e.target.closest('.card'); if (!el) return;
+    const id = el.dataset.id;
+    if (canDefend) {
+      if (!defendTarget) return err('Сначала выберите карту врага на столе');
+      const entry = s.field.cards.find(x => x.card.id === defendTarget);
+      const card  = s.myHand.find(c => c.id === id);
+      if (!entry || !card) return;
+      if (entry.card.r === myDoc) return err('Нельзя бить свой документ');
+      if (card.r === myDoc && card.s !== s.trumpSuit) return err('Свой документ бьёт только козырем');
+      if (!beatsUI(card, entry.card, s.trumpSuit)) return err('Не бьёт');
+      socket.emit('defend', { targetId: defendTarget, withId: id });
+      defendTarget = null; selected.clear();
+      return;
+    }
+    if (selected.has(id)) selected.delete(id); else selected.add(id);
+    renderTable();
+  };
+
+  const centerEl = document.querySelector('.center');
+  if (centerEl) {
+    centerEl.onclick = e => {
+      const slot = e.target.closest('[data-field-card]'); if (!slot) return;
+      if (!canDefend) return;
+      const fid = slot.dataset.fieldCard;
+      const entry = s.field.cards.find(x => x.card.id === fid);
+      if (!entry || entry.beatenBy) return;
+      if (entry.card.r === myDoc) return err('Это ваш документ — только поднять');
+      defendTarget = (defendTarget === fid) ? null : fid;
+      renderTable();
+    };
+  }
+
+  const cc = g('copyCode');
+  if (cc) cc.onclick = async () => {
+    const code = document.getElementById('roomCode').textContent;
+    try { await navigator.clipboard.writeText(code); cc.textContent = '✅ ОК'; setTimeout(() => cc.textContent = '📋 Скопировать', 1500); } catch {}
+  };
+  const st = g('startBtn'); if (st) st.onclick = () => socket.emit('startGame');
+  const atk = g('attackBtn'); if (atk) atk.onclick = () => {
+    if (!selected.size) return err('Выберите карты');
+    socket.emit('attack', { cardIds: [...selected] }); selected.clear();
+  };
+  const pk = g('pickBtn'); if (pk) pk.onclick = () => { socket.emit('pickUp'); defendTarget = null; };
+  const en = g('endBtn'); if (en) en.onclick = () => socket.emit('endAttack');
+  const bi = g('bitoBtn'); if (bi) bi.onclick = () => socket.emit('bito');
+  const fl = g('falshBtn'); if (fl) fl.onclick = () => {
+    if (!defendTarget) return err('Сначала выберите карту врага');
+    socket.emit('falsh', { cardId: defendTarget }); defendTarget = null;
+  };
+  const th = g('throwBtn'); if (th) th.onclick = () => socket.emit('throwDocs');
+  const ps = g('passBtn'); if (ps) ps.onclick = () => socket.emit('passDocsRequest');
+  const cp = g('confirmPassBtn'); if (cp) cp.onclick = () => socket.emit('passDocsConfirm');
+  const xp = g('cancelPassBtn'); if (xp) xp.onclick = () => socket.emit('passDocsCancel');
+  const si = g('swapInitBtn'); if (si) si.onclick = () => socket.emit('swapInitiate');
+  const sa = g('swapAskBtn'); if (sa) sa.onclick = () => socket.emit('swapAsk');
+  const sacc = g('swapAcceptBtn'); if (sacc) sacc.onclick = () => socket.emit('swapAccept');
+  const srej = g('swapRejectBtn'); if (srej) srej.onclick = () => socket.emit('swapReject');
+  const sc = g('swapConfirmBtn'); if (sc) sc.onclick = () => socket.emit('swapConfirm');
+  const sx = g('swapCancelBtn'); if (sx) sx.onclick = () => socket.emit('swapCancel');
+  const sm = g('startMeBtn'); if (sm) sm.onclick = () => socket.emit('chooseStart', { seat: s.mySeat });
+  const sp = g('startPartnerBtn'); if (sp) sp.onclick = () => socket.emit('chooseStart', { seat: myPartnerSeat });
+  const ex = g('exitBtn'); if (ex) ex.onclick = () => {
+    if (!confirm('Выйти из комнаты?')) return;
+    socket.emit('leaveRoom');
+    localStorage.removeItem('me');
+    me = null; state = null;
+    renderWelcome();
+  };
+
+  const et = g('emojiToggle');
+  if (et) et.onclick = () => { emojiOpen = !emojiOpen; renderTable(); };
+  const eb = g('emojiBar');
+  if (eb) eb.onclick = e => {
+    const b = e.target.closest('[data-e]'); if (!b) return;
+    socket.emit('reaction', { emoji: b.dataset.e }); emojiOpen = false; renderTable();
+  };
+  const hb = g('historyBtn');
+  if (hb) hb.onclick = () => { historyOpen = true; renderTable(); };
+
+  if (historyOpen) showHistory(s);
+  if (s.phase === 'gameEnd' && s.winnerTeam != null) showChampion(s);
+}
+
+function r_fieldExists(s) { return !!s.field; }
+function opponentsOfView(s, attackerSeat) {
+  const partner = (attackerSeat + 2) % 4;
+  const list = [];
+  for (let i = 1; i <= 3; i++) {
+    const s2 = (attackerSeat - i + 4) % 4;
+    if (s2 === partner) continue;
+    const pl = s.players.find(p => p.seat === s2);
+    if (!pl || pl.out) continue;
+    list.push(s2);
+  }
+  return list;
+}
+
+function showHistory(s) {
+  const el = document.createElement('div');
+  el.className = 'overlay';
+  el.style.zIndex = 900;
+  el.innerHTML = `
+    <div class="ov-title">📜 История конов</div>
+    <div class="history-list">
+      ${s.roundHistory.length === 0
+        ? '<div class="ov-wait">Пока нет конов</div>'
+        : s.roundHistory.map(r => `<div class="history-row">Кон ${r.n}: 🏆 Team ${r.winner ? 'B' : 'A'}</div>`).join('')}
+    </div>
+    <div class="ov-buttons"><button class="b1" id="closeHistory">Закрыть</button></div>
+  `;
+  document.body.appendChild(el);
+  el.onclick = e => {
+    if (e.target === el || e.target.id === 'closeHistory') { el.remove(); historyOpen = false; }
+  };
+}
+
+function showChampion(s) {
+  if (document.getElementById('champOverlay')) return;
+  const winTeam = s.winnerTeam;
+  const winners = s.players.filter(p => p.team === winTeam).map(p => p.name).join(' и ');
+  const minutes = s.gameStartTime ? Math.round((Date.now() - s.gameStartTime) / 60000) : 0;
+  const myStats = s.playerStats;
+  const bestScore = Math.max(...myStats);
+  const bestSeats = myStats.map((v, i) => v === bestScore ? i : -1).filter(i => i >= 0);
+  const bestNames = bestSeats.map(i => s.players.find(p => p.seat === i)?.name).filter(Boolean).join(', ');
+
+  const el = document.createElement('div');
+  el.className = 'champ-overlay';
+  el.id = 'champOverlay';
+  el.innerHTML = `
+    <div class="champ-title">🏆 Team ${winTeam ? 'B' : 'A'} — ЧЕМПИОН!</div>
+    <div class="champ-names">${esc(winners)}</div>
+    <div class="champ-stats">
+      Счёт: ${s.roundWins[0]} : ${s.roundWins[1]}<br>
+      Время партии: ~${minutes} мин<br>
+      Конов сыграно: ${s.roundHistory.length}
+    </div>
+    <div class="champ-best">⭐ Лучший игрок: ${esc(bestNames || '—')} (${bestScore} кон.)</div>
+    <div class="champ-buttons">
+      <button id="playAgainBtn" style="background:#f1c40f; color:#000;">🔄 Играть снова</button>
+      <button id="exitMenuBtn" style="background:#95a5a6; color:#000;">🚪 Выйти в меню</button>
+    </div>
+  `;
+  document.body.appendChild(el);
+  document.getElementById('playAgainBtn').onclick = () => { el.remove(); socket.emit('restartGame'); };
+  document.getElementById('exitMenuBtn').onclick = () => {
+    el.remove();
+    socket.emit('leaveRoom');
+    localStorage.removeItem('me');
+    me = null; state = null;
+    renderWelcome();
+  };
+}
+
+function showReaction(seat, emoji) {
+  const table = document.getElementById('table'); if (!table || !state) return;
+  const posMap = {
+    bottom: 'bottom:190px; left:50%; transform:translateX(-50%)',
+    top:    'top:80px; left:50%; transform:translateX(-50%)',
+    left:   'top:40%; left:100px',
+    right:  'top:40%; right:100px',
+  };
+  const pos = posMap[posClass(seat)] || posMap.top;
+  const el = document.createElement('div');
+  el.className = 'reaction';
+  el.textContent = emoji;
+  el.style.cssText = pos + ';position:absolute';
+  table.appendChild(el);
+  setTimeout(() => el.remove(), 2000);
+}
+function showFalshBanner(byName, targetName, card) {
+  const el = document.createElement('div');
+  el.className = 'falsh-banner';
+  el.innerHTML = `🃏 Ты фальшивка!<div style="font-size:14px;font-weight:500;margin-top:6px;opacity:.9">${esc(byName)} → ${esc(targetName)} · ${esc(card.r)}${esc(card.s)}</div>`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2200);
+}
+
+socket.on('state', s => {
+  const mySeat = s.mySeat;
+  if (!s.field || s.field.defender !== mySeat) defendTarget = null;
+  else {
+    const t = s.field.cards.find(x => x.card.id === defendTarget);
+    if (!t || t.beatenBy) defendTarget = null;
+  }
+  const startedNewRound = s.phase === 'playing' && lastPhaseForDeal !== 'playing';
+  lastPhaseForDeal = s.phase;
+  state = s;
+  if (startedNewRound) {
+    dealKey = Date.now();
+    renderTable();
+    setTimeout(() => { dealKey = 0; renderTable(); }, 1600);
+  } else renderTable();
+});
+socket.on('reaction', ({ seat, emoji }) => showReaction(seat, emoji));
+socket.on('falsh', ({ byName, targetName, card }) => showFalshBanner(byName, targetName, card));
+socket.on('err', m => { const e = document.getElementById('err'); if (e) e.textContent = m; });
+
+if (me?.roomId) {
+  socket.emit('joinRoom', { roomId: me.roomId, name: me.name, playerId: me.id }, r => {
+    if (!r.ok) { localStorage.removeItem('me'); me = null; renderWelcome(); }
+    else me.id = r.playerId;
+  });
+} else renderWelcome();
+</script>
+</body>
+</html>
