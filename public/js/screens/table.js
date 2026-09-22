@@ -1,12 +1,47 @@
-import { state, saveMe, applyTheme } from '../state.js';
+import { state, saveMe, applyTheme, playerState, getAvatar, savePrefs } from '../state.js';
 import { socket } from '../socket.js';
 import { cardHtml, backPath, esc, renderHandFan } from '../card.js';
 import { buildOverlays, bindOverlays } from '../ui/overlays.js';
 import { maybeShowChampion } from '../ui/champion.js';
 import { showHistory } from '../ui/history.js';
+import { openSettings } from '../ui/settings.js';
+import { openChat } from '../ui/chat.js';
 import { initDrag } from '../drag.js';
 
 const EMOJIS = ['👍','😂','😡','😭','🔥','💪','🤔','😎','👏','😱','🤝','🎯','😤','🙈','💯','⚡'];
+
+let sortMode = 0; // 0=старшинство, 1=масть, 2=козырь
+
+function sortHand(hand, myDoc, trumpSuit) {
+  const RV = { '6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14 };
+  const SUIT_ORDER = { '♠':0, '♥':1, '♦':2, '♣':3 };
+  const arr = [...hand];
+  const isDoc = c => c.r === myDoc;
+  const isKoz = c => c.s === trumpSuit;
+
+  // Документы всегда первыми
+  arr.sort((a, b) => {
+    const aD = isDoc(a), bD = isDoc(b);
+    if (aD && !bD) return -1;
+    if (!aD && bD) return 1;
+    if (aD && bD) return SUIT_ORDER[a.s] - SUIT_ORDER[b.s]; // внутри док — по масти
+
+    if (sortMode === 0) {
+      if (RV[b.r] !== RV[a.r]) return RV[b.r] - RV[a.r];
+      return SUIT_ORDER[a.s] - SUIT_ORDER[b.s];
+    }
+    if (sortMode === 1) {
+      if (SUIT_ORDER[a.s] !== SUIT_ORDER[b.s]) return SUIT_ORDER[a.s] - SUIT_ORDER[b.s];
+      return RV[a.r] - RV[b.r];
+    }
+    // sortMode === 2 — козырь вперёд
+    const aK = isKoz(a), bK = isKoz(b);
+    if (aK && !bK) return -1;
+    if (!aK && bK) return 1;
+    return RV[a.r] - RV[b.r];
+  });
+  return arr;
+}
 
 export function renderTable(app, navigate) {
   const s = state.server;
@@ -61,7 +96,7 @@ export function renderTable(app, navigate) {
         <button class="copy-btn" id="copyCode">📋 Скопировать</button>
         <div class="waiting-info">Игроков: <b>${playersCount} / ${maxP}</b></div>
         <div class="waiting-players">
-          ${s.players.map(p => `<div class="waiting-player ${p.isHost?'host':''}">${esc(p.name)}${p.isHost?' (хост)':''}</div>`).join('')}
+          ${s.players.map(p => `<div class="waiting-player ${p.isHost?'host':''}">${getAvatar(p.seat)} ${esc(p.name)}${p.isHost?' (хост)':''}</div>`).join('')}
         </div>
         ${isHost && playersCount === maxP
           ? `<button class="start-big" id="startBtn">▶ Начать игру</button>`
@@ -81,24 +116,29 @@ export function renderTable(app, navigate) {
   }
   if (waitingForSeat !== undefined) {
     const wname = s.players.find(p => p.seat === waitingForSeat)?.name || '?';
-    passNotice = `<div class="pass-notice wait">⏳ Ждём ${esc(wname)} — отошёл, скоро вернётся</div>`;
+    passNotice = `<div class="pass-notice wait">⏳ Ждём ${esc(wname)} — отошёл</div>`;
   }
 
-  // Сиденья
+  // Сиденья с аватарками и состояниями
   const seats = s.players.filter(p => p.seat !== mySeat).map(p => {
     const isThisInPassed = passedSeats.includes(p.seat);
     const offlineBadge = !p.connected ? '<div class="badge-off">⚠ отошёл</div>' : '';
     const posArr = ['bottom','right','top','left'];
     const pos = posArr[((p.seat - mySeat + 4) % 4)] || 'top';
+    const st = playerState(s, p.seat);
+    const stCls = st === 'бьёт' ? 'beat' : st === 'думает' ? 'think' : st === 'ходит' ? 'move'
+                : st === 'отошёл' ? 'out' : '';
     return `
       <div class="seat ${pos} ${p.seat===s.turnSeat?'active':''} ${p.out?'out':''} ${!p.connected?'offline':''}">
-        ${esc(p.name)} ${p.team===myTeam?'★':'✗'}
+        <div class="avatar">${getAvatar(p.seat)}</div>
+        <div>${esc(p.name)} ${p.team===myTeam?'★':'✗'}</div>
+        ${st ? `<div class="state ${stCls}">${st}</div>` : ''}
         ${isThisInPassed ? '<div class="pass-badge">⛔ Хватит</div>' : ''}
         ${offlineBadge}
       </div>`;
   }).join('');
 
-  // Колода и козырь
+  // Колода
   let deckArea = '';
   if (isPlaying || s.phase === 'roundEnd' || s.phase === 'gameEnd') {
     const stack = Array.from({ length: 4 }).map((_, i) =>
@@ -114,7 +154,7 @@ export function renderTable(app, navigate) {
       </div>`;
   }
 
-  // Поле боя
+  // Поле
   const fieldHtml = s.field
     ? s.field.cards.map(e => {
         const canBeTarget = canDefend && !e.beatenBy && e.card.r !== myDoc;
@@ -146,50 +186,52 @@ export function renderTable(app, navigate) {
   const selectedOppDocs = s.myHand.filter(c => state.selected.has(c.id) && c.r === oppDoc && oppDoc !== myDoc);
   const isOnlyOppDocs = state.selected.size > 0 && selectedOppDocs.length === state.selected.size;
 
-  // Рука — веер
-  const handHtml = renderHandFan(s.myHand, {
-    myDoc,
-    oppDoc,
-    selected: state.selected,
-    isDealing,
-  });
+  // Сортировка руки
+  const sortedHand = sortHand(s.myHand, myDoc, s.trumpSuit);
+  const handHtml = renderHandFan(sortedHand, { myDoc, oppDoc, selected: state.selected, isDealing });
 
   // Подсказка
   let hintHtml = '';
-  if (isOnlyOppDocs) {
-    hintHtml = `<div class="hint" style="color:#e74c3c;">⚠ Навязываете документ противника — не бьётся</div>`;
-  } else if (waitingForSeat !== undefined) {
-    hintHtml = `<div class="hint">⏳ Ждём игрока — скоро вернётся</div>`;
-  } else if (canDefend && !bothPassed && !s.pendingPass && !s.pendingSwap && !s.pendingFalsh) {
+  if (isOnlyOppDocs) hintHtml = `<div class="hint" style="color:#e74c3c;">⚠ Навязываете документ противника</div>`;
+  else if (waitingForSeat !== undefined) hintHtml = `<div class="hint">⏳ Ждём игрока — скоро вернётся</div>`;
+  else if (canDefend && !bothPassed && !s.pendingPass && !s.pendingSwap && !s.pendingFalsh) {
     const hasMyDoc = s.field.cards.some(x => !x.beatenBy && x.card.r === myDoc);
-    if (hasMyDoc) hintHtml = `<div class="hint">⚠ На столе ваш документ — нужно поднять всё</div>`;
+    if (hasMyDoc) hintHtml = `<div class="hint">⚠ На столе ваш документ — поднять всё</div>`;
     else hintHtml = `<div class="hint">👆 Тяните карту на карту врага — бить. Тап по врагу — фальш</div>`;
-  } else if (canDefend && bothPassed) {
-    hintHtml = `<div class="hint">✋ Атакующие закрыты — решите: «Бито» или «Поднять»</div>`;
-  } else if (canAttack) {
-    hintHtml = `<div class="hint">👆 Тяните карту в поле — атака</div>`;
-  }
+  } else if (canDefend && bothPassed) hintHtml = `<div class="hint">✋ Атакующие закрыты — решите: «Бито» или «Поднять»</div>`;
+  else if (canAttack) hintHtml = `<div class="hint">👆 Тяните карту в поле — атака</div>`;
 
-  const overlays = buildOverlays();
+  // Центральная кнопка действия + дуга
+  let centerActionBtn = '';
+  let centerActionCls = 'b1';
+  if (canAttack || canAdd) {
+    if (isOnlyOppDocs) { centerActionBtn = `📤 Навязать (${selectedOppDocs.length})`; centerActionCls = 'b4'; }
+    else if (canAttack) { centerActionBtn = '⚔ Атаковать'; centerActionCls = 'b1'; }
+    else                { centerActionBtn = '➕ Подкинуть'; centerActionCls = 'b1'; }
+  } else if (canPickUp) { centerActionBtn = '📥 Поднять всё'; centerActionCls = 'b3'; }
+  else if (canBito)     { centerActionBtn = '✔ Бито'; centerActionCls = 'b1'; }
+  else if (canSayEnd)   { centerActionBtn = '✋ Хватит'; centerActionCls = 'b2'; }
+
+  const extraActions = [];
+  if (canThrow) extraActions.push(`<button class="b1" id="throwBtn">🏆 Бросить док.</button>`);
+  if (canPassDocs) extraActions.push(`<button class="b2" id="passBtn">📤 Передать</button>`);
+  if (canSwapInitiate) extraActions.push(`<button class="b5" id="swapInitBtn">🔄 Отдать</button>`);
+  if (canSwapAsk) extraActions.push(`<button class="b5" id="swapAskBtn">🔄 Вернуться</button>`);
+
+  // Дуга иконок
+  const arcBtn = isPlaying ? `
+    <div class="icon-arc">
+      <button class="arc-btn arc-1" id="sortBtn" title="Сортировка">🔄</button>
+      <button class="arc-btn arc-2" id="emojiToggle" title="Смайлик">😀</button>
+      <button class="arc-btn arc-3" id="chatBtn" title="Чат">💬</button>
+      <button class="arc-btn arc-4 ${state.micOn?'active':''}" id="micBtn" title="Микрофон">🎤</button>
+    </div>
+  ` : '';
+
   const emojiPanel = state.emojiOpen ? `<div class="emoji-bar" id="emojiBar">
     ${EMOJIS.map(e => `<button data-e="${e}">${e}</button>`).join('')}</div>` : '';
-  const emojiBtn = isPlaying ? `<button class="emoji-toggle" id="emojiToggle">😀</button>${emojiPanel}` : '';
-  const historyBtn = isPlaying ? `<button class="history-btn" id="historyBtn">📜</button>` : '';
 
-  // Кнопки справа
-  const rightActions = [];
-  if (canAttack || canAdd) {
-    rightActions.push(`<button class="${isOnlyOppDocs ? 'b4' : 'b1'}" id="attackBtn">${
-      isOnlyOppDocs ? `📤 Навязать (${selectedOppDocs.length})` : (canAttack ? 'Атаковать' : 'Подкинуть')
-    }</button>`);
-  }
-  if (canSayEnd) rightActions.push(`<button class="b2" id="endBtn">Хватит</button>`);
-  if (canPickUp) rightActions.push(`<button class="b3" id="pickBtn">Поднять всё</button>`);
-  if (canBito) rightActions.push(`<button class="b1" id="bitoBtn">✔ Бито</button>`);
-  if (canThrow) rightActions.push(`<button class="b1" id="throwBtn">🏆 Бросить док.</button>`);
-  if (canPassDocs) rightActions.push(`<button class="b2" id="passBtn">Передать</button>`);
-  if (canSwapInitiate) rightActions.push(`<button class="b5" id="swapInitBtn">🔄 Отдать</button>`);
-  if (canSwapAsk) rightActions.push(`<button class="b5" id="swapAskBtn">🔄 Вернуться</button>`);
+  const overlays = buildOverlays();
 
   app.innerHTML = `
     <div class="table" id="table">
@@ -209,18 +251,17 @@ export function renderTable(app, navigate) {
       ${seats}
       <div class="center">${fieldHtml}</div>
 
-      <div class="right-actions">
-        ${rightActions.join('')}
+      <div class="right-cluster">
+        ${arcBtn}
+        ${centerActionBtn ? `<button class="action-center ${centerActionCls}" id="centerActionBtn">${centerActionBtn}</button>` : ''}
+        <div class="extra-actions">${extraActions.join('')}</div>
       </div>
 
       ${overlays}
-      ${emojiBtn}
-      ${historyBtn}
+      ${emojiPanel}
     </div>
     <div class="hand" id="hand">${handHtml}</div>
-    <div class="actions">
-      ${hintHtml}
-    </div>
+    <div class="actions">${hintHtml}</div>
     <div class="err" id="err"></div>
   `;
 
@@ -228,10 +269,8 @@ export function renderTable(app, navigate) {
   const err = m => { const e = document.getElementById('err'); if (e) e.textContent = m; };
   const g = id => document.getElementById(id);
 
-  // Drag-and-drop
   initDrag(() => renderTable(app, navigate));
 
-  // Клик по карте врага = фальш
   const centerEl = document.querySelector('.center');
   if (centerEl) {
     centerEl.onclick = e => {
@@ -240,7 +279,7 @@ export function renderTable(app, navigate) {
       const fid = slot.dataset.fieldCard;
       const entry = s.field.cards.find(x => x.card.id === fid);
       if (!entry || entry.beatenBy) return;
-      if (entry.card.r === myDoc) return err('Это ваш документ — только поднять');
+      if (entry.card.r === myDoc) return err('Ваш документ — только поднять');
       socket.emit('falsh', { cardId: fid });
     };
   }
@@ -253,31 +292,45 @@ export function renderTable(app, navigate) {
   };
   const st = g('startBtn'); if (st) st.onclick = () => socket.emit('startGame');
 
-  // Действия
-  const atk = g('attackBtn'); if (atk) atk.onclick = () => {
-    if (!state.selected.size) return err('Выберите карты');
-    socket.emit('attack', { cardIds: [...state.selected] }); state.selected.clear();
+  // Кнопки действий
+  const ca = g('centerActionBtn');
+  if (ca) ca.onclick = () => {
+    if (canAttack || canAdd) {
+      if (!state.selected.size && !isOnlyOppDocs) return err('Выберите карты (тап по карте)');
+      if (isOnlyOppDocs) {
+        socket.emit('attack', { cardIds: [...state.selected] }); state.selected.clear();
+      } else if (canAttack) {
+        socket.emit('attack', { cardIds: [...state.selected] }); state.selected.clear();
+      } else {
+        socket.emit('attack', { cardIds: [...state.selected] }); state.selected.clear();
+      }
+      return;
+    }
+    if (canPickUp) socket.emit('pickUp');
+    if (canBito)   socket.emit('bito');
+    if (canSayEnd) socket.emit('endAttack');
   };
-  const pk = g('pickBtn'); if (pk) pk.onclick = () => socket.emit('pickUp');
-  const en = g('endBtn'); if (en) en.onclick = () => socket.emit('endAttack');
-  const bi = g('bitoBtn'); if (bi) bi.onclick = () => socket.emit('bito');
   const th = g('throwBtn'); if (th) th.onclick = () => socket.emit('throwDocs');
   const ps = g('passBtn'); if (ps) ps.onclick = () => socket.emit('passDocsRequest');
   const si = g('swapInitBtn'); if (si) si.onclick = () => socket.emit('swapInitiate');
   const sa = g('swapAskBtn'); if (sa) sa.onclick = () => socket.emit('swapAsk');
 
-  // Настройки (заглушка)
-  const sb = g('settingsBtn'); if (sb) sb.onclick = () => {
-    if (!confirm('Выйти из комнаты?')) return;
-    socket.emit('leaveRoom');
-    saveMe(null);
-    state.server = null;
-    navigate('welcome');
+  // Иконки дуги
+  const sortBtn = g('sortBtn');
+  if (sortBtn) sortBtn.onclick = () => {
+    sortMode = (sortMode + 1) % 3;
+    renderTable(app, navigate);
+  };
+  const emojiToggle = g('emojiToggle');
+  if (emojiToggle) emojiToggle.onclick = () => { state.emojiOpen = !state.emojiOpen; renderTable(app, navigate); };
+  const chatBtn = g('chatBtn'); if (chatBtn) chatBtn.onclick = () => openChat();
+  const micBtn = g('micBtn');
+  if (micBtn) micBtn.onclick = () => {
+    state.micOn = !state.micOn;
+    savePrefs();
+    renderTable(app, navigate);
   };
 
-  // Эмодзи
-  const et = g('emojiToggle');
-  if (et) et.onclick = () => { state.emojiOpen = !state.emojiOpen; renderTable(app, navigate); };
   const eb = g('emojiBar');
   if (eb) eb.onclick = e => {
     const b = e.target.closest('[data-e]'); if (!b) return;
@@ -286,9 +339,9 @@ export function renderTable(app, navigate) {
     renderTable(app, navigate);
   };
 
-  // История
-  const hb = g('historyBtn');
-  if (hb) hb.onclick = () => showHistory();
+  // Настройки
+  const sb = g('settingsBtn');
+  if (sb) sb.onclick = () => openSettings(() => renderTable(app, navigate));
 
   bindOverlays();
   maybeShowChampion(navigate);

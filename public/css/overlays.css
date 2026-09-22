@@ -15,43 +15,15 @@
   box-shadow: 0 10px 40px rgba(0,0,0,.7);
 }
 [data-theme="paper"] .overlay { background: rgba(255,255,255,.97); color: #333; }
-.ov-title {
-  font-size: 15px;
-  font-weight: 700;
-  margin-bottom: 12px;
-  color: #f1c40f;
-}
+.ov-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; color: #f1c40f; }
 [data-theme="paper"] .ov-title { color: #b8860b; }
-.ov-cards {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
-}
-.ov-wait {
-  color: #ccc;
-  font-size: 12px;
-  margin-top: 8px;
-}
+.ov-cards { display: flex; gap: 8px; justify-content: center; margin-bottom: 14px; flex-wrap: wrap; }
+.ov-wait { color: #ccc; font-size: 12px; margin-top: 8px; }
 [data-theme="paper"] .ov-wait { color: #666; }
-.ov-buttons {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-top: 8px;
-}
-.ov-buttons button {
-  padding: 10px 16px;
-  border: none;
-  border-radius: 10px;
-  font-weight: 700;
-  cursor: pointer;
-  font-size: 14px;
-}
+.ov-buttons { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+.ov-buttons button { padding: 10px 16px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px; }
 
-/* ==================== ИНФО-БАННЕР СВЕРХУ ==================== */
+/* ==================== БАННЕР СВЕРХУ ==================== */
 .pass-notice {
   position: absolute;
   top: 14px;
@@ -74,7 +46,7 @@
   50%      { opacity: .75; }
 }
 
-/* ==================== РЕАКЦИИ (СМАЙЛИКИ) ==================== */
+/* ==================== РЕАКЦИИ ==================== */
 .reaction {
   position: absolute;
   font-size: 32px;
@@ -89,7 +61,7 @@
   100% { transform: translateY(-60px) scale(.8);  opacity: 0; }
 }
 
-/* ==================== БАННЕР «ФАЛЬШИВКА» ==================== */
+/* ==================== БАННЕР ФАЛЬШ ==================== */
 .falsh-banner {
   position: fixed;
   top: 50%;
@@ -113,7 +85,7 @@
   100% { transform: translate(-50%,-50%) scale(.9);  opacity: 0; }
 }
 
-/* ==================== ЭКРАН ЧЕМПИОНА ==================== */
+/* ==================== ЧЕМПИОН ==================== */
 .champ-overlay {
   position: fixed;
   inset: 0;
@@ -128,51 +100,187 @@
   color: #fff;
   overflow-y: auto;
 }
-.champ-title {
-  font-size: 32px;
-  font-weight: 900;
-  color: #f1c40f;
-  margin-bottom: 16px;
-  text-shadow: 0 0 20px rgba(241,196,15,.7);
-}
+.champ-title { font-size: 32px; font-weight: 900; color: #f1c40f; margin-bottom: 16px; text-shadow: 0 0 20px rgba(241,196,15,.7); }
 .champ-names { font-size: 20px; margin-bottom: 20px; }
-.champ-stats {
-  font-size: 15px;
-  line-height: 1.8;
-  margin-bottom: 20px;
-  opacity: .9;
-}
-.champ-best {
-  font-size: 16px;
-  color: #2ecc71;
-  font-weight: 700;
-  margin-bottom: 20px;
-}
-.champ-buttons {
+.champ-stats { font-size: 15px; line-height: 1.8; margin-bottom: 20px; opacity: .9; }
+.champ-best { font-size: 16px; color: #2ecc71; font-weight: 700; margin-bottom: 20px; }
+.champ-buttons { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.champ-buttons button { padding: 14px 28px; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; }
+
+.history-list { max-height: 50vh; overflow-y: auto; text-align: left; margin-bottom: 14px; }
+.history-row { padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,.15); font-size: 14px; }
+[data-theme="paper"] .history-row { border-color: rgba(0,0,0,.15); }
+
+/* ==================== МЕНЮ ⚙️ (боковая панель) ==================== */
+.settings-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 320px;
+  max-width: 88vw;
+  background: rgba(0,0,0,.95);
+  color: #fff;
+  z-index: 800;
+  transform: translateX(100%);
+  transition: transform .25s ease-out;
+  overflow-y: auto;
+  padding: 20px;
   display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
 }
-.champ-buttons button {
-  padding: 14px 28px;
+[data-theme="paper"] .settings-panel { background: rgba(255,255,255,.98); color: #333; }
+.settings-panel.open { transform: translateX(0); }
+.settings-panel h3 { margin: 0 0 12px; font-size: 20px; }
+.settings-panel .close-btn { position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 22px; color: inherit; cursor: pointer; }
+.settings-section { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.1); }
+[data-theme="paper"] .settings-section { border-color: rgba(0,0,0,.1); }
+.settings-section h4 { margin: 0 0 8px; font-size: 13px; opacity: .7; text-transform: uppercase; letter-spacing: 1px; }
+
+/* Тумблер */
+.toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 14px; }
+.toggle {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  background: rgba(255,255,255,.2);
+  border-radius: 13px;
+  cursor: pointer;
+  transition: background .2s;
+}
+.toggle.on { background: #2ecc71; }
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left .2s;
+}
+.toggle.on::after { left: 23px; }
+
+.scale-row { display: flex; gap: 6px; }
+.scale-row button {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: 2px solid rgba(255,255,255,.2);
+  background: rgba(255,255,255,.06);
+  color: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.scale-row button.sel { border-color: var(--acc); background: rgba(241,196,15,.2); }
+
+.menu-btn {
+  padding: 12px;
+  border-radius: 10px;
   border: none;
-  border-radius: 12px;
-  font-size: 16px;
+  background: rgba(255,255,255,.1);
+  color: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+.menu-btn:active { background: rgba(255,255,255,.2); }
+.menu-btn.danger { background: rgba(231,76,60,.85); color: #fff; }
+
+/* ==================== ЧАТ ==================== */
+.chat-panel {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  width: 340px;
+  max-width: 92vw;
+  height: 400px;
+  max-height: 70vh;
+  background: rgba(0,0,0,.95);
+  color: #fff;
+  z-index: 700;
+  transform: translateY(100%);
+  transition: transform .25s ease-out;
+  display: flex;
+  flex-direction: column;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+}
+[data-theme="paper"] .chat-panel { background: rgba(255,255,255,.98); color: #333; }
+.chat-panel.open { transform: translateY(0); }
+.chat-head {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.15);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+}
+.chat-head button { background: none; border: none; color: inherit; font-size: 20px; cursor: pointer; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; }
+.chat-msg { font-size: 13px; line-height: 1.4; }
+.chat-msg .author { font-weight: 700; color: var(--acc); }
+.chat-msg .time { font-size: 10px; opacity: .5; margin-left: 6px; }
+.chat-input {
+  display: flex;
+  gap: 6px;
+  padding: 10px;
+  border-top: 1px solid rgba(255,255,255,.15);
+}
+.chat-input input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255,255,255,.1);
+  color: inherit;
+  font-size: 14px;
+}
+.chat-input button {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: none;
+  background: var(--acc);
+  color: #000;
   font-weight: 700;
   cursor: pointer;
 }
 
-/* ==================== ИСТОРИЯ КОНОВ ==================== */
-.history-list {
-  max-height: 50vh;
+/* ==================== ПРАВИЛА / ПОЧТА / ПРОФИЛЬ (простые) ==================== */
+.simple-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.7);
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.simple-modal-inner {
+  background: rgba(0,0,0,.95);
+  color: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 560px;
+  width: 100%;
+  max-height: 80vh;
   overflow-y: auto;
-  text-align: left;
-  margin-bottom: 14px;
 }
-.history-row {
-  padding: 8px 12px;
-  border-bottom: 1px solid rgba(255,255,255,.15);
-  font-size: 14px;
+[data-theme="paper"] .simple-modal-inner { background: #fff; color: #333; }
+.simple-modal-inner h3 { margin: 0 0 12px; }
+.simple-modal-inner .body { font-size: 14px; line-height: 1.6; }
+.simple-modal-inner .close-btn {
+  margin-top: 14px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  background: var(--acc);
+  color: #000;
+  font-weight: 700;
+  cursor: pointer;
 }
-[data-theme="paper"] .history-row { border-color: rgba(0,0,0,.15); }

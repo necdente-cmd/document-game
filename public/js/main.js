@@ -1,4 +1,4 @@
-import { state, loadMe, applyTheme, applyScale, loadOpts, saveMe } from './state.js';
+import { state, loadMe, applyTheme, applyScale, loadOpts, saveMe, loadPrefs } from './state.js';
 import { bindSocket, socket } from './socket.js';
 import { renderWelcome } from './screens/welcome.js';
 import { renderCreate } from './screens/create.js';
@@ -6,7 +6,6 @@ import { renderJoin } from './screens/join.js';
 import { renderTable } from './screens/table.js';
 
 const app = document.getElementById('app');
-
 let currentScreen = 'welcome';
 
 function navigate(screen) {
@@ -19,15 +18,13 @@ function navigate(screen) {
   renderWelcome(app, navigate);
 }
 
-// Инициализация
 loadMe();
+loadPrefs();
 const opts = loadOpts();
 applyTheme(opts.theme);
 applyScale(opts.scale);
 
-// Подписка на state
 bindSocket(() => {
-  // Если мы в комнате и фаза не лобби-первый вход — идём на стол
   if (state.server && state.me?.roomId) {
     if (currentScreen === 'welcome' || currentScreen === 'create' || currentScreen === 'join') {
       navigate('table');
@@ -71,7 +68,6 @@ window.addEventListener('falsh', e => {
   setTimeout(() => el.remove(), 2200);
 });
 
-// Старт
 if (state.me?.roomId) {
   socket.emit('joinRoom', { roomId: state.me.roomId, name: state.me.name, playerId: state.me.id }, r => {
     if (!r.ok) { saveMe(null); navigate('welcome'); }
@@ -80,8 +76,3 @@ if (state.me?.roomId) {
 } else {
   navigate('welcome');
 }
-
-// Обновляем приветствие при отсутствии серверного стейта
-socket.on('err', (m) => {
-  console.log('[server error]', m);
-});
