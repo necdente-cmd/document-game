@@ -6,6 +6,7 @@ export const state = {
   emojiOpen: false,
   historyOpen: false,
   chatOpen: false,
+  chatUnread: 0,
   settingsOpen: false,
   dealKey: 0,
   lastPhaseForDeal: null,

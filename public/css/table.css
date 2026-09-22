@@ -6,175 +6,221 @@
   overflow: hidden;
 }
 
-/* ==================== КОЛОДА + КОЗЫРЬ ==================== */
+/* ==================== КОЛОДА + КОЗЫРЬ (левый верх) ==================== */
 .deck-area {
   position: absolute;
   top: calc(12px * var(--scale));
   left: calc(12px * var(--scale));
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
   z-index: 10;
   pointer-events: none;
 }
 .deck-wrapper {
   position: relative;
-  width: calc(var(--card-w) + 30px);
-  height: calc(var(--card-h) + 10px);
+  width: calc(var(--card-w) + 40px);
+  height: calc(var(--card-h) + 40px);
 }
+/* Колода — вертикальная стопка */
 .deck-stack {
-  position: absolute; top: 0; left: 0;
-  width: var(--card-w); height: var(--card-h);
-  z-index: 2;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--card-w);
+  height: var(--card-h);
+  z-index: 3;
   filter: drop-shadow(0 2px 5px rgba(0,0,0,.6));
 }
 .deck-stack .card { position: absolute; top: 0; left: 0; }
+
+/* Козырь — горизонтально ПОД колодой, виден на 80% */
 .trump-under {
   position: absolute;
-  top: 5px;
-  left: calc(var(--card-w) * 0.75);
-  width: calc(var(--card-h) * 0.9);
-  height: calc(var(--card-w) * 1.1);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 1;
-  transform: rotate(55deg);
+  top: calc(var(--card-h) + 2px);
+  left: 0;
+  width: var(--card-w);
+  height: calc(var(--card-h) * 0.8);
+  overflow: hidden;
+  z-index: 2;
 }
-.trump-under .card { transform: rotate(-55deg); }
+.trump-under .card {
+  width: var(--card-h);          /* повёрнутая карта = высота как ширина */
+  height: var(--card-w);
+  position: absolute;
+  top: calc(var(--card-w) / -2 + var(--card-h) * 0.4);
+  left: calc(var(--card-h) / -2 + var(--card-w) / 2);
+  transform: rotate(90deg);
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,.6));
+}
 
 /* ==================== СИДЕНЬЯ ==================== */
 .seat {
   position: absolute;
-  padding: calc(8px * var(--scale)) calc(12px * var(--scale));
-  border-radius: calc(12px * var(--scale));
-  font-size: calc(12px * var(--scale));
+  padding: calc(6px * var(--scale)) calc(10px * var(--scale));
+  border-radius: calc(10px * var(--scale));
+  font-size: calc(11px * var(--scale));
   text-align: center;
   background: rgba(0,0,0,.6);
   color: #fff;
-  min-width: calc(100px * var(--scale));
+  min-width: calc(80px * var(--scale));
   z-index: 10;
-  line-height: 1.3;
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  line-height: 1.25;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
 }
 [data-theme="paper"] .seat { background: rgba(0,0,0,.18); color: #333; }
 .seat.active { outline: 3px solid var(--acc); box-shadow: 0 0 20px rgba(241,196,15,.6); }
 .seat.out    { opacity: .35; text-decoration: line-through; }
 .seat.offline { opacity: .6; border: 1px dashed #e74c3c; }
 
+/* Аватарка СНИЗУ */
 .seat .avatar {
-  width: calc(56px * var(--scale)); height: calc(56px * var(--scale));
+  order: 3;
+  width: calc(44px * var(--scale));
+  height: calc(44px * var(--scale));
   border-radius: 50%;
   background: rgba(255,255,255,.15);
-  display: flex; align-items: center; justify-content: center;
-  font-size: calc(34px * var(--scale));
-  border: 3px solid rgba(255,255,255,.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(26px * var(--scale));
+  border: 2px solid rgba(255,255,255,.3);
+  margin-top: 2px;
 }
 .seat.active .avatar {
   border-color: var(--acc);
   box-shadow: 0 0 16px rgba(241,196,15,.8);
 }
-.seat .state { font-size: calc(11px * var(--scale)); opacity: .9; font-style: italic; font-weight: 600; }
+/* Имя — сверху */
+.seat .name { order: 1; font-weight: 700; font-size: calc(12px * var(--scale)); }
+/* Состояние — по центру */
+.seat .state { order: 2; font-size: calc(10px * var(--scale)); opacity: .9; font-style: italic; font-weight: 600; }
 .seat .state.beat    { color: #2ecc71; }
 .seat .state.think   { color: #f1c40f; }
 .seat .state.pickup  { color: #e74c3c; }
 .seat .state.move    { color: #3498db; }
 .seat .state.out     { color: #888; }
-.seat .badge-off { color: #e74c3c; font-size: calc(11px * var(--scale)); font-weight: 700; }
-.seat .pass-badge { color: #e74c3c; font-weight: 700; font-size: calc(11px * var(--scale)); }
+.seat .badge-off { color: #e74c3c; font-size: calc(10px * var(--scale)); font-weight: 700; }
+.seat .pass-badge { color: #e74c3c; font-weight: 700; font-size: calc(10px * var(--scale)); }
 
-.seat.top    { top: calc(14px * var(--scale));  left: 50%; transform: translateX(-50%); }
-.seat.left   { top: 50%;   left: calc(14px * var(--scale)); transform: translateY(-50%); }
-.seat.right  { top: 50%;   right: calc(14px * var(--scale)); transform: translateY(-50%); }
+/* Партнёр — напротив (12ч) */
+.seat.top {
+  top: calc(80px * var(--scale));
+  left: 50%;
+  transform: translateX(-50%);
+}
+/* B2 — слева, ниже колоды */
+.seat.left {
+  top: calc(140px * var(--scale));
+  left: calc(12px * var(--scale));
+}
+/* B4 — справа, ниже настроек */
+.seat.right {
+  top: calc(140px * var(--scale));
+  right: calc(12px * var(--scale));
+}
 
 /* ==================== ПОЛЕ БОЯ ==================== */
 .center {
   position: absolute;
-  top: 48%; left: 50%;
+  top: 46%;
+  left: 50%;
   transform: translate(-50%, -50%);
-  display: flex; gap: calc(24px * var(--scale));
-  flex-wrap: wrap; max-width: 55%; justify-content: center;
-  z-index: 5; padding: 10px;
+  display: flex;
+  gap: calc(10px * var(--scale));       /* ← УМЕНЬШИЛИ зазор между парами */
+  flex-wrap: wrap;
+  max-width: 70%;
+  justify-content: center;
+  z-index: 5;
+  padding: 6px;
 }
 .slot {
   position: relative;
-  width: calc(var(--card-w) * 1.25);
-  height: calc(var(--card-h) * 1.25);
+  width: calc(var(--card-w) * 1.1);
+  height: calc(var(--card-h) * 1.1);
   animation: fieldIn .25s ease-out;
 }
 .slot .card {
-  width: calc(var(--card-w) * 1.25) !important;
-  height: calc(var(--card-h) * 1.25) !important;
-  position: absolute; top: 0; left: 0;
+  width: calc(var(--card-w) * 1.1) !important;
+  height: calc(var(--card-h) * 1.1) !important;
+  position: absolute;
+  top: 0;
+  left: 0;
   transition: top .2s, left .2s, transform .2s;
-  transform: rotate(-4deg);
-  box-shadow: 0 4px 10px rgba(0,0,0,.6);
 }
 @keyframes fieldIn {
-  from { transform: rotate(-4deg) scale(.6); opacity: 0; }
-  to   { transform: rotate(-4deg) scale(1);  opacity: 1; }
+  from { transform: scale(.6); opacity: 0; }
+  to   { transform: scale(1);  opacity: 1; }
 }
-
-/* Битая карта перекрывает карту врага со сдвигом вправо-вверх */
+/* Битая карта — сдвиг минимальный, чтобы обе видны минимум на 20% */
 .slot .card.beaten {
   top: calc(-8px * var(--scale));
-  left: calc(12px * var(--scale));
-  transform: rotate(8deg);
+  left: calc(14px * var(--scale));       /* ← сдвиг вправо ~25% ширины */
+  transform: rotate(6deg);
   z-index: 2;
-  box-shadow: 0 8px 16px rgba(0,0,0,.85);
+  box-shadow: 0 6px 14px rgba(0,0,0,.85);
   outline: 3px solid #2ecc71;
   outline-offset: -3px;
 }
 .slot.tappable { cursor: pointer; }
 .slot.tappable .card:first-child {
-  outline: 3px dashed rgba(241,196,15,.8); outline-offset: -3px;
+  outline: 3px dashed rgba(241,196,15,.8);
+  outline-offset: -3px;
 }
 .slot.drag-over { outline: 4px solid #2ecc71; outline-offset: -4px; border-radius: 8px; }
 
 /* ==================== НАСТРОЙКА ==================== */
 .settings-btn {
   position: absolute; top: 0; right: 0;
-  width: calc(44px * var(--scale)); height: calc(44px * var(--scale));
-  border-radius: 0 0 0 calc(12px * var(--scale));
+  width: calc(40px * var(--scale)); height: calc(40px * var(--scale));
+  border-radius: 0 0 0 calc(10px * var(--scale));
   background: rgba(0,0,0,.7); color: #fff;
-  border: none; font-size: calc(22px * var(--scale));
+  border: none; font-size: calc(20px * var(--scale));
   cursor: pointer; z-index: 20;
   display: flex; align-items: center; justify-content: center;
 }
 [data-theme="paper"] .settings-btn { background: rgba(0,0,0,.2); color: #333; }
 
-/* ==================== НИЖНЯЯ ПОЛОСА ==================== */
+/* ==================== ПОДСКАЗКА (опущена ниже, ближе к руке) ==================== */
+.actions {
+  display: flex;
+  gap: 6px;
+  padding: 2px 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  background: rgba(0,0,0,.35);
+  min-height: 22px;
+  align-items: center;
+  flex-shrink: 0;
+  margin-bottom: -4px;                  /* ← сдвиг ниже */
+}
+[data-theme="paper"] .actions { background: rgba(0,0,0,.12); }
+.hint {
+  font-size: calc(11px * var(--scale));
+  color: var(--acc);
+  font-weight: 600;
+  padding: 1px 10px;
+  text-align: center;
+  width: 100%;
+}
+
+/* ==================== НИЖНЯЯ ПОЛОСА (рука + кнопки) ==================== */
 .bottom-bar {
   position: relative;
   width: 100%;
   height: calc(var(--card-h) + 40px);
-  background: rgba(0,0,0,.15);
+  background: transparent;
   flex-shrink: 0;
   overflow: visible;
   z-index: 15;
 }
 
-/* Инфо-панель — столбик, 12px */
-.info-panel {
-  position: absolute;
-  bottom: 4px; left: 4px;
-  font-size: 12px;
-  line-height: 1.5;
-  background: rgba(0,0,0,.75);
-  padding: 6px 10px;
-  border-radius: 8px;
-  color: #fff;
-  text-align: left;
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-[data-theme="paper"] .info-panel { background: rgba(0,0,0,.25); color: #333; }
-.info-panel b { color: var(--acc); }
-
 /* Рука */
 .hand {
   position: absolute;
-  bottom: 0; left: 0; right: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
   height: 100%;
   background: transparent;
   overflow: visible;
@@ -195,22 +241,55 @@
 }
 .hand .card:active { cursor: grabbing; }
 
-/* ==================== КНОПКА ДЕЙСТВИЯ (круглая) ==================== */
+/* ==================== ЛЕВАЯ ПАНЕЛЬ ИКОНОК (📊💬😀🔄) ==================== */
+.left-icons {
+  position: absolute;
+  bottom: calc(8px * var(--scale));
+  left: calc(8px * var(--scale));
+  display: flex;
+  flex-direction: column-reverse;        /* снизу вверх: 🔄😀💬📊 */
+  gap: 8px;
+  z-index: 30;
+}
+.left-icons .icon-btn {
+  width: calc(44px * var(--scale));
+  height: calc(44px * var(--scale));
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,.75);          /* ← ЧЁРНЫЙ ФОН */
+  color: #fff;
+  font-size: calc(20px * var(--scale));
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,.5);
+  padding: 0;
+}
+.left-icons .icon-btn:active { transform: scale(.92); }
+.left-icons .icon-btn.active { background: var(--acc); color: #000; }
+
+/* ==================== КНОПКА ДЕЙСТВИЯ ==================== */
 .action-center {
   position: absolute;
-  bottom: 4px; right: 4px;
-  width: calc(120px * var(--scale));
-  height: calc(120px * var(--scale));
-  border-radius: calc(120px * var(--scale));
+  bottom: calc(8px * var(--scale));
+  right: calc(8px * var(--scale));
+  width: calc(100px * var(--scale));
+  height: calc(100px * var(--scale));
+  border-radius: calc(100px * var(--scale));
   border: none;
   font-weight: 900;
-  font-size: calc(13px * var(--scale));
+  font-size: calc(11px * var(--scale));
   cursor: pointer;
   background: radial-gradient(circle at 40% 40%, #56d4ff 0%, #3498db 100%);
   color: #fff;
   box-shadow: 0 6px 24px rgba(52,152,219,.7), inset 0 -4px 8px rgba(0,0,0,.2);
-  display: flex; align-items: center; justify-content: center;
-  text-align: center; line-height: 1.15; padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.1;
+  padding: 6px;
   text-shadow: 0 1px 2px rgba(0,0,0,.4);
   z-index: 30;
 }
@@ -221,11 +300,11 @@
 .action-center.b4 { background: radial-gradient(circle at 40% 40%, #bb6bd9 0%, #8e44ad 100%); }
 .action-center.b5 { background: radial-gradient(circle at 40% 40%, #5dade2 0%, #2874a6 100%); }
 
-/* ==================== ДОП. КНОПКИ — ПРЯМОУГОЛЬНЫЕ ==================== */
+/* Доп. кнопки — над основной */
 .extra-actions {
   position: absolute;
-  bottom: calc(120px * var(--scale) + 8px);
-  right: 4px;
+  bottom: calc(100px * var(--scale) + 12px);
+  right: calc(8px * var(--scale));
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -233,96 +312,102 @@
   z-index: 25;
 }
 .extra-actions button {
-  min-width: calc(120px * var(--scale));
-  padding: calc(10px * var(--scale)) calc(14px * var(--scale));
-  border-radius: calc(10px * var(--scale));
+  min-width: calc(100px * var(--scale));
+  padding: calc(8px * var(--scale)) calc(12px * var(--scale));
+  border-radius: calc(8px * var(--scale));
   border: 2px solid rgba(255,255,255,.4);
   font-weight: 800;
-  font-size: calc(13px * var(--scale));
+  font-size: calc(11px * var(--scale));
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
   box-shadow: 0 4px 12px rgba(0,0,0,.6);
-  text-align: center;
-  line-height: 1.15;
+  line-height: 1.1;
 }
 .extra-actions button:active { transform: scale(.95); }
 .extra-actions .b1 { background: #f39c12; color: #000; }
 .extra-actions .b4 { background: #8e44ad; color: #fff; }
 
-/* ==================== ДУГА ИКОНОК ==================== */
-.icon-arc {
-  position: absolute;
-  bottom: 4px; right: 4px;
-  width: calc(280px * var(--scale));
-  height: calc(280px * var(--scale));
-  pointer-events: none;
-  z-index: 28;
+/* ==================== ПАНЕЛЬ СМАЙЛОВ (СПРАВА) ==================== */
+.emoji-bar {
+  position: fixed;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  padding: 8px;
+  background: rgba(0,0,0,.85);
+  border-radius: 12px;
+  z-index: 200;
+  box-shadow: 0 4px 20px rgba(0,0,0,.7);
 }
-.icon-arc .arc-btn {
-  position: absolute;
-  width: calc(44px * var(--scale));
-  height: calc(44px * var(--scale));
-  border-radius: 50%;
+.emoji-bar button {
+  background: none;
   border: none;
-  background: rgba(0,0,0,.75);
-  color: #fff;
-  font-size: calc(18px * var(--scale));
+  font-size: 22px;
   cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,.5);
-  pointer-events: auto;
+  padding: 4px;
+  border-radius: 6px;
 }
-.icon-arc .arc-btn:active { transform: scale(.9); }
-.icon-arc .arc-btn.active { background: var(--acc); color: #000; }
+.emoji-bar button:active { background: rgba(255,255,255,.2); }
 
-.icon-arc .arc-1 { right: calc(160px * var(--scale)); bottom: calc(-25px * var(--scale)); }
-.icon-arc .arc-2 { right: calc(180px * var(--scale)); bottom: calc(25px * var(--scale));  }
-.icon-arc .arc-3 { right: calc(180px * var(--scale)); bottom: calc(80px * var(--scale));  }
-.icon-arc .arc-4 { right: calc(160px * var(--scale)); bottom: calc(130px * var(--scale)); }
-
-/* ==================== ПОДСКАЗКА ==================== */
-.actions {
-  display: flex; gap: 6px; padding: 4px 8px;
-  justify-content: center; flex-wrap: wrap;
-  background: rgba(0,0,0,.3);
-  min-height: 26px; align-items: center;
-  flex-shrink: 0;
+/* ==================== ИНФО-ПАНЕЛЬ ==================== */
+.info-panel {
+  position: absolute;
+  bottom: calc(8px * var(--scale));
+  left: calc(60px * var(--scale));       /* ← сдвиг вправо от левых иконок */
+  font-size: 12px;
+  line-height: 1.5;
+  background: rgba(0,0,0,.75);
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: #fff;
+  text-align: left;
+  z-index: 20;
+  display: none;                          /* ← показываем только при клике на 📊 */
 }
-[data-theme="paper"] .actions { background: rgba(0,0,0,.1); }
-.hint {
-  font-size: calc(12px * var(--scale));
-  color: var(--acc); font-weight: 600;
-  padding: 2px 12px; text-align: center;
-  width: 100%;
-}
+.info-panel.open { display: flex; flex-direction: column; }
+[data-theme="paper"] .info-panel { background: rgba(0,0,0,.25); color: #333; }
+.info-panel b { color: var(--acc); }
 
 /* ==================== ОКНО ОЖИДАНИЯ ==================== */
 .waiting {
-  position: absolute; top: 50%; left: 50%;
+  position: absolute;
+  top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   background: rgba(0,0,0,.8);
   border: 2px solid var(--acc);
   border-radius: 16px;
-  padding: 24px 28px; text-align: center;
-  min-width: 260px; max-width: 90vw;
+  padding: 24px 28px;
+  text-align: center;
+  min-width: 260px;
+  max-width: 90vw;
   z-index: 50;
 }
 [data-theme="paper"] .waiting { background: rgba(255,255,255,.9); }
 .waiting-title { font-size: 13px; opacity: .8; margin-bottom: 4px; }
 .waiting-code {
-  font-size: 42px; font-weight: 900; letter-spacing: 8px;
-  color: var(--acc); margin: 4px 0 12px;
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: 8px;
+  color: var(--acc);
+  margin: 4px 0 12px;
   font-family: 'Courier New', monospace;
 }
 [data-theme="paper"] .waiting-code { color: #b8860b; }
 .copy-btn {
-  background: rgba(255,255,255,.15); color: #fff;
+  background: rgba(255,255,255,.15);
+  color: #fff;
   border: 1px solid rgba(255,255,255,.3);
-  padding: 8px 14px; border-radius: 8px;
-  font-size: 13px; cursor: pointer; margin-bottom: 14px; font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-bottom: 14px;
+  font-weight: 600;
 }
 .waiting-info { font-size: 14px; margin-bottom: 10px; }
 .waiting-players { display: flex; flex-direction: column; gap: 4px; margin: 8px 0 12px; font-size: 13px; }
@@ -331,94 +416,42 @@
 .waiting-hint { font-size: 12px; opacity: .7; margin-top: 8px; }
 .start-big {
   padding: 14px 24px; font-size: 16px; border-radius: 12px;
-  margin-top: 8px; width: 100%; background: var(--acc);
-  color: #000; font-weight: 700; border: none; cursor: pointer;
+  margin-top: 8px; width: 100%;
+  background: var(--acc); color: #000;
+  font-weight: 700; border: none; cursor: pointer;
 }
 
-/* ==================== LANDSCAPE ==================== */
-@media (orientation: landscape) and (max-height: 500px) {
-  .seat { font-size: calc(10px * var(--scale)); padding: 5px 8px; min-width: 80px; }
-  .seat .avatar { width: calc(40px * var(--scale)); height: calc(40px * var(--scale)); font-size: calc(22px * var(--scale)); }
-  .settings-btn { width: calc(34px * var(--scale)); height: calc(34px * var(--scale)); font-size: calc(16px * var(--scale)); }
-  .deck-area { top: 8px; left: 8px; }
-
-  .action-center {
-    width: calc(90px * var(--scale));
-    height: calc(90px * var(--scale));
-    border-radius: calc(90px * var(--scale));
-    font-size: calc(11px * var(--scale));
-  }
-  .extra-actions { bottom: calc(90px * var(--scale) + 6px); }
-  .extra-actions button {
-    min-width: calc(100px * var(--scale));
-    padding: calc(7px * var(--scale)) calc(10px * var(--scale));
-    font-size: calc(11px * var(--scale));
-  }
-
-  .icon-arc {
-    width: calc(220px * var(--scale));
-    height: calc(220px * var(--scale));
-  }
-  .icon-arc .arc-btn {
-    width: calc(36px * var(--scale));
-    height: calc(36px * var(--scale));
-    font-size: calc(15px * var(--scale));
-  }
-  .icon-arc .arc-1 { right: calc(125px * var(--scale)); bottom: calc(-20px * var(--scale)); }
-  .icon-arc .arc-2 { right: calc(140px * var(--scale)); bottom: calc(20px * var(--scale));  }
-  .icon-arc .arc-3 { right: calc(140px * var(--scale)); bottom: calc(65px * var(--scale));  }
-  .icon-arc .arc-4 { right: calc(125px * var(--scale)); bottom: calc(105px * var(--scale)); }
-
-  .info-panel { font-size: 11px; padding: 4px 7px; }
+/* ==================== ИНДИКАТОР НЕПРОЧИТАННЫХ ==================== */
+.left-icons .icon-btn.has-notify {
+  animation: chatPulse 1.2s ease-in-out infinite;
+  position: relative;
 }
-
-/* ==================== ПУЛЬСАЦИЯ КНОПКИ ДЕЙСТВИЯ ==================== */
-.action-center.pulse {
-  animation: actionPulse 1.2s ease-in-out infinite;
+.left-icons .icon-btn .notify-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #e74c3c;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  padding: 0 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 8px rgba(231,76,60,.9);
+  z-index: 40;
 }
-@keyframes actionPulse {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.06); }
-}
-
-/* Состояние "нет действия" — серая кнопка с "—" */
-.action-center.idle {
-  background: rgba(60,60,60,.8) !important;
-  color: #999 !important;
-  cursor: default !important;
-  box-shadow: 0 4px 12px rgba(0,0,0,.4), inset 0 -4px 8px rgba(0,0,0,.3) !important;
-  font-size: calc(36px * var(--scale)) !important;
-  text-shadow: none !important;
-}
-
-/* ==================== ПОЛЁТ КАРТЫ НА ПОЛЕ ==================== */
-@keyframes cardFlyIn {
-  0% {
-    transform: translate(-250px, 300px) rotate(-45deg) scale(0.3);
-    opacity: 0;
+@keyframes chatPulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(0,0,0,.5), 0 0 0 0 rgba(241,196,15,.8);
+    background: rgba(0,0,0,.75);
   }
-  30% { opacity: 1; }
-  100% {
-    transform: rotate(-4deg) scale(1);
-    opacity: 1;
+  50% {
+    box-shadow: 0 2px 8px rgba(0,0,0,.5), 0 0 0 10px rgba(241,196,15,0);
+    background: rgba(241,196,15,.9);
+    color: #000;
   }
-}
-.slot .card.fly-in {
-  animation: cardFlyIn 0.75s cubic-bezier(.3,.8,.4,1);
-}
-
-/* ==================== ПОЛЁТ ОТБИТОЙ КАРТЫ ==================== */
-@keyframes beatenFlyIn {
-  0% {
-    transform: translate(-200px, 250px) rotate(-45deg) scale(0.3);
-    opacity: 0;
-  }
-  30% { opacity: 1; }
-  100% {
-    transform: rotate(8deg) scale(1);
-    opacity: 1;
-  }
-}
-.slot .card.beaten.fly-in {
-  animation: beatenFlyIn 0.7s cubic-bezier(.3,.8,.4,1);
 }

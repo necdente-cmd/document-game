@@ -11,31 +11,19 @@
 [data-theme="neon"]    { --bg:#0a001a; --felt:#0a001a; --acc:#00e5ff; --text:#fff; }
 [data-theme="paper"]   { --bg:#f4ecd8; --felt:#e8dcc0; --acc:#b8860b; --text:#333; }
 
-/* Масштаб */
-[data-scale="small"]  { --scale: 0.85; }
+[data-scale="small"]  { --scale: 0.9;  }
 [data-scale="medium"] { --scale: 1;    }
 [data-scale="large"]  { --scale: 1.15; }
 
 :root {
-  --card-w-base: 64px;
-  --card-h-base: 92px;
+  --card-w-base: 56px;
+  --card-h-base: 80px;
   --hand-h-base: 120px;
   --card-w: calc(var(--card-w-base) * var(--scale));
   --card-h: calc(var(--card-h-base) * var(--scale));
   --hand-h: calc(var(--hand-h-base) * var(--scale));
 }
 
-@media (orientation: landscape) and (max-height: 500px) {
-  :root { --card-w-base: 44px; --card-h-base: 64px; --hand-h-base: 90px; }
-}
-@media (orientation: landscape) and (max-height: 400px) {
-  :root { --card-w-base: 38px; --card-h-base: 56px; --hand-h-base: 76px; }
-}
-@media (orientation: landscape) and (max-height: 340px) {
-  :root { --card-w-base: 34px; --card-h-base: 50px; --hand-h-base: 66px; }
-}
-
-/* ==================== ОБЩИЕ ==================== */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 body {
   margin: 0;
@@ -46,32 +34,23 @@ body {
 }
 #app { height: 100dvh; display: flex; flex-direction: column; }
 
-/* ==================== ЛОББИ ==================== */
 .lobby {
   padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-width: 520px;
-  margin: 0 auto;
-  width: 100%;
+  display: flex; flex-direction: column; gap: 12px;
+  max-width: 520px; margin: 0 auto; width: 100%;
   overflow-y: auto;
 }
 .lobby h2 { margin: 0 0 8px; font-size: 26px; }
 .lobby label { font-size: 13px; opacity: .85; margin-bottom: -4px; margin-top: 6px; font-weight: 600; }
 .lobby input, .lobby select, .lobby button {
-  padding: 12px;
-  border-radius: 10px;
-  border: none;
-  font-size: 16px;
-  font-family: inherit;
+  padding: 12px; border-radius: 10px; border: none;
+  font-size: 16px; font-family: inherit;
 }
 .lobby input, .lobby select { background: rgba(255,255,255,.1); color: var(--text); }
 [data-theme="paper"] .lobby input, [data-theme="paper"] .lobby select { background: rgba(0,0,0,.05); }
 .lobby button { background: var(--acc); color: #000; font-weight: 700; cursor: pointer; }
 .lobby button:active { transform: scale(.98); }
 
-/* ==================== КНОПКИ ==================== */
 .b1 { background: var(--acc); color: #000; }
 .b2 { background: #95a5a6; color: #000; }
 .b3 { background: #e74c3c; color: #fff; }
@@ -82,12 +61,9 @@ body {
 
 .choice-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
 .choice {
-  padding: 8px 12px;
-  border-radius: 8px;
+  padding: 8px 12px; border-radius: 8px;
   border: 2px solid rgba(255,255,255,.25);
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
+  cursor: pointer; font-size: 13px; font-weight: 600;
   background: rgba(255,255,255,.06);
 }
 .choice.sel { border-color: var(--acc); background: rgba(241,196,15,.2); }
@@ -99,49 +75,10 @@ body {
 .choice.back-swatch img { width: 100%; height: 100%; object-fit: cover; }
 
 .icon-btn {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.12);
-  border: none;
-  color: inherit;
-  font-size: 20px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 42px; height: 42px; border-radius: 50%;
+  background: rgba(255,255,255,.12); border: none;
+  color: inherit; font-size: 20px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
 }
 .icon-btn:active { transform: scale(.95); }
 [data-theme="paper"] .icon-btn { background: rgba(0,0,0,.08); }
-
-/* ==================== ВЫБОР АВАТАРКИ ==================== */
-.avatar-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 6px;
-  margin-top: 4px;
-}
-.avatar-choice {
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 10px;
-  border: 2px solid rgba(255,255,255,.2);
-  background: rgba(255,255,255,.06);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 26px;
-  cursor: pointer;
-  transition: transform .15s, border-color .15s, background .15s;
-  user-select: none;
-}
-[data-theme="paper"] .avatar-choice {
-  background: rgba(0,0,0,.04);
-  border-color: rgba(0,0,0,.15);
-}
-.avatar-choice:hover { border-color: var(--acc); }
-.avatar-choice.sel {
-  border-color: var(--acc);
-  background: rgba(241,196,15,.25);
-  transform: scale(1.08);
-}

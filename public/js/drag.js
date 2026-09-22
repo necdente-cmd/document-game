@@ -6,7 +6,6 @@ let drag = null;
 
 export function initDrag(onRender) {
   const hand = document.getElementById('hand');
-  const center = document.querySelector('.center');
   if (!hand) return;
 
   hand.addEventListener('pointerdown', e => {
@@ -24,18 +23,17 @@ export function initDrag(onRender) {
       offsetY: e.clientY - rect.top,
       isDragging: false,
       pointerId: e.pointerId,
-      onRender,
     };
-    el.setPointerCapture(e.pointerId);
   });
 
-  hand.addEventListener('pointermove', e => {
+  document.addEventListener('pointermove', e => {
     if (!drag || drag.pointerId !== e.pointerId) return;
     const dx = e.clientX - drag.startX;
     const dy = e.clientY - drag.startY;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
-    if (!drag.isDragging && dist > 10) {
+    // Быстрый старт drag — 4px (было 10px)
+    if (!drag.isDragging && dist > 4) {
       drag.isDragging = true;
       drag.el.classList.add('dragging');
     }
@@ -46,9 +44,8 @@ export function initDrag(onRender) {
     }
   });
 
-  hand.addEventListener('pointerup', e => {
+  document.addEventListener('pointerup', e => {
     if (!drag || drag.pointerId !== e.pointerId) return;
-
     const wasDragging = drag.isDragging;
     const cardId = drag.cardId;
     const el = drag.el;
@@ -58,7 +55,7 @@ export function initDrag(onRender) {
     el.style.top = '';
 
     if (wasDragging) {
-      handleDrop(e.clientX, e.clientY, cardId, onRender);
+      handleDrop(e.clientX, e.clientY, cardId);
     } else {
       handleTap(cardId, onRender);
     }
@@ -66,7 +63,7 @@ export function initDrag(onRender) {
     drag = null;
   });
 
-  hand.addEventListener('pointercancel', () => {
+  document.addEventListener('pointercancel', () => {
     if (!drag) return;
     drag.el.classList.remove('dragging');
     drag.el.style.left = '';
@@ -95,7 +92,7 @@ function clearHighlight() {
   document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
 }
 
-function handleDrop(x, y, cardId, onRender) {
+function handleDrop(x, y, cardId) {
   const s = state.server;
   if (!s) return;
   const card = s.myHand.find(c => c.id === cardId);
@@ -112,7 +109,7 @@ function handleDrop(x, y, cardId, onRender) {
     const entry = s.field.cards.find(e => e.card.id === targetId && !e.beatenBy);
     if (entry) {
       const myDoc = s.docs[s.myTeam];
-      if (entry.card.r === myDoc) return; // свой документ — не бить
+      if (entry.card.r === myDoc) return;
       if (card.r === myDoc && card.s !== s.trumpSuit) return;
       if (!beatsUI(card, entry.card, s.trumpSuit)) return;
       socket.emit('defend', { targetId, withId: cardId });
@@ -124,8 +121,8 @@ function handleDrop(x, y, cardId, onRender) {
   const center = document.querySelector('.center');
   if (center) {
     const rect = center.getBoundingClientRect();
-    const inField = x >= rect.left - 40 && x <= rect.right + 40 &&
-                    y >= rect.top - 40 && y <= rect.bottom + 40;
+    const inField = x >= rect.left - 60 && x <= rect.right + 60 &&
+                    y >= rect.top - 60 && y <= rect.bottom + 60;
     if (inField) {
       socket.emit('attack', { cardIds: [cardId] });
       return;

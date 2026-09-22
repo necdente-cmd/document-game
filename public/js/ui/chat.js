@@ -4,11 +4,9 @@ import { esc } from '../card.js';
 
 const messages = [];
 
-// Глобальный слушатель — добавляется ОДИН раз
 window.addEventListener('chat', (e) => {
   const { name, text, time } = e.detail;
   messages.push({ name, text, time });
-  // Обновляем только если чат открыт
   const box = document.getElementById('chatMessages');
   if (box) {
     box.innerHTML = renderMessagesHtml();
@@ -30,6 +28,9 @@ function renderMessagesHtml() {
 }
 
 export function openChat() {
+  // Сбрасываем непрочитанные
+  state.chatUnread = 0;
+
   let panel = document.getElementById('chatPanel');
   if (!panel) {
     panel = document.createElement('div');
@@ -49,7 +50,10 @@ export function openChat() {
       </form>
     `;
 
-    document.getElementById('closeChat').onclick = () => panel.classList.remove('open');
+    document.getElementById('closeChat').onclick = () => {
+      panel.classList.remove('open');
+      if (window.onChatClose) window.onChatClose();
+    };
 
     document.getElementById('chatForm').onsubmit = (e) => {
       e.preventDefault();
@@ -62,7 +66,6 @@ export function openChat() {
   }
 
   panel.classList.add('open');
-
   const box = document.getElementById('chatMessages');
   box.innerHTML = renderMessagesHtml();
   box.scrollTop = box.scrollHeight;

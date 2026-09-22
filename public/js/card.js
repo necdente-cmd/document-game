@@ -46,6 +46,7 @@ export function posClass(seat) {
   return ['bottom','right','top','left'][((seat - mySeat + 4) % 4)] || 'top';
 }
 
+// ==================== ВЕЕР КАРТ (портрет) ====================
 export function renderHandFan(cards, options = {}) {
   const n = cards.length;
   if (n === 0) return '';
@@ -55,14 +56,18 @@ export function renderHandFan(cards, options = {}) {
   const selected = options.selected || new Set();
   const isDealing = options.isDealing || false;
 
-  const maxSpread = Math.min(360, n * 58);
-  const angleStep = n > 1 ? Math.min(5, 30 / n) : 0;
-  const arcHeight = 10;
+  // Шаг = 80% ширины карты (видно 80% каждой карты)
+  const step = 0.8;
+  // Угол ±7° на крайних (6–8°)
+  const maxAngle = 7;
+  // Слабая дуга — 8px
+  const arcHeight = 8;
 
   return cards.map((c, i) => {
-    const t = n > 1 ? i / (n - 1) : 0.5;
-    const x = (t - 0.5) * maxSpread;
-    const angle = (t - 0.5) * angleStep * n / 2;
+    const t = n > 1 ? i / (n - 1) : 0.5;         // 0..1
+    // Смещение относительно центра в долях ширины карты
+    const xPct = (t - 0.5) * (n - 1) * step;
+    const angle = (t - 0.5) * maxAngle * 2;
     const lift = Math.sin(t * Math.PI) * arcHeight;
 
     const cls = [
@@ -72,7 +77,7 @@ export function renderHandFan(cards, options = {}) {
       isDealing ? 'deal' : ''
     ].filter(Boolean).join(' ');
 
-    const style = `transform: translateX(${x.toFixed(1)}px) translateY(-${lift.toFixed(1)}px) rotate(${angle.toFixed(1)}deg); z-index: ${i + 1};`;
+    const style = `transform: translateX(calc(var(--card-w) * ${xPct.toFixed(3)})) translateY(${(-lift).toFixed(1)}px) rotate(${angle.toFixed(2)}deg); z-index: ${i + 1};`;
 
     return cardHtml(c, { cls, style, dataIndex: i });
   }).join('');

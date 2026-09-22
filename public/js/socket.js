@@ -94,7 +94,13 @@ export function bindSocket(onStateChange) {
     window.dispatchEvent(new CustomEvent('falsh', { detail: { byName, targetName, card } }));
   });
 
-  socket.on('chat', ({ seat, name, text, time }) => {
+    socket.on('chat', ({ seat, name, text, time }) => {
+    // Если чат закрыт и это не моё сообщение — +1 к непрочитанным
+    const chatPanel = document.getElementById('chatPanel');
+    const isOpen = chatPanel && chatPanel.classList.contains('open');
+    if (!isOpen && name !== state.me?.name) {
+      state.chatUnread = (state.chatUnread || 0) + 1;
+    }
     window.dispatchEvent(new CustomEvent('chat', { detail: { seat, name, text, time } }));
   });
 
