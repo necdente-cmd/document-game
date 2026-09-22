@@ -390,3 +390,35 @@
   font-size: calc(36px * var(--scale)) !important;
   text-shadow: none !important;
 }
+
+/* ==================== ПОЛЁТ КАРТЫ НА ПОЛЕ ==================== */
+@keyframes cardFlyIn {
+  0% {
+    transform: translate(-250px, 300px) rotate(-45deg) scale(0.3);
+    opacity: 0;
+  }
+  30% { opacity: 1; }
+  100% {
+    transform: rotate(-4deg) scale(1);
+    opacity: 1;
+  }
+}
+.slot .card.fly-in {
+  animation: cardFlyIn 0.75s cubic-bezier(.3,.8,.4,1);
+}
+
+/* ==================== ПОЛЁТ ОТБИТОЙ КАРТЫ ==================== */
+@keyframes beatenFlyIn {
+  0% {
+    transform: translate(-200px, 250px) rotate(-45deg) scale(0.3);
+    opacity: 0;
+  }
+  30% { opacity: 1; }
+  100% {
+    transform: rotate(8deg) scale(1);
+    opacity: 1;
+  }
+}
+.slot .card.beaten.fly-in {
+  animation: beatenFlyIn 0.7s cubic-bezier(.3,.8,.4,1);
+}

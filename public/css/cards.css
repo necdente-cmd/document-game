@@ -55,27 +55,27 @@
   transition: none;
 }
 
-/* ==================== АНИМАЦИЯ РАЗДАЧИ ==================== */
+/* ==================== РАЗДАЧА (медленнее) ==================== */
 @keyframes dealIn {
-  0%   { transform: translateY(-250px) rotate(-25deg) scale(.3); opacity: 0; }
+  0%   { transform: translateY(-300px) rotate(-35deg) scale(.3); opacity: 0; }
   100% { transform: translateY(0) rotate(0) scale(1); opacity: 1; }
 }
-.hand .card.deal { animation: dealIn .55s cubic-bezier(.2,.8,.3,1) backwards; }
-.hand .card.deal:nth-child(1) { animation-delay: 0s;   }
-.hand .card.deal:nth-child(2) { animation-delay: .1s;  }
-.hand .card.deal:nth-child(3) { animation-delay: .2s;  }
-.hand .card.deal:nth-child(4) { animation-delay: .3s;  }
-.hand .card.deal:nth-child(5) { animation-delay: .4s;  }
-.hand .card.deal:nth-child(6) { animation-delay: .5s;  }
-.hand .card.deal:nth-child(7) { animation-delay: .6s;  }
-.hand .card.deal:nth-child(8) { animation-delay: .7s;  }
-.hand .card.deal:nth-child(9) { animation-delay: .8s;  }
+.hand .card.deal { animation: dealIn 1s cubic-bezier(.2,.8,.3,1) backwards; }
+.hand .card.deal:nth-child(1) { animation-delay: 0s;    }
+.hand .card.deal:nth-child(2) { animation-delay: .18s;  }
+.hand .card.deal:nth-child(3) { animation-delay: .36s;  }
+.hand .card.deal:nth-child(4) { animation-delay: .54s;  }
+.hand .card.deal:nth-child(5) { animation-delay: .72s;  }
+.hand .card.deal:nth-child(6) { animation-delay: .90s;  }
+.hand .card.deal:nth-child(7) { animation-delay: 1.08s; }
+.hand .card.deal:nth-child(8) { animation-delay: 1.26s; }
+.hand .card.deal:nth-child(9) { animation-delay: 1.44s; }
 
 /* ==================== РУКА-ВЕЕР ==================== */
 .hand {
-  position: relative;
-  width: 100%;
-  height: calc(var(--card-h) + 24px);
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 100%;
   background: transparent;
   overflow: visible;
   pointer-events: none;
@@ -83,58 +83,45 @@
 }
 .hand .card {
   position: absolute;
-  bottom: 0;
+  bottom: calc(8px * var(--scale));
   left: 50%;
   margin-left: calc(var(--card-w) / -2);
   pointer-events: auto;
   transform-origin: center bottom;
-  transition: transform .18s ease-out;
+  transition: transform .25s ease-out;
   cursor: grab;
   touch-action: none;
   will-change: transform;
 }
 .hand .card:active { cursor: grabbing; }
 
-/* ==================== ПАНЕЛЬ ПОДСКАЗКИ ==================== */
+/* ==================== ПОДСКАЗКА ==================== */
 .actions {
-  display: flex;
-  gap: 6px;
-  padding: 4px 8px;
-  justify-content: center;
-  flex-wrap: wrap;
+  display: flex; gap: 6px; padding: 4px 8px;
+  justify-content: center; flex-wrap: wrap;
   background: rgba(0,0,0,.3);
-  min-height: 28px;
-  align-items: center;
+  min-height: 26px; align-items: center;
+  flex-shrink: 0;
 }
 [data-theme="paper"] .actions { background: rgba(0,0,0,.1); }
 .hint {
-  font-size: 12px;
-  color: var(--acc);
-  font-weight: 600;
-  padding: 2px 12px;
-  text-align: center;
+  font-size: calc(12px * var(--scale));
+  color: var(--acc); font-weight: 600;
+  padding: 2px 12px; text-align: center;
   width: 100%;
 }
 
 /* ==================== ЭМОДЗИ-БАР ==================== */
 .emoji-bar {
   position: fixed;
-  right: 8px;
-  top: 50%;
+  right: 8px; top: 50%;
   transform: translateY(-50%);
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 4px;
-  padding: 8px;
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 4px; padding: 8px;
   background: rgba(0,0,0,.7);
-  border-radius: 12px;
-  z-index: 200;
+  border-radius: 12px; z-index: 200;
 }
 .emoji-bar button {
-  background: none;
-  border: none;
-  font-size: 22px;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 6px;
+  background: none; border: none; font-size: 22px;
+  cursor: pointer; padding: 4px; border-radius: 6px;
 }

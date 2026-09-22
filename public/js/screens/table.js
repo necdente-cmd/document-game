@@ -45,6 +45,11 @@ export function renderTable(app, navigate) {
 
   applyTheme(s.opts.theme);
 
+  // Очистить снапшот поля при новом коне
+  if (isPlayingNewRound) {
+    state.lastFieldCards = [];
+  }
+
   const mySeat = s.mySeat;
   const myTeam = s.myTeam;
   const myDoc = s.docs[myTeam];
@@ -150,18 +155,32 @@ export function renderTable(app, navigate) {
       </div>`;
   }
 
-  // Поле
+    // Поле с отслеживанием новых карт
+  const currentFieldIds = s.field ? s.field.cards.map(e => e.card.id) : [];
+  const newFieldIds = currentFieldIds.filter(id => !state.lastFieldCards.includes(id));
+  const beatenIds = s.field ? s.field.cards.filter(e => e.beatenBy).map(e => e.beatenBy.id) : [];
+  const newBeatenIds = beatenIds.filter(id => !state.lastFieldCards.includes(id));
+
   const fieldHtml = s.field
     ? s.field.cards.map(e => {
         const canBeTarget = canDefend && !e.beatenBy && e.card.r !== myDoc;
-        const cls = ['slot'];
-        if (canBeTarget) cls.push('tappable');
-        return `<div class="${cls.join(' ')}" data-field-card="${e.card.id}">
-          ${cardHtml(e.card)}
-          ${e.beatenBy ? cardHtml(e.beatenBy, { cls:'beaten' }) : ''}
+        const slotCls = ['slot'];
+        if (canBeTarget) slotCls.push('tappable');
+
+        const baseCls = newFieldIds.includes(e.card.id) ? 'fly-in' : '';
+        const beatenCls = e.beatenBy
+          ? ('beaten' + (newBeatenIds.includes(e.beatenBy.id) ? ' fly-in' : ''))
+          : '';
+
+        return `<div class="${slotCls.join(' ')}" data-field-card="${e.card.id}">
+          ${cardHtml(e.card, { cls: baseCls })}
+          ${e.beatenBy ? cardHtml(e.beatenBy, { cls: beatenCls }) : ''}
         </div>`;
       }).join('')
     : `<div style="opacity:.5">— поле пусто —</div>`;
+
+  // Обновляем снапшот
+  state.lastFieldCards = [...currentFieldIds, ...beatenIds];
 
   // Флаги
   const onlyDocsNow = s.myHand.length > 0 && s.myHand.every(c => c.r === myDoc);

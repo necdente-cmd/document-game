@@ -12,6 +12,7 @@ export const state = {
   soundOn: true,
   vibrationOn: true,
   micOn: false,
+  lastFieldCards: [],   // для отслеживания новых карт на поле
 };
 
 // ==================== НАБОР АВАТАРОК ====================
@@ -43,7 +44,7 @@ export function saveName(name) { localStorage.setItem('lastName', name); }
 export function loadAvatar() { return localStorage.getItem('lastAvatar') || AVATARS[0]; }
 export function saveAvatar(a) { localStorage.setItem('lastAvatar', a); }
 
-// Настройки звука/вибры
+// ==================== ЗВУК И ВИБРАЦИЯ ====================
 export function loadPrefs() {
   state.soundOn = localStorage.getItem('soundOn') !== '0';
   state.vibrationOn = localStorage.getItem('vibrationOn') !== '0';
@@ -55,25 +56,47 @@ export function savePrefs() {
   localStorage.setItem('micOn', state.micOn ? '1' : '0');
 }
 
-// Вспомогательные
 export function vibrate(ms = 50) {
   if (state.vibrationOn && 'vibrate' in navigator) navigator.vibrate(ms);
 }
-export function beep() {
+
+// Синтез звуков через Web Audio API
+export function playSound(type) {
   if (!state.soundOn) return;
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.frequency.value = 440;
-    osc.connect(gain); gain.connect(ctx.destination);
-    gain.gain.setValueAtTime(0.05, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-    osc.start(); osc.stop(ctx.currentTime + 0.1);
+    const now = ctx.currentTime;
+
+    // Каждый тип — последовательность нот: {f = частота, t = длительность, d = задержка}
+    const tones = {
+      deal:     [{ f: 400, t: 0.10 }],
+      card:     [{ f: 660, t: 0.10 }],
+      beat:     [{ f: 540, t: 0.10 }],
+      move:     [{ f: 440, t: 0.12 }],
+      reaction: [{ f: 800, t: 0.06 }],
+      win:      [{ f: 523, t: 0.15 }, { f: 659, t: 0.15, d: 0.15 }, { f: 784, t: 0.40, d: 0.30 }],
+      lose:     [{ f: 330, t: 0.20 }, { f: 220, t: 0.50, d: 0.20 }],
+      champ:    [{ f: 523, t: 0.18 }, { f: 659, t: 0.18, d: 0.18 },
+                 { f: 784, t: 0.18, d: 0.36 }, { f: 1046, t: 0.60, d: 0.54 }],
+    };
+
+    const seq = tones[type] || tones.move;
+    for (const n of seq) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = n.f;
+      osc.connect(gain); gain.connect(ctx.destination);
+      const start = now + (n.d || 0);
+      gain.gain.setValueAtTime(0.06, start);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + n.t);
+      osc.start(start);
+      osc.stop(start + n.t);
+    }
   } catch {}
 }
 
-// Определение состояния игрока
+// ==================== СОСТОЯНИЕ ИГРОКА ====================
 export function playerState(s, seat) {
   const p = s.players.find(x => x.seat === seat);
   if (!p) return '';
@@ -90,7 +113,6 @@ export function playerState(s, seat) {
   return '';
 }
 
-// Хелпер для рендера аватарок
 export function getAvatar(seat, players) {
   const p = players?.find(x => x.seat === seat);
   return (p && p.avatar) || '😎';
