@@ -10,6 +10,7 @@ export function startRound(r, starterSeat = 0) {
   r.pendingPass = null;
   r.pendingSwap = null;
   r.pendingStart = null;
+  r.pendingFalsh = null;
   r.lastAttacker = null;
   r.lastTarget = null;
   r.forcedTarget = null;

@@ -516,6 +516,29 @@ function renderTable() {
       </div>`;
   }
 
+  let falshOverlay = '';
+if (s.pendingFalsh && s.pendingFalsh.owner === s.mySeat) {
+  const defenderP = s.players.find(p => p.seat === s.pendingFalsh.defender);
+  const fcard = s.field?.cards.find(c => c.card.id === s.pendingFalsh.cardId)?.card;
+  falshOverlay = `
+    <div class="overlay" style="border-color:#e74c3c;">
+      <div class="ov-title" style="color:#e74c3c;">🃏 ${esc(defenderP?.name || '?')} требует фальш</div>
+      <div class="ov-cards">${fcard ? cardHtml(fcard) : ''}</div>
+      <div class="ov-buttons">
+        <button class="b1" id="falshAcceptBtn">✅ Принять</button>
+        <button class="b3" id="falshRejectBtn">❌ Отказать</button>
+      </div>
+    </div>
+  `;
+}
+if (s.pendingFalsh && s.pendingFalsh.owner !== s.mySeat && s.pendingFalsh.defender === s.mySeat) {
+  falshOverlay = `
+    <div class="overlay" style="border-color:#e74c3c;">
+      <div class="ov-title" style="color:#e74c3c;">🃏 Ожидание ответа хозяина карты…</div>
+    </div>
+  `;
+}
+
   let startOverlay = '';
   if (startPending && iCanChooseStart && s.phase === 'roundEnd') {
     const partner = s.players.find(p => p.seat === (s.mySeat + 2) % 4);
@@ -625,6 +648,7 @@ function renderTable() {
       ${passOverlay}
       ${swapOverlay}
       ${startOverlay}
+      ${falshOverlay}
       ${emojiBtn}
       ${historyBtn}
     </div>
@@ -708,6 +732,8 @@ function renderTable() {
   const srej = g('swapRejectBtn'); if (srej) srej.onclick = () => socket.emit('swapReject');
   const sc = g('swapConfirmBtn'); if (sc) sc.onclick = () => socket.emit('swapConfirm');
   const sx = g('swapCancelBtn'); if (sx) sx.onclick = () => socket.emit('swapCancel');
+  const fa = g('falshAcceptBtn'); if (fa) fa.onclick = () => socket.emit('falshAccept');
+  const fr = g('falshRejectBtn'); if (fr) fr.onclick = () => socket.emit('falshReject');
   const sm = g('startMeBtn'); if (sm) sm.onclick = () => socket.emit('chooseStart', { seat: s.mySeat });
   const sp = g('startPartnerBtn'); if (sp) sp.onclick = () => socket.emit('chooseStart', { seat: myPartnerSeat });
   const ex = g('exitBtn'); if (ex) ex.onclick = () => {

@@ -78,22 +78,44 @@ export function registerGameHandlers(io, socket, ctx) {
     broadcast(r);
   });
 
-  // ФАЛЬШ
+  // ФАЛЬШ — запрос хозяину карты
   socket.on('falsh', ({ cardId }) => {
     const r = rooms.get(getRid()); if (!r || !r.field) return;
     const p = getMe(); if (!p || r.field.defender !== p.seat) return err('Не вы защищаетесь');
+    if (r.pendingFalsh) return err('Уже есть запрос на фальш');
     const idx = r.field.cards.findIndex(x => x.card.id === cardId && !x.beatenBy);
     if (idx < 0) return err('Эту карту нельзя вернуть');
     const entry = r.field.cards[idx];
-    const card = entry.card;
     const owner = r.players[entry.fromSeat];
     if (!owner) return err('Хозяин карты не найден');
+    r.pendingFalsh = {
+      cardId: entry.card.id,
+      defender: p.seat,
+      owner: entry.fromSeat,
+    };
+    log(r, `${p.name} требует фальш на ${entry.card.r}${entry.card.s} (хозяин ${owner.name})`);
+    broadcast(r);
+  });
+
+  socket.on('falshAccept', () => {
+    const r = rooms.get(getRid()); if (!r || !r.pendingFalsh) return;
+    const p = getMe(); if (!p) return;
+    if (p.seat !== r.pendingFalsh.owner) return err('Только хозяин карты решает');
+    const cardId = r.pendingFalsh.cardId;
+    const defenderSeat = r.pendingFalsh.defender;
+    const idx = r.field.cards.findIndex(x => x.card.id === cardId && !x.beatenBy);
+    if (idx < 0) { r.pendingFalsh = null; return broadcast(r); }
+    const entry = r.field.cards[idx];
+    const card = entry.card;
+    const owner = r.players[entry.fromSeat];
+    const defender = r.players[defenderSeat];
     owner.hand.push(card);
     if (owner.out) owner.out = false;
     r.field.cards.splice(idx, 1);
-    log(r, `${p.name} ФАЛЬШ → возврат ${owner.name}`);
+    r.pendingFalsh = null;
     r.players.forEach(x => io.to(x.id).emit('falsh', {
-      byName: p.name, targetName: owner.name,
+      byName: defender ? defender.name : '?',
+      targetName: owner.name,
       card: { r: card.r, s: card.s },
     }));
     if (r.field.cards.length === 0) {
@@ -102,6 +124,16 @@ export function registerGameHandlers(io, socket, ctx) {
       r.turnSeat = attackerSeat;
       r.forcedTarget = null;
     }
+    log(r, `${p.name} принял фальш → ${card.r}${card.s} уходит обратно`);
+    broadcast(r);
+  });
+
+  socket.on('falshReject', () => {
+    const r = rooms.get(getRid()); if (!r || !r.pendingFalsh) return;
+    const p = getMe(); if (!p) return;
+    if (p.seat !== r.pendingFalsh.owner) return err('Только хозяин карты решает');
+    log(r, `${p.name} отказал в фальше`);
+    r.pendingFalsh = null;
     broadcast(r);
   });
 
