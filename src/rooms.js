@@ -53,7 +53,6 @@ export const docsOf = (r) => [
 export function pub(r, forId) {
   const me = r.players.find(p => p.id === forId);
   const docs = docsOf(r);
-  // Противнику НЕ показываем карты при свопе — только факт
   const swapPub = r.pendingSwap ? {
     stage: r.pendingSwap.stage,
     from: r.pendingSwap.from,
@@ -67,9 +66,14 @@ export function pub(r, forId) {
     players: r.players.map(p => {
       const isMe = p.id === forId;
       return {
-        id: p.id, name: p.name, seat: p.seat, team: p.team,
+        id: p.id,
+        name: p.name,
+        seat: p.seat,
+        team: p.team,
+        avatar: p.avatar || '😎',
         handCount: isMe ? p.hand.length : null,
-        connected: p.connected, out: p.out,
+        connected: p.connected,
+        out: p.out,
         isHost: p.id === r.hostId,
       };
     }),

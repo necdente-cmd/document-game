@@ -18,13 +18,14 @@ export function setupHandlers(io, broadcast) {
     const ctx = { rooms, broadcast, err, getMe, getRid: () => rid };
 
     // СОЗДАНИЕ КОМНАТЫ
-    socket.on('createRoom', ({ name, opts }, cb) => {
+    socket.on('createRoom', ({ name, avatar, opts }, cb) => {
       const r = newRoom(opts);
       pid = uid();
       rid = r.id;
       r.hostId = pid;
       r.players.push({
-        id: pid, name: name || 'Игрок', seat: 0, team: 0,
+        id: pid, name: name || 'Игрок', avatar: avatar || '😎',
+        seat: 0, team: 0,
         hand: [], connected: true, out: false,
       });
       socket.join(pid);
@@ -34,7 +35,7 @@ export function setupHandlers(io, broadcast) {
     });
 
     // ВХОД / ПЕРЕПОДКЛЮЧЕНИЕ
-    socket.on('joinRoom', ({ roomId, name, playerId }, cb) => {
+    socket.on('joinRoom', ({ roomId, name, avatar, playerId }, cb) => {
       const r = rooms.get((roomId || '').toUpperCase());
       if (!r) return cb({ ok: false, err: 'Комната не найдена' });
 
@@ -46,6 +47,7 @@ export function setupHandlers(io, broadcast) {
           rid = r.id;
           existing.connected = true;
           if (name) existing.name = name;
+          if (avatar) existing.avatar = avatar;
           socket.join(pid);
           socket.join(r.id);
           log(r, `${existing.name} вернулся`);
@@ -62,8 +64,10 @@ export function setupHandlers(io, broadcast) {
       rid = r.id;
       const seat = r.players.length;
       r.players.push({
-        id: pid, name: name || `Игрок ${seat + 1}`, seat,
-        team: seat % 2, hand: [], connected: true, out: false,
+        id: pid, name: name || `Игрок ${seat + 1}`,
+        avatar: avatar || '😎',
+        seat, team: seat % 2,
+        hand: [], connected: true, out: false,
       });
       socket.join(pid);
       socket.join(r.id);

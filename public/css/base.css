@@ -113,3 +113,35 @@ body {
 }
 .icon-btn:active { transform: scale(.95); }
 [data-theme="paper"] .icon-btn { background: rgba(0,0,0,.08); }
+
+/* ==================== ВЫБОР АВАТАРКИ ==================== */
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  margin-top: 4px;
+}
+.avatar-choice {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  border: 2px solid rgba(255,255,255,.2);
+  background: rgba(255,255,255,.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  cursor: pointer;
+  transition: transform .15s, border-color .15s, background .15s;
+  user-select: none;
+}
+[data-theme="paper"] .avatar-choice {
+  background: rgba(0,0,0,.04);
+  border-color: rgba(0,0,0,.15);
+}
+.avatar-choice:hover { border-color: var(--acc); }
+.avatar-choice.sel {
+  border-color: var(--acc);
+  background: rgba(241,196,15,.25);
+  transform: scale(1.08);
+}

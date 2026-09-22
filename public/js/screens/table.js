@@ -1,4 +1,4 @@
-import { state, saveMe, applyTheme, playerState, getAvatar, savePrefs } from '../state.js';
+import { state, saveMe, applyTheme, playerState, savePrefs } from '../state.js';
 import { socket } from '../socket.js';
 import { cardHtml, backPath, esc, renderHandFan } from '../card.js';
 import { buildOverlays, bindOverlays } from '../ui/overlays.js';
@@ -79,7 +79,7 @@ export function renderTable(app, navigate) {
     ((s.field && s.field.defender === p.seat) || (!s.field && s.turnSeat === p.seat))
   ))?.seat;
 
-  // ==================== ЛОББИ ====================
+  // Лобби
   let lobbyBar = '';
   if (s.phase === 'lobby') {
     const playersCount = s.players.length;
@@ -92,7 +92,7 @@ export function renderTable(app, navigate) {
         <button class="copy-btn" id="copyCode">📋 Скопировать</button>
         <div class="waiting-info">Игроков: <b>${playersCount} / ${maxP}</b></div>
         <div class="waiting-players">
-          ${s.players.map(p => `<div class="waiting-player ${p.isHost?'host':''}">${getAvatar(p.seat)} ${esc(p.name)}${p.isHost?' (хост)':''}</div>`).join('')}
+          ${s.players.map(p => `<div class="waiting-player ${p.isHost?'host':''}">${p.avatar || '😎'} ${esc(p.name)}${p.isHost?' (хост)':''}</div>`).join('')}
         </div>
         ${isHost && playersCount === maxP
           ? `<button class="start-big" id="startBtn">▶ Начать игру</button>`
@@ -101,7 +101,7 @@ export function renderTable(app, navigate) {
       </div>`;
   }
 
-  // ==================== БАННЕР ====================
+  // Баннер
   let passNotice = '';
   if (s.field && !s.pendingPass && !s.pendingSwap && !s.pendingFalsh) {
     if (bothPassed) passNotice = `<div class="pass-notice">⛔ Оба атакующих пасанули</div>`;
@@ -115,7 +115,7 @@ export function renderTable(app, navigate) {
     passNotice = `<div class="pass-notice wait">⏳ Ждём ${esc(wname)} — отошёл</div>`;
   }
 
-  // ==================== СИДЕНЬЯ ====================
+  // Сиденья
   const seats = s.players.filter(p => p.seat !== mySeat).map(p => {
     const isThisInPassed = passedSeats.includes(p.seat);
     const offlineBadge = !p.connected ? '<div class="badge-off">⚠ отошёл</div>' : '';
@@ -126,7 +126,7 @@ export function renderTable(app, navigate) {
                 : st === 'отошёл' ? 'out' : '';
     return `
       <div class="seat ${pos} ${p.seat===s.turnSeat?'active':''} ${p.out?'out':''} ${!p.connected?'offline':''}">
-        <div class="avatar">${getAvatar(p.seat)}</div>
+        <div class="avatar">${p.avatar || '😎'}</div>
         <div>${esc(p.name)} ${p.team===myTeam?'★':'✗'}</div>
         ${st ? `<div class="state ${stCls}">${st}</div>` : ''}
         ${isThisInPassed ? '<div class="pass-badge">⛔ Пас</div>' : ''}
@@ -134,7 +134,7 @@ export function renderTable(app, navigate) {
       </div>`;
   }).join('');
 
-  // ==================== КОЛОДА ====================
+  // Колода
   let deckArea = '';
   if (isPlaying || s.phase === 'roundEnd' || s.phase === 'gameEnd') {
     const stack = Array.from({ length: 4 }).map((_, i) =>
@@ -150,7 +150,7 @@ export function renderTable(app, navigate) {
       </div>`;
   }
 
-  // ==================== ПОЛЕ ====================
+  // Поле
   const fieldHtml = s.field
     ? s.field.cards.map(e => {
         const canBeTarget = canDefend && !e.beatenBy && e.card.r !== myDoc;
@@ -163,48 +163,54 @@ export function renderTable(app, navigate) {
       }).join('')
     : `<div style="opacity:.5">— поле пусто —</div>`;
 
-  // ==================== ФЛАГИ ====================
+  // Флаги
   const onlyDocsNow = s.myHand.length > 0 && s.myHand.every(c => c.r === myDoc);
-  const hasUnbeaten = s.field && s.field.cards.some(x => !x.beatenBy);
   const allBeaten = s.field && s.field.cards.length > 0 && s.field.cards.every(x => x.beatenBy);
 
-  // ==================== ОСНОВНАЯ КНОПКА ====================
-  let centerActionBtn = '';
-  let centerActionCls = 'b2';
+  // ============ ОСНОВНАЯ КНОПКА ============
+  let centerActionBtn = '—';
+  let centerActionCls = 'idle';
   let centerActionId = '';
+  let centerActionDisabled = true;
 
   if (canDefend && s.field && s.field.cards.length > 0) {
     centerActionBtn = '📥<br>ПОДНЯТЬ';
     centerActionCls = 'b3';
     centerActionId = 'pickUpBtn';
+    centerActionDisabled = false;
   }
   else if (isMyTurn && !iAmOut && !s.field && partnerIsOut && onlyDocsNow) {
     centerActionBtn = '🏆<br>БРОСИТЬ';
     centerActionCls = 'b1';
     centerActionId = 'throwBtn';
+    centerActionDisabled = false;
   }
   else if (isMyTurn && !iAmOut && !s.field && partnerIsOut && !s.swapUsedByTeam[myTeam] && !onlyDocsNow && s.myHand.length > 0) {
     centerActionBtn = '🔄<br>ОТДАТЬ';
     centerActionCls = 'b5';
     centerActionId = 'swapInitBtn';
+    centerActionDisabled = false;
   }
   else if (iAmOut && !partnerIsOut && s.turnSeat === myPartnerSeat && !s.field && !s.swapUsedByTeam[myTeam]) {
     centerActionBtn = '🔄<br>ВЕРНУТЬСЯ';
     centerActionCls = 'b5';
     centerActionId = 'swapAskBtn';
+    centerActionDisabled = false;
   }
   else if (isMyTurn && !iAmOut && !s.field && !partnerIsOut && onlyDocsNow) {
     centerActionBtn = '📤<br>ПЕРЕДАТЬ';
     centerActionCls = 'b2';
     centerActionId = 'passBtn';
+    centerActionDisabled = false;
   }
   else if ((isAttacker || isPartnerOfAttacker) && !iHavePassed) {
     centerActionBtn = '✋<br>ПАС';
     centerActionCls = 'b2';
     centerActionId = 'pasBtn';
+    centerActionDisabled = false;
   }
 
-  // ==================== ДОП. КНОПКИ ====================
+  // ============ ДОП. КНОПКИ ============
   const extraActions = [];
 
   if (canDefend && allBeaten && bothPassed && !s.pendingPass && !s.pendingSwap && !s.pendingFalsh) {
@@ -215,13 +221,12 @@ export function renderTable(app, navigate) {
     extraActions.push(`<button class="b4" id="falshBtn">🃏 ФАЛЬШ</button>`);
   }
 
-  // ==================== РУКА ====================
+  // Рука
   const sortedHand = sortHand(s.myHand, myDoc, s.trumpSuit);
   const handHtml = renderHandFan(sortedHand, { myDoc, oppDoc, selected: state.selected, isDealing });
 
-  // ==================== ПОДСКАЗКИ ====================
+  // Подсказки
   let hintHtml = '';
-
   if (waitingForSeat !== undefined) {
     hintHtml = `<div class="hint">⏳ Ждём игрока — скоро вернётся</div>`;
   }
@@ -253,7 +258,7 @@ export function renderTable(app, navigate) {
     hintHtml = `<div class="hint">👆 Твой ход — тяни карту в поле</div>`;
   }
 
-  // ==================== ДУГА ====================
+  // Дуга
   const arcBtn = isPlaying ? `
     <div class="icon-arc">
       <button class="arc-btn arc-1" id="sortBtn" title="Сортировка">🔄</button>
@@ -268,7 +273,9 @@ export function renderTable(app, navigate) {
 
   const overlays = buildOverlays();
 
-  // ==================== РЕНДЕР ====================
+  // Класс пульсации: если действие доступно — pulse
+  const pulseClass = !centerActionDisabled ? 'pulse' : '';
+
   app.innerHTML = `
     <div class="table" id="table">
       ${lobbyBar}
@@ -298,14 +305,18 @@ export function renderTable(app, navigate) {
 
       <div class="extra-actions">${extraActions.join('')}</div>
 
-      ${centerActionBtn ? `<button class="action-center ${centerActionCls}" id="${centerActionId}">${centerActionBtn}</button>` : ''}
+      <button class="action-center ${centerActionCls} ${pulseClass}"
+              id="centerActionBtn"
+              ${centerActionDisabled ? 'disabled' : ''}>
+        ${centerActionBtn}
+      </button>
     </div>
 
     <div class="actions">${hintHtml}</div>
     <div class="err" id="err"></div>
   `;
 
-  // ==================== ОБРАБОТЧИКИ ====================
+  // ============ ОБРАБОТЧИКИ ============
   const err = m => { const e = document.getElementById('err'); if (e) e.textContent = m; };
   const g = id => document.getElementById(id);
 
@@ -332,6 +343,7 @@ export function renderTable(app, navigate) {
   };
   const st = g('startBtn'); if (st) st.onclick = () => socket.emit('startGame');
 
+  // Основная кнопка — обрабатывается по ID (если доступна)
   const pu = g('pickUpBtn');   if (pu) pu.onclick = () => { socket.emit('pickUp'); state.defendTarget = null; };
   const th = g('throwBtn');    if (th) th.onclick = () => socket.emit('throwDocs');
   const si = g('swapInitBtn'); if (si) si.onclick = () => socket.emit('swapInitiate');
@@ -339,6 +351,7 @@ export function renderTable(app, navigate) {
   const ps = g('passBtn');     if (ps) ps.onclick = () => socket.emit('passDocsRequest');
   const pas = g('pasBtn');     if (pas) pas.onclick = () => socket.emit('endAttack');
 
+  // Доп. кнопки
   const bi = g('bitoBtn');     if (bi) bi.onclick = () => socket.emit('bito');
   const fl = g('falshBtn');    if (fl) fl.onclick = () => {
     if (!state.defendTarget) return err('Сначала тапните карту врага');
@@ -346,6 +359,7 @@ export function renderTable(app, navigate) {
     state.defendTarget = null;
   };
 
+  // Дуга
   const sortBtn = g('sortBtn');
   if (sortBtn) sortBtn.onclick = () => {
     sortMode = (sortMode + 1) % 3;

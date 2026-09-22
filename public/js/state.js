@@ -2,6 +2,7 @@ export const state = {
   server: null,
   me: null,
   selected: new Set(),
+  defendTarget: null,
   emojiOpen: false,
   historyOpen: false,
   chatOpen: false,
@@ -11,9 +12,15 @@ export const state = {
   soundOn: true,
   vibrationOn: true,
   micOn: false,
-  // состояние игроков для UI
-  lastState: {},
 };
+
+// ==================== НАБОР АВАТАРОК ====================
+export const AVATARS = [
+  '😎','🤠','👽','🤖','🎃','👻',
+  '💀','🐱','🦊','🐻','🐼','🦁',
+  '🐯','🐸','🐙','🦄','🐲','🦉',
+  '🐺','🐨','🦅','🐷','🐵','🦝',
+];
 
 export function loadMe() {
   try { state.me = JSON.parse(localStorage.getItem('me') || 'null'); }
@@ -33,6 +40,8 @@ export function loadOpts() {
 export function saveOpts(opts) { localStorage.setItem('opts', JSON.stringify(opts)); }
 export function loadName() { return localStorage.getItem('lastName') || ''; }
 export function saveName(name) { localStorage.setItem('lastName', name); }
+export function loadAvatar() { return localStorage.getItem('lastAvatar') || AVATARS[0]; }
+export function saveAvatar(a) { localStorage.setItem('lastAvatar', a); }
 
 // Настройки звука/вибры
 export function loadPrefs() {
@@ -81,8 +90,8 @@ export function playerState(s, seat) {
   return '';
 }
 
-// Аватарки (стандартный набор)
-export const AVATARS = ['😎','🦊','🐻','🐼','🦁','🐯','🐸','🐙','🦄','🐲','👽','🤖'];
-export function getAvatar(seat) {
-  return AVATARS[seat % AVATARS.length];
+// Хелпер для рендера аватарок
+export function getAvatar(seat, players) {
+  const p = players?.find(x => x.seat === seat);
+  return (p && p.avatar) || '😎';
 }

@@ -371,3 +371,22 @@
 
   .info-panel { font-size: 11px; padding: 4px 7px; }
 }
+
+/* ==================== ПУЛЬСАЦИЯ КНОПКИ ДЕЙСТВИЯ ==================== */
+.action-center.pulse {
+  animation: actionPulse 1.2s ease-in-out infinite;
+}
+@keyframes actionPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.06); }
+}
+
+/* Состояние "нет действия" — серая кнопка с "—" */
+.action-center.idle {
+  background: rgba(60,60,60,.8) !important;
+  color: #999 !important;
+  cursor: default !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,.4), inset 0 -4px 8px rgba(0,0,0,.3) !important;
+  font-size: calc(36px * var(--scale)) !important;
+  text-shadow: none !important;
+}
