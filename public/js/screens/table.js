@@ -95,11 +95,11 @@ export function renderTable(app, navigate) {
       </div>`;
   }).join('');
 
-  // Колода и козырь
+  // Колода и козырь (слева)
   let deckArea = '';
   if (isPlaying || s.phase === 'roundEnd' || s.phase === 'gameEnd') {
     const stack = Array.from({ length: 4 }).map((_, i) =>
-      `<div class="card back ${isDealing ? 'deal' : ''}" style="top:${i*3}px;left:${i*3}px;z-index:${10+i}">
+      `<div class="card back ${isDealing ? 'deal' : ''}" style="top:${i*2}px;left:${i*2}px;z-index:${10+i}">
         <img src="${backPath(s.opts)}" alt="•" draggable="false">
       </div>`).join('');
     deckArea = `
@@ -146,7 +146,7 @@ export function renderTable(app, navigate) {
   const selectedOppDocs = s.myHand.filter(c => state.selected.has(c.id) && c.r === oppDoc && oppDoc !== myDoc);
   const isOnlyOppDocs = state.selected.size > 0 && selectedOppDocs.length === state.selected.size;
 
-  // Рука
+  // Рука (пока прямая, веер будет на след. этапе)
   const handHtml = s.myHand.map(c => cardHtml(c, {
     cls: [
       state.selected.has(c.id) ? 'sel' : '',
@@ -177,20 +177,44 @@ export function renderTable(app, navigate) {
   const emojiBtn = isPlaying ? `<button class="emoji-toggle" id="emojiToggle">😀</button>${emojiPanel}` : '';
   const historyBtn = isPlaying ? `<button class="history-btn" id="historyBtn">📜</button>` : '';
 
+  // Кнопки действий справа
+  const rightActions = [];
+  if (canAttack || canAdd) {
+    rightActions.push(`<button class="${isOnlyOppDocs ? 'b4' : 'b1'}" id="attackBtn">${
+      isOnlyOppDocs ? `📤 Навязать (${selectedOppDocs.length})` : (canAttack ? 'Атаковать' : 'Подкинуть')
+    }</button>`);
+  }
+  if (canSayEnd) rightActions.push(`<button class="b2" id="endBtn">Хватит</button>`);
+  if (canPickUp) rightActions.push(`<button class="b3" id="pickBtn">Поднять всё</button>`);
+  if (canFalsh) rightActions.push(`<button class="b4" id="falshBtn">🃏 Фальш</button>`);
+  if (canBito) rightActions.push(`<button class="b1" id="bitoBtn">✔ Бито</button>`);
+  if (canThrow) rightActions.push(`<button class="b1" id="throwBtn">🏆 Бросить док.</button>`);
+  if (canPassDocs) rightActions.push(`<button class="b2" id="passBtn">Передать</button>`);
+  if (canSwapInitiate) rightActions.push(`<button class="b5" id="swapInitBtn">🔄 Отдать</button>`);
+  if (canSwapAsk) rightActions.push(`<button class="b5" id="swapAskBtn">🔄 Вернуться</button>`);
+
   app.innerHTML = `
     <div class="table" id="table">
       ${lobbyBar}
       ${passNotice}
       ${deckArea}
-      <button class="exit-btn" id="exitBtn" title="Выйти">✕</button>
-      <div class="side">
-        Козырь: <b>${esc(s.trumpSuit || '—')}</b><br>
-        Мой док: <b>${esc(myDoc)}</b><br>
-        Их док: <b>${esc(oppDoc)}</b><br>
-        Счёт: ${s.roundWins[0]} : ${s.roundWins[1]}
+
+      <div class="top-bar">
+        <div class="info-panel">
+          Козырь: <b>${esc(s.trumpSuit || '—')}</b><br>
+          Мой док: <b>${esc(myDoc)}</b> · Их док: <b>${esc(oppDoc)}</b><br>
+          Счёт: ${s.roundWins[0]} : ${s.roundWins[1]}
+        </div>
+        <button class="settings-btn" id="settingsBtn" title="Настройки">⚙️</button>
       </div>
+
       ${seats}
       <div class="center">${fieldHtml}</div>
+
+      <div class="right-actions">
+        ${rightActions.join('')}
+      </div>
+
       ${overlays}
       ${emojiBtn}
       ${historyBtn}
@@ -198,31 +222,14 @@ export function renderTable(app, navigate) {
     <div class="hand" id="hand">${handHtml}</div>
     <div class="actions">
       ${hintHtml}
-      ${(canAttack || canAdd)
-        ? `<button class="${isOnlyOppDocs ? 'b4' : 'b1'}" id="attackBtn">${
-            isOnlyOppDocs
-              ? `📤 Навязать документ (${selectedOppDocs.length})`
-              : (canAttack ? 'Атаковать' : 'Подкинуть')
-          }</button>`
-        : ''}
-      ${canSayEnd ? `<button class="b2" id="endBtn">Хватит</button>` : ''}
-      ${canPickUp ? `<button class="b3" id="pickBtn">Поднять всё</button>` : ''}
-      ${canFalsh ? `<button class="b4" id="falshBtn">🃏 Фальш</button>` : ''}
-      ${canBito ? `<button class="b1" id="bitoBtn">✔ Бито</button>` : ''}
-      ${canThrow ? `<button class="b1" id="throwBtn">🏆 Бросить документы</button>` : ''}
-      ${canPassDocs ? `<button class="b2" id="passBtn">Передать партнёру</button>` : ''}
-      ${canSwapInitiate ? `<button class="b5" id="swapInitBtn">🔄 Отдать партнёру</button>` : ''}
-      ${canSwapAsk ? `<button class="b5" id="swapAskBtn">🔄 Вернуться в игру</button>` : ''}
     </div>
     <div class="err" id="err"></div>
   `;
 
   // ============ ОБРАБОТЧИКИ ============
-
   const err = m => { const e = document.getElementById('err'); if (e) e.textContent = m; };
   const g = id => document.getElementById(id);
 
-  // Клик по руке
   document.getElementById('hand').onclick = e => {
     const el = e.target.closest('.card'); if (!el) return;
     const id = el.dataset.id;
@@ -244,7 +251,6 @@ export function renderTable(app, navigate) {
     renderTable(app, navigate);
   };
 
-  // Клик по полю (выбор цели защиты)
   const centerEl = document.querySelector('.center');
   if (centerEl) {
     centerEl.onclick = e => {
@@ -284,8 +290,8 @@ export function renderTable(app, navigate) {
   const si = g('swapInitBtn'); if (si) si.onclick = () => socket.emit('swapInitiate');
   const sa = g('swapAskBtn'); if (sa) sa.onclick = () => socket.emit('swapAsk');
 
-  // Выход
-  const ex = g('exitBtn'); if (ex) ex.onclick = () => {
+  // Кнопка настроек (пока просто заглушка)
+  const sb = g('settingsBtn'); if (sb) sb.onclick = () => {
     if (!confirm('Выйти из комнаты?')) return;
     socket.emit('leaveRoom');
     saveMe(null);
@@ -308,9 +314,6 @@ export function renderTable(app, navigate) {
   const hb = g('historyBtn');
   if (hb) hb.onclick = () => showHistory();
 
-  // Оверлеи
   bindOverlays();
-
-  // Экран чемпиона
   maybeShowChampion(navigate);
 }
