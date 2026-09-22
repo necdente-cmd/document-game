@@ -1,6 +1,6 @@
 import { state, saveMe, applyTheme } from '../state.js';
 import { socket } from '../socket.js';
-import { cardHtml, backPath, beatsUI, posClass, esc } from '../card.js';
+import { cardHtml, backPath, beatsUI, posClass, esc, renderHandFan } from '../card.js';
 import { buildOverlays, bindOverlays } from '../ui/overlays.js';
 import { maybeShowChampion } from '../ui/champion.js';
 import { showHistory } from '../ui/history.js';
@@ -146,15 +146,13 @@ export function renderTable(app, navigate) {
   const selectedOppDocs = s.myHand.filter(c => state.selected.has(c.id) && c.r === oppDoc && oppDoc !== myDoc);
   const isOnlyOppDocs = state.selected.size > 0 && selectedOppDocs.length === state.selected.size;
 
-  // Рука (пока прямая, веер будет на след. этапе)
-  const handHtml = s.myHand.map(c => cardHtml(c, {
-    cls: [
-      state.selected.has(c.id) ? 'sel' : '',
-      c.r === myDoc ? 'doc' : '',
-      (c.r === oppDoc && oppDoc !== myDoc) ? 'opp-doc' : '',
-      isDealing ? 'deal' : ''
-    ].filter(Boolean).join(' ')
-  })).join('');
+  // Рука — веер
+  const handHtml = renderHandFan(s.myHand, {
+    myDoc,
+    oppDoc,
+    selected: state.selected,
+    isDealing,
+  });
 
   // Подсказка
   let hintHtml = '';
@@ -290,7 +288,7 @@ export function renderTable(app, navigate) {
   const si = g('swapInitBtn'); if (si) si.onclick = () => socket.emit('swapInitiate');
   const sa = g('swapAskBtn'); if (sa) sa.onclick = () => socket.emit('swapAsk');
 
-  // Кнопка настроек (пока просто заглушка)
+  // Кнопка настроек (пока заглушка — просто выход)
   const sb = g('settingsBtn'); if (sb) sb.onclick = () => {
     if (!confirm('Выйти из комнаты?')) return;
     socket.emit('leaveRoom');

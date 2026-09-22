@@ -49,3 +49,43 @@ export function posClass(seat) {
   const mySeat = state.server.mySeat;
   return ['bottom','right','top','left'][((seat - mySeat + 4) % 4)] || 'top';
 }
+
+// ==================== ВЕЕР КАРТ ====================
+// Рендер руки в виде веера: карты по дуге, крайние ниже, центральные выше
+export function renderHandFan(cards, options = {}) {
+  const n = cards.length;
+  if (n === 0) return '';
+
+  const myDoc = options.myDoc || '';
+  const oppDoc = options.oppDoc || '';
+  const selected = options.selected || new Set();
+  const isDealing = options.isDealing || false;
+
+  // Параметры веера (меняем от количества карт)
+  const maxSpread = 320;           // максимальная ширина разворота (px)
+  const cardW = 64;                // ширина карты (примерно)
+  const angleStep = n > 1 ? Math.min(6, 40 / n) : 0;  // угол наклона между картами
+  const arcHeight = 24;            // высота дуги
+  const overlap = Math.min(cardW * 0.5, n > 1 ? maxSpread / (n - 1) : 0);
+
+  return cards.map((c, i) => {
+    // Позиция от левого края
+    const t = n > 1 ? i / (n - 1) : 0.5;          // 0..1
+    const x = (t - 0.5) * maxSpread;              // -160..160
+    const angle = (t - 0.5) * angleStep * 2 * n / 5;  // наклон
+    const lift = -Math.sin(t * Math.PI) * arcHeight;  // подъём центральных
+
+    const cls = [
+      selected.has(c.id) ? 'sel' : '',
+      c.r === myDoc ? 'doc' : '',
+      (c.r === oppDoc && oppDoc !== myDoc) ? 'opp-doc' : '',
+      isDealing ? 'deal' : ''
+    ].filter(Boolean).join(' ');
+
+    return cardHtml(c, {
+      cls,
+      style: `left: calc(50% + ${x}px - var(--card-w)/2); bottom: ${-lift}px; transform: rotate(${angle}deg); z-index: ${i + 1};`,
+      dataIndex: i,
+    });
+  }).join('');
+}

@@ -21,8 +21,9 @@
   -webkit-user-drag: none;
 }
 .card.sel {
-  transform: translateY(-18px);
-  box-shadow: 0 0 0 4px var(--acc), 0 3px 12px rgba(0,0,0,.8);
+  transform: translateY(-30px) scale(1.05);
+  z-index: 20;
+  box-shadow: 0 0 0 4px var(--acc), 0 6px 16px rgba(0,0,0,.8);
 }
 .card.doc {
   box-shadow: 0 0 0 3px var(--acc), 0 3px 8px rgba(0,0,0,.6);
@@ -60,17 +61,26 @@
 .hand .card.deal:nth-child(8) { animation-delay: .7s;  }
 .hand .card.deal:nth-child(9) { animation-delay: .8s;  }
 
-/* ==================== РУКА ИГРОКА ==================== */
+/* ==================== РУКА-ВЕЕР ==================== */
 .hand {
-  display: flex;
-  gap: 8px;
-  padding: 10px;
-  overflow-x: auto;
+  position: relative;
+  padding: 0;
   height: var(--hand-h);
+  background: transparent;
+  overflow: visible;
+  display: flex;
   align-items: flex-end;
-  background: rgba(0,0,0,.18);
+  justify-content: center;
+  pointer-events: none;
 }
-[data-theme="paper"] .hand { background: rgba(0,0,0,.06); }
+.hand .card {
+  position: absolute;
+  bottom: 0;
+  pointer-events: auto;
+  transform-origin: bottom center;
+  transition: transform .2s ease-out, bottom .2s ease-out;
+  cursor: pointer;
+}
 
 /* ==================== ПАНЕЛЬ ДЕЙСТВИЙ ==================== */
 .actions {
@@ -101,7 +111,7 @@
   width: 100%;
 }
 
-/* ==================== ЭМОДЗИ ПАНЕЛЬ ==================== */
+/* ==================== ЭМОДЗИ / ИСТОРИЯ ==================== */
 .emoji-bar {
   position: fixed;
   right: 8px;
@@ -149,20 +159,6 @@
   font-size: 20px;
   cursor: pointer;
   z-index: 199;
-}
-.exit-btn {
-  position: fixed;
-  left: 8px;
-  top: 8px;
-  z-index: 200;
-  background: rgba(231,76,60,.85);
-  color: #fff;
-  border: none;
-  border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  font-size: 16px;
-  cursor: pointer;
 }
 
 /* ==================== LANDSCAPE ==================== */
