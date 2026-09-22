@@ -1,9 +1,10 @@
 import { state, saveMe, applyTheme } from '../state.js';
 import { socket } from '../socket.js';
-import { cardHtml, backPath, beatsUI, posClass, esc, renderHandFan } from '../card.js';
+import { cardHtml, backPath, esc, renderHandFan } from '../card.js';
 import { buildOverlays, bindOverlays } from '../ui/overlays.js';
 import { maybeShowChampion } from '../ui/champion.js';
 import { showHistory } from '../ui/history.js';
+import { initDrag } from '../drag.js';
 
 const EMOJIS = ['👍','😂','😡','😭','🔥','💪','🤔','😎','👏','😱','🤝','🎯','😤','🙈','💯','⚡'];
 
@@ -87,15 +88,17 @@ export function renderTable(app, navigate) {
   const seats = s.players.filter(p => p.seat !== mySeat).map(p => {
     const isThisInPassed = passedSeats.includes(p.seat);
     const offlineBadge = !p.connected ? '<div class="badge-off">⚠ отошёл</div>' : '';
+    const posArr = ['bottom','right','top','left'];
+    const pos = posArr[((p.seat - mySeat + 4) % 4)] || 'top';
     return `
-      <div class="seat ${posClass(p.seat)} ${p.seat===s.turnSeat?'active':''} ${p.out?'out':''} ${!p.connected?'offline':''}">
+      <div class="seat ${pos} ${p.seat===s.turnSeat?'active':''} ${p.out?'out':''} ${!p.connected?'offline':''}">
         ${esc(p.name)} ${p.team===myTeam?'★':'✗'}
         ${isThisInPassed ? '<div class="pass-badge">⛔ Хватит</div>' : ''}
         ${offlineBadge}
       </div>`;
   }).join('');
 
-  // Колода и козырь (слева)
+  // Колода и козырь
   let deckArea = '';
   if (isPlaying || s.phase === 'roundEnd' || s.phase === 'gameEnd') {
     const stack = Array.from({ length: 4 }).map((_, i) =>
@@ -114,11 +117,9 @@ export function renderTable(app, navigate) {
   // Поле боя
   const fieldHtml = s.field
     ? s.field.cards.map(e => {
-        const isTarget = state.defendTarget === e.card.id;
         const canBeTarget = canDefend && !e.beatenBy && e.card.r !== myDoc;
         const cls = ['slot'];
         if (canBeTarget) cls.push('tappable');
-        if (isTarget)    cls.push('selected');
         return `<div class="${cls.join(' ')}" data-field-card="${e.card.id}">
           ${cardHtml(e.card)}
           ${e.beatenBy ? cardHtml(e.beatenBy, { cls:'beaten' }) : ''}
@@ -135,7 +136,6 @@ export function renderTable(app, navigate) {
                   && !s.field.cards.some(x => x.card.r === myDoc)
                   && !s.pendingPass && !s.pendingSwap && !s.pendingFalsh;
   const canPickUp = canDefend && !s.pendingPass && !s.pendingSwap && !s.pendingFalsh;
-  const canFalsh = canDefend && state.defendTarget && !s.pendingPass && !s.pendingSwap && !s.pendingFalsh;
   const canThrow = isMyTurn && !iAmOut && onlyDocsNow && !s.pendingPass && !s.pendingSwap && partnerIsOut && !s.pendingFalsh;
   const canPassDocs = isMyTurn && !iAmOut && onlyDocsNow && !s.field && !s.pendingPass && !s.pendingSwap && !partnerIsOut && !s.pendingFalsh;
   const canSwapInitiate = isMyTurn && !iAmOut && !s.field && !s.pendingPass && !s.pendingSwap
@@ -157,16 +157,17 @@ export function renderTable(app, navigate) {
   // Подсказка
   let hintHtml = '';
   if (isOnlyOppDocs) {
-    hintHtml = `<div class="hint" style="color:#e74c3c;">⚠ Навязываете документ противника — не бьётся, защитник обязан поднять</div>`;
+    hintHtml = `<div class="hint" style="color:#e74c3c;">⚠ Навязываете документ противника — не бьётся</div>`;
   } else if (waitingForSeat !== undefined) {
     hintHtml = `<div class="hint">⏳ Ждём игрока — скоро вернётся</div>`;
   } else if (canDefend && !bothPassed && !s.pendingPass && !s.pendingSwap && !s.pendingFalsh) {
     const hasMyDoc = s.field.cards.some(x => !x.beatenBy && x.card.r === myDoc);
     if (hasMyDoc) hintHtml = `<div class="hint">⚠ На столе ваш документ — нужно поднять всё</div>`;
-    else if (state.defendTarget) hintHtml = `<div class="hint">👆 Выберите свою карту или «Фальш»</div>`;
-    else hintHtml = `<div class="hint">👆 Тапните карту врага — фальш, или тяните свою — бить</div>`;
+    else hintHtml = `<div class="hint">👆 Тяните карту на карту врага — бить. Тап по врагу — фальш</div>`;
   } else if (canDefend && bothPassed) {
     hintHtml = `<div class="hint">✋ Атакующие закрыты — решите: «Бито» или «Поднять»</div>`;
+  } else if (canAttack) {
+    hintHtml = `<div class="hint">👆 Тяните карту в поле — атака</div>`;
   }
 
   const overlays = buildOverlays();
@@ -175,7 +176,7 @@ export function renderTable(app, navigate) {
   const emojiBtn = isPlaying ? `<button class="emoji-toggle" id="emojiToggle">😀</button>${emojiPanel}` : '';
   const historyBtn = isPlaying ? `<button class="history-btn" id="historyBtn">📜</button>` : '';
 
-  // Кнопки действий справа
+  // Кнопки справа
   const rightActions = [];
   if (canAttack || canAdd) {
     rightActions.push(`<button class="${isOnlyOppDocs ? 'b4' : 'b1'}" id="attackBtn">${
@@ -184,7 +185,6 @@ export function renderTable(app, navigate) {
   }
   if (canSayEnd) rightActions.push(`<button class="b2" id="endBtn">Хватит</button>`);
   if (canPickUp) rightActions.push(`<button class="b3" id="pickBtn">Поднять всё</button>`);
-  if (canFalsh) rightActions.push(`<button class="b4" id="falshBtn">🃏 Фальш</button>`);
   if (canBito) rightActions.push(`<button class="b1" id="bitoBtn">✔ Бито</button>`);
   if (canThrow) rightActions.push(`<button class="b1" id="throwBtn">🏆 Бросить док.</button>`);
   if (canPassDocs) rightActions.push(`<button class="b2" id="passBtn">Передать</button>`);
@@ -228,27 +228,10 @@ export function renderTable(app, navigate) {
   const err = m => { const e = document.getElementById('err'); if (e) e.textContent = m; };
   const g = id => document.getElementById(id);
 
-  document.getElementById('hand').onclick = e => {
-    const el = e.target.closest('.card'); if (!el) return;
-    const id = el.dataset.id;
+  // Drag-and-drop
+  initDrag(() => renderTable(app, navigate));
 
-    if (canDefend) {
-      if (!state.defendTarget) return err('Сначала тапните карту врага');
-      const entry = s.field.cards.find(x => x.card.id === state.defendTarget);
-      const card  = s.myHand.find(c => c.id === id);
-      if (!entry || !card) return;
-      if (entry.card.r === myDoc) return err('Нельзя бить свой документ');
-      if (card.r === myDoc && card.s !== s.trumpSuit) return err('Свой документ бьёт только козырем');
-      if (!beatsUI(card, entry.card, s.trumpSuit)) return err('Не бьёт');
-      socket.emit('defend', { targetId: state.defendTarget, withId: id });
-      state.defendTarget = null; state.selected.clear();
-      return;
-    }
-
-    if (state.selected.has(id)) state.selected.delete(id); else state.selected.add(id);
-    renderTable(app, navigate);
-  };
-
+  // Клик по карте врага = фальш
   const centerEl = document.querySelector('.center');
   if (centerEl) {
     centerEl.onclick = e => {
@@ -258,8 +241,7 @@ export function renderTable(app, navigate) {
       const entry = s.field.cards.find(x => x.card.id === fid);
       if (!entry || entry.beatenBy) return;
       if (entry.card.r === myDoc) return err('Это ваш документ — только поднять');
-      state.defendTarget = (state.defendTarget === fid) ? null : fid;
-      renderTable(app, navigate);
+      socket.emit('falsh', { cardId: fid });
     };
   }
 
@@ -276,19 +258,15 @@ export function renderTable(app, navigate) {
     if (!state.selected.size) return err('Выберите карты');
     socket.emit('attack', { cardIds: [...state.selected] }); state.selected.clear();
   };
-  const pk = g('pickBtn'); if (pk) pk.onclick = () => { socket.emit('pickUp'); state.defendTarget = null; };
+  const pk = g('pickBtn'); if (pk) pk.onclick = () => socket.emit('pickUp');
   const en = g('endBtn'); if (en) en.onclick = () => socket.emit('endAttack');
   const bi = g('bitoBtn'); if (bi) bi.onclick = () => socket.emit('bito');
-  const fl = g('falshBtn'); if (fl) fl.onclick = () => {
-    if (!state.defendTarget) return err('Сначала тапните карту врага');
-    socket.emit('falsh', { cardId: state.defendTarget }); state.defendTarget = null;
-  };
   const th = g('throwBtn'); if (th) th.onclick = () => socket.emit('throwDocs');
   const ps = g('passBtn'); if (ps) ps.onclick = () => socket.emit('passDocsRequest');
   const si = g('swapInitBtn'); if (si) si.onclick = () => socket.emit('swapInitiate');
   const sa = g('swapAskBtn'); if (sa) sa.onclick = () => socket.emit('swapAsk');
 
-  // Кнопка настроек (пока заглушка — просто выход)
+  // Настройки (заглушка)
   const sb = g('settingsBtn'); if (sb) sb.onclick = () => {
     if (!confirm('Выйти из комнаты?')) return;
     socket.emit('leaveRoom');
