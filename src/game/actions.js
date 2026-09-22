@@ -1,15 +1,15 @@
-import { MAX_ATTACK, EMOJIS } from '../constants.js';
+import { MAX_ATTACK, EMOJIS, SWAP_TIMEOUT_MS } from '../constants.js';
 import {
   isKozir, beats, partnerOf, pickTarget, bothPartnersPassed,
 } from '../utils.js';
-import { docsOf, log } from '../rooms.js';
+import { docsOf, log, clearSwapTimer } from '../rooms.js';
 import { drawTo } from './round.js';
 import { winByThrow, checkTeamExitWin, onlyDocs, hasDefenderDoc } from './end.js';
 
 export function registerGameHandlers(io, socket, ctx) {
   const { rooms, broadcast, getMe, getRid, err } = ctx;
 
-  // АТАКА / ПОДКИДЫВАНИЕ
+  // ==================== АТАКА / ПОДКИДЫВАНИЕ ====================
   socket.on('attack', ({ cardIds }) => {
     const r = rooms.get(getRid()); if (!r || r.phase !== 'playing') return;
     const p = getMe(); if (!p || p.out) return;
@@ -59,7 +59,7 @@ export function registerGameHandlers(io, socket, ctx) {
     broadcast(r);
   });
 
-  // ЗАЩИТА
+  // ==================== ЗАЩИТА ====================
   socket.on('defend', ({ targetId, withId }) => {
     const r = rooms.get(getRid()); if (!r || !r.field) return;
     const p = getMe(); if (!p || r.field.defender !== p.seat) return err('Не вы защищаетесь');
@@ -78,7 +78,7 @@ export function registerGameHandlers(io, socket, ctx) {
     broadcast(r);
   });
 
-  // ФАЛЬШ — запрос хозяину карты
+  // ==================== ФАЛЬШ (с подтверждением хозяина) ====================
   socket.on('falsh', ({ cardId }) => {
     const r = rooms.get(getRid()); if (!r || !r.field) return;
     const p = getMe(); if (!p || r.field.defender !== p.seat) return err('Не вы защищаетесь');
@@ -137,7 +137,7 @@ export function registerGameHandlers(io, socket, ctx) {
     broadcast(r);
   });
 
-  // ПОДНЯТЬ ВСЁ
+  // ==================== ПОДНЯТЬ ВСЁ ====================
   socket.on('pickUp', () => {
     const r = rooms.get(getRid()); if (!r || !r.field) return;
     const p = getMe(); if (!p || r.field.defender !== p.seat) return err('Не вы защищаетесь');
@@ -158,7 +158,7 @@ export function registerGameHandlers(io, socket, ctx) {
     broadcast(r);
   });
 
-  // ХВАТИТ
+  // ==================== ХВАТИТ ====================
   socket.on('endAttack', () => {
     const r = rooms.get(getRid()); if (!r || !r.field) return;
     const p = getMe(); if (!p) return;
@@ -171,7 +171,7 @@ export function registerGameHandlers(io, socket, ctx) {
     broadcast(r);
   });
 
-  // БИТО
+  // ==================== БИТО ====================
   socket.on('bito', () => {
     const r = rooms.get(getRid()); if (!r || !r.field) return;
     const p = getMe(); if (!p) return;
@@ -190,7 +190,7 @@ export function registerGameHandlers(io, socket, ctx) {
     broadcast(r);
   });
 
-  // ПЕРЕДАЧА ДОКУМЕНТОВ
+  // ==================== ПЕРЕДАЧА ДОКУМЕНТОВ ====================
   socket.on('passDocsRequest', () => {
     const r = rooms.get(getRid()); if (!r || r.phase !== 'playing') return;
     const p = getMe(); if (!p || p.out) return;
@@ -234,7 +234,7 @@ export function registerGameHandlers(io, socket, ctx) {
     broadcast(r);
   });
 
-  // СВОП
+  // ==================== СВОП ====================
   socket.on('swapInitiate', () => {
     const r = rooms.get(getRid()); if (!r || r.phase !== 'playing') return;
     const p = getMe(); if (!p || p.out) return;
@@ -246,11 +246,20 @@ export function registerGameHandlers(io, socket, ctx) {
     if (!partner || !partner.out) return err('Партнёр ещё в игре');
     r.pendingSwap = {
       stage: 'opponentConfirm',
-      from: p.seat, to: partner.seat,
+      from: p.seat,
+      to: partner.seat,
       cards: p.hand.map(c => ({ ...c })),
       team: p.team,
     };
-    log(r, `${p.name} хочет передать карты партнёру`);
+    clearSwapTimer(r);
+    r.swapTimer = setTimeout(() => {
+      const room = rooms.get(r.id);
+      if (!room || !room.pendingSwap) return;
+      room.pendingSwap = null;
+      log(room, `⏱ Своп отменён по таймауту (60с)`);
+      broadcast(room);
+    }, SWAP_TIMEOUT_MS);
+    log(r, `${p.name} инициирует своп с партнёром`);
     broadcast(r);
   });
 
@@ -263,7 +272,20 @@ export function registerGameHandlers(io, socket, ctx) {
     if (!partner || partner.out) return err('Партнёр тоже вышел');
     if (r.turnSeat !== partner.seat) return err('Сейчас не ход партнёра');
     if (r.field) return err('Нельзя во время хода');
-    r.pendingSwap = { stage: 'partnerConfirm', from: p.seat, to: partner.seat, team: p.team };
+    r.pendingSwap = {
+      stage: 'partnerConfirm',
+      from: p.seat,
+      to: partner.seat,
+      team: p.team,
+    };
+    clearSwapTimer(r);
+    r.swapTimer = setTimeout(() => {
+      const room = rooms.get(r.id);
+      if (!room || !room.pendingSwap) return;
+      room.pendingSwap = null;
+      log(room, `⏱ Запрос на своп отменён по таймауту (60с)`);
+      broadcast(room);
+    }, SWAP_TIMEOUT_MS);
     log(r, `${p.name} просит вернуть его в игру`);
     broadcast(r);
   });
@@ -276,10 +298,12 @@ export function registerGameHandlers(io, socket, ctx) {
     const outgoing = r.players[r.pendingSwap.from];
     r.pendingSwap = {
       stage: 'opponentConfirm',
-      from: p.seat, to: outgoing.seat,
+      from: p.seat,
+      to: outgoing.seat,
       cards: p.hand.map(c => ({ ...c })),
       team: p.team,
     };
+    log(r, `${p.name} согласен вернуть партнёра`);
     broadcast(r);
   });
 
@@ -288,6 +312,8 @@ export function registerGameHandlers(io, socket, ctx) {
     const p = getMe(); if (!p) return;
     if (r.pendingSwap.stage !== 'partnerConfirm') return;
     if (r.pendingSwap.to !== p.seat) return err('Не вам решать');
+    log(r, `${p.name} отказался возвращать партнёра`);
+    clearSwapTimer(r);
     r.pendingSwap = null;
     broadcast(r);
   });
@@ -297,6 +323,7 @@ export function registerGameHandlers(io, socket, ctx) {
     const p = getMe(); if (!p) return;
     if (r.pendingSwap.stage !== 'opponentConfirm') return;
     if (p.team === r.pendingSwap.team) return err('Подтвердить может только противник');
+    clearSwapTimer(r);
     const fromPlayer = r.players[r.pendingSwap.from];
     const toPlayer = r.players[r.pendingSwap.to];
     toPlayer.hand.push(...fromPlayer.hand);
@@ -306,21 +333,12 @@ export function registerGameHandlers(io, socket, ctx) {
     r.swapUsedByTeam[fromPlayer.team] = true;
     r.pendingSwap = null;
     r.turnSeat = toPlayer.seat;
-    log(r, `${fromPlayer.name} ↔ ${toPlayer.name} — своп`);
+    log(r, `${fromPlayer.name} ↔ ${toPlayer.name} — своп завершён`);
     if (checkTeamExitWin(r)) return broadcast(r);
     broadcast(r);
   });
 
-  socket.on('swapCancel', () => {
-    const r = rooms.get(getRid()); if (!r || !r.pendingSwap) return;
-    const p = getMe(); if (!p) return;
-    if (r.pendingSwap.stage !== 'opponentConfirm') return;
-    if (p.team === r.pendingSwap.team) return err('Отменить может только противник');
-    r.pendingSwap = null;
-    broadcast(r);
-  });
-
-  // БРОСОК ДОКУМЕНТОВ
+  // ==================== БРОСОК ДОКУМЕНТОВ ====================
   socket.on('throwDocs', () => {
     const r = rooms.get(getRid()); if (!r || r.phase !== 'playing') return;
     const p = getMe(); if (!p || p.out) return;
@@ -337,7 +355,7 @@ export function registerGameHandlers(io, socket, ctx) {
     broadcast(r);
   });
 
-  // ЭМОДЗИ
+  // ==================== ЭМОДЗИ ====================
   socket.on('reaction', ({ emoji }) => {
     const r = rooms.get(getRid()); if (!r) return;
     const p = getMe(); if (!p) return;

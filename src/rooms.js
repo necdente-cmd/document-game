@@ -28,6 +28,7 @@ export function newRoom(opts = {}) {
     pendingSwap: null,
     pendingStart: null,
     pendingFalsh: null,
+    swapTimer: null,
     turnSeat: 0,
     log: [],
     lastAttacker: null,
@@ -52,6 +53,13 @@ export const docsOf = (r) => [
 export function pub(r, forId) {
   const me = r.players.find(p => p.id === forId);
   const docs = docsOf(r);
+  // Противнику НЕ показываем карты при свопе — только факт
+  const swapPub = r.pendingSwap ? {
+    stage: r.pendingSwap.stage,
+    from: r.pendingSwap.from,
+    to: r.pendingSwap.to,
+    team: r.pendingSwap.team,
+  } : null;
   return {
     id: r.id,
     opts: r.opts,
@@ -79,7 +87,7 @@ export function pub(r, forId) {
     winnerTeam: r.winnerTeam,
     field: r.field,
     pendingPass: r.pendingPass,
-    pendingSwap: r.pendingSwap,
+    pendingSwap: swapPub,
     pendingStart: r.pendingStart,
     pendingFalsh: r.pendingFalsh,
     turnSeat: r.turnSeat,
@@ -103,5 +111,12 @@ export function clearDisconnectTimer(r, playerId) {
   if (r.disconnectTimers[playerId]) {
     clearTimeout(r.disconnectTimers[playerId]);
     delete r.disconnectTimers[playerId];
+  }
+}
+
+export function clearSwapTimer(r) {
+  if (r.swapTimer) {
+    clearTimeout(r.swapTimer);
+    r.swapTimer = null;
   }
 }
