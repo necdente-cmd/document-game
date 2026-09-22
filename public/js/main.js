@@ -1,67 +1,87 @@
-import { state, loadMe, applyTheme, applyScale } from './state.js';
-import { bindSocket, socket, reconnectIfNeeded } from './socket.js';
+import { state, loadMe, applyTheme, applyScale, loadOpts, saveMe } from './state.js';
+import { bindSocket, socket } from './socket.js';
 import { renderWelcome } from './screens/welcome.js';
+import { renderCreate } from './screens/create.js';
+import { renderJoin } from './screens/join.js';
+import { renderTable } from './screens/table.js';
 
 const app = document.getElementById('app');
 
-// Простой роутер экранов
+let currentScreen = 'welcome';
+
 function navigate(screen) {
+  currentScreen = screen;
+  app.dataset.screen = screen;
   if (screen === 'welcome') return renderWelcome(app, navigate);
+  if (screen === 'create')  return renderCreate(app, navigate);
   if (screen === 'join')    return renderJoin(app, navigate);
-  if (screen === 'table')   return renderTablePlaceholder(app, navigate);
-  // По умолчанию — приветствие
+  if (screen === 'table')   return renderTable(app, navigate);
   renderWelcome(app, navigate);
-}
-
-// Временные заглушки для экранов, которые создадим позже
-function renderJoin(app, navigate) {
-  app.innerHTML = `
-    <div class="lobby" style="justify-content:center; min-height:100dvh;">
-      <h2 style="text-align:center;">Войти по коду</h2>
-      <p style="text-align:center; opacity:.7;">Скоро здесь будет вход. Пока нажмите Назад.</p>
-      <button id="backBtn">← Назад</button>
-      <div class="err" id="err"></div>
-    </div>`;
-  document.getElementById('backBtn').onclick = () => navigate('welcome');
-}
-
-function renderTablePlaceholder(app, navigate) {
-  const code = state.me?.roomId || '?';
-  app.innerHTML = `
-    <div class="lobby" style="justify-content:center; min-height:100dvh;">
-      <h2 style="text-align:center;">Код комнаты</h2>
-      <div style="text-align:center; font-size:42px; font-weight:900; letter-spacing:8px; color:var(--acc); margin:20px 0; font-family:'Courier New',monospace;">${code}</div>
-      <p style="text-align:center; opacity:.7;">Ждём других игроков. Скоро здесь будет стол.</p>
-      <div class="err" id="err"></div>
-    </div>`;
 }
 
 // Инициализация
 loadMe();
-const opts = JSON.parse(localStorage.getItem('opts') || '{}');
+const opts = loadOpts();
 applyTheme(opts.theme);
 applyScale(opts.scale);
 
-// Подписываемся на состояние — при обновлении просто перерисовываем текущий экран
+// Подписка на state
 bindSocket(() => {
-  if (state.me?.roomId && state.server) {
-    // Если мы в комнате — переходим на стол
-    if (!app.dataset.screen || app.dataset.screen === 'welcome' || app.dataset.screen === 'join') {
-      app.dataset.screen = 'table';
+  // Если мы в комнате и фаза не лобби-первый вход — идём на стол
+  if (state.server && state.me?.roomId) {
+    if (currentScreen === 'welcome' || currentScreen === 'create' || currentScreen === 'join') {
+      navigate('table');
+    } else {
+      renderTable(app, navigate);
     }
-    navigate(app.dataset.screen);
   } else {
-    if (!app.dataset.screen) {
-      app.dataset.screen = 'welcome';
-    }
-    navigate(app.dataset.screen);
+    if (!app.dataset.screen) navigate('welcome');
+    else navigate(currentScreen);
   }
 });
 
-// Если есть сохранённая комната — пробуем переподключиться
+// Реакции
+window.addEventListener('reaction', e => {
+  const { seat, emoji } = e.detail;
+  const table = document.getElementById('table');
+  if (!table || !state.server) return;
+  const posMap = {
+    bottom: 'bottom:190px; left:50%; transform:translateX(-50%)',
+    top:    'top:80px; left:50%; transform:translateX(-50%)',
+    left:   'top:40%; left:100px',
+    right:  'top:40%; right:100px',
+  };
+  const mySeat = state.server.mySeat;
+  const posKey = ['bottom','right','top','left'][((seat - mySeat + 4) % 4)] || 'top';
+  const pos = posMap[posKey] || posMap.top;
+  const el = document.createElement('div');
+  el.className = 'reaction';
+  el.textContent = emoji;
+  el.style.cssText = pos + ';position:absolute';
+  table.appendChild(el);
+  setTimeout(() => el.remove(), 2000);
+});
+
+window.addEventListener('falsh', e => {
+  const { byName, targetName, card } = e.detail;
+  const el = document.createElement('div');
+  el.className = 'falsh-banner';
+  el.innerHTML = `🃏 Ты фальшивка!<div style="font-size:14px;font-weight:500;margin-top:6px;opacity:.9">${byName} → ${targetName} · ${card.r}${card.s}</div>`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2200);
+});
+
+// Старт
 if (state.me?.roomId) {
-  reconnectIfNeeded();
+  socket.emit('joinRoom', { roomId: state.me.roomId, name: state.me.name, playerId: state.me.id }, r => {
+    if (!r.ok) { saveMe(null); navigate('welcome'); }
+    else state.me.id = r.playerId;
+  });
 } else {
-  app.dataset.screen = 'welcome';
   navigate('welcome');
 }
+
+// Обновляем приветствие при отсутствии серверного стейта
+socket.on('err', (m) => {
+  console.log('[server error]', m);
+});
