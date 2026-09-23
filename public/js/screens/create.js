@@ -9,6 +9,7 @@ export function renderCreate(app, navigate) {
   const docSet    = savedOpts.docSet    || 'classic';
   const theme     = savedOpts.theme     || 'classic';
   let pickedAvatar = loadAvatar() || AVATARS[0];
+  let pickedTheme  = theme;
 
   const backColors = ['black','blue','green','orange','purple','red'];
   const backs = backColors.map(c => `
@@ -28,6 +29,25 @@ export function renderCreate(app, navigate) {
     <div class="avatar-choice ${a===pickedAvatar?'sel':''}" data-avatar="${a}">${a}</div>
   `).join('');
 
+  const themesHtml = `
+    <div class="theme-preview ${pickedTheme==='classic'?'sel':''}" data-theme-val="classic" title="Классика">
+      <div class="tp-inner"></div>
+      <div class="tp-label">Классика</div>
+    </div>
+    <div class="theme-preview ${pickedTheme==='dark'?'sel':''}" data-theme-val="dark" title="Тёмная">
+      <div class="tp-inner"></div>
+      <div class="tp-label">Тёмная</div>
+    </div>
+    <div class="theme-preview ${pickedTheme==='neon'?'sel':''}" data-theme-val="neon" title="Неон">
+      <div class="tp-inner"></div>
+      <div class="tp-label">Неон</div>
+    </div>
+    <div class="theme-preview ${pickedTheme==='paper'?'sel':''}" data-theme-val="paper" title="Бумага">
+      <div class="tp-inner"></div>
+      <div class="tp-label">Бумага</div>
+    </div>
+  `;
+
   app.innerHTML = `
     <div class="lobby">
       <h2 style="text-align:center;">Настройки игры</h2>
@@ -45,12 +65,7 @@ export function renderCreate(app, navigate) {
         <option value="short"   ${docSet==='short'  ?'selected':''}>6 · 10 · Q · A</option>
       </select>
       <label>Тема стола</label>
-      <select id="theme">
-        <option value="classic" ${theme==='classic'?'selected':''}>Классика</option>
-        <option value="dark"    ${theme==='dark'   ?'selected':''}>Тёмная</option>
-        <option value="neon"    ${theme==='neon'   ?'selected':''}>Неон</option>
-        <option value="paper"   ${theme==='paper'  ?'selected':''}>Бумага</option>
-      </select>
+      <div class="theme-grid" id="themePick">${themesHtml}</div>
       <button id="createBtn" style="padding:16px; margin-top:12px;">🎮 Создать комнату</button>
       <button id="backBtn" style="background:#95a5a6; color:#000;">← Назад</button>
       <div class="err" id="err"></div>
@@ -73,7 +88,15 @@ export function renderCreate(app, navigate) {
     pickedBack = el.dataset.back;
     [...document.querySelectorAll('#backPick .choice')].forEach(x => x.classList.toggle('sel', x === el));
   };
-  document.getElementById('theme').onchange = e => applyTheme(e.target.value);
+
+  // ===== Выбор темы =====
+  document.getElementById('themePick').onclick = e => {
+    const el = e.target.closest('[data-theme-val]'); if (!el) return;
+    pickedTheme = el.dataset.themeVal;
+    [...document.querySelectorAll('#themePick .theme-preview')].forEach(x => x.classList.toggle('sel', x === el));
+    applyTheme(pickedTheme);   // сразу превью на всём экране
+  };
+
   document.getElementById('backBtn').onclick = () => navigate('welcome');
 
   document.getElementById('createBtn').onclick = () => {
@@ -82,7 +105,7 @@ export function renderCreate(app, navigate) {
     const opts = {
       maxPlayers: 4,
       docSet: document.getElementById('docSet').value,
-      theme: document.getElementById('theme').value,
+      theme: pickedTheme,
       deckStyle: pickedDeck,
       backColor: pickedBack,
       handSize: 6,

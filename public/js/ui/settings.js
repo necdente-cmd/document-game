@@ -13,6 +13,7 @@ export function openSettings(onClose) {
 
   const s = state.server || { swapUsedByTeam: [false, false] };
   const scale = document.documentElement.dataset.scale || 'medium';
+  const curTheme = document.documentElement.dataset.theme || 'classic';
 
   panel.innerHTML = `
     <button class="close-btn" id="closeSettings">✕</button>
@@ -40,6 +41,28 @@ export function openSettings(onClose) {
         <button data-scale="small"  class="${scale==='small'?'sel':''}">Маленький</button>
         <button data-scale="medium" class="${scale==='medium'?'sel':''}">Средний</button>
         <button data-scale="large"  class="${scale==='large'?'sel':''}">Большой</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h4>🎨 Тема стола <span style="font-weight:400;opacity:.6;font-size:11px;">(применится в след. комнате)</span></h4>
+      <div class="theme-grid" id="settingsThemePick">
+        <div class="theme-preview ${curTheme==='classic'?'sel':''}" data-theme-val="classic">
+          <div class="tp-inner"></div>
+          <div class="tp-label">Классика</div>
+        </div>
+        <div class="theme-preview ${curTheme==='dark'?'sel':''}" data-theme-val="dark">
+          <div class="tp-inner"></div>
+          <div class="tp-label">Тёмная</div>
+        </div>
+        <div class="theme-preview ${curTheme==='neon'?'sel':''}" data-theme-val="neon">
+          <div class="tp-inner"></div>
+          <div class="tp-label">Неон</div>
+        </div>
+        <div class="theme-preview ${curTheme==='paper'?'sel':''}" data-theme-val="paper">
+          <div class="tp-inner"></div>
+          <div class="tp-label">Бумага</div>
+        </div>
       </div>
     </div>
 
@@ -76,10 +99,20 @@ export function openSettings(onClose) {
       const val = sc.dataset.scale;
       applyScale(val);
       [...panel.querySelectorAll('.scale-row button')].forEach(b => b.classList.toggle('sel', b === sc));
-      // сохранить в opts комнаты
       if (state.server?.opts) state.server.opts.scale = val;
       const opts = JSON.parse(localStorage.getItem('opts') || '{}');
       opts.scale = val;
+      localStorage.setItem('opts', JSON.stringify(opts));
+      return;
+    }
+    const th = e.target.closest('[data-theme-val]');
+    if (th) {
+      const val = th.dataset.themeVal;
+      // локальный превью + сохранить в opts (применится в следующей комнате)
+      import('../state.js').then(m => m.applyTheme(val));
+      [...panel.querySelectorAll('.theme-preview')].forEach(x => x.classList.toggle('sel', x === th));
+      const opts = JSON.parse(localStorage.getItem('opts') || '{}');
+      opts.theme = val;
       localStorage.setItem('opts', JSON.stringify(opts));
       return;
     }
