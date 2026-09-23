@@ -299,3 +299,131 @@ body {
   opacity: 0;
   transition: none;
 }
+
+/* ==================== SPLASH (приветствие) ==================== */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: radial-gradient(ellipse at 50% 40%, #0f4d3a 0%, #061d14 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity .6s ease-out;
+  pointer-events: none;
+}
+.splash.hide {
+  opacity: 0;
+}
+.splash-inner {
+  text-align: center;
+  animation: splashIn .8s ease-out;
+}
+@keyframes splashIn {
+  0%   { opacity: 0; transform: scale(.85); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.splash-logo {
+  font-size: 96px;
+  line-height: 1;
+  margin-bottom: 8px;
+  animation: splashLogoSpin 2.5s ease-in-out;
+}
+@keyframes splashLogoSpin {
+  0%   { transform: rotate(-25deg) scale(.7); }
+  60%  { transform: rotate(8deg)   scale(1.1); }
+  100% { transform: rotate(0)      scale(1); }
+}
+.splash-title {
+  font-size: 40px;
+  font-weight: 900;
+  color: #f1c40f;
+  letter-spacing: 3px;
+  text-shadow: 0 0 24px rgba(241,196,15,.55);
+}
+.splash-sub {
+  font-size: 13px;
+  color: #9ac6b6;
+  margin-top: 6px;
+  letter-spacing: 1px;
+  opacity: .8;
+}
+
+/* ==================== НОВОЕ ЛОББИ (welcome) ==================== */
+.welcome-title {
+  text-align: center;
+  font-size: 32px;
+  margin: 40px 0 6px;
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+.welcome-sub {
+  text-align: center;
+  font-size: 13px;
+  opacity: .6;
+  margin-bottom: 32px;
+  letter-spacing: 1px;
+}
+.welcome-btn {
+  padding: 20px;
+  font-size: 18px;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  transition: transform .12s;
+}
+.welcome-btn:active { transform: scale(.97); }
+.welcome-btn.primary {
+  background: var(--acc);
+  color: #000;
+  box-shadow: 0 6px 24px rgba(241,196,15,.35);
+}
+.welcome-btn.secondary {
+  background: #95a5a6;
+  color: #000;
+}
+.welcome-footer {
+  position: absolute;
+  bottom: 14px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20px;
+  font-size: 12px;
+  opacity: .65;
+}
+.welcome-author {
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.welcome-author:active { opacity: 1; }
+.welcome-author b { color: var(--acc); }
+
+.icon-btn.active {
+  background: var(--acc);
+  color: #000;
+}
+
+/* ==================== МОДАЛКА «О РАЗРАБОТЧИКЕ» ==================== */
+.about-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+  font-size: 14px;
+}
+[data-theme="paper"] .about-row { border-color: rgba(0,0,0,.1); }
+.about-row b { color: var(--acc); }
+.simple-modal-close-btn {
+  margin-top: 16px;
+  padding: 10px 24px;
+  border-radius: 10px;
+  border: none;
+  background: var(--acc);
+  color: #000;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}

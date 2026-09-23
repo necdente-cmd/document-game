@@ -4,6 +4,7 @@ import { renderWelcome } from './screens/welcome.js';
 import { renderCreate } from './screens/create.js';
 import { renderJoin } from './screens/join.js';
 import { renderTable } from './screens/table.js';
+import { startLobbyMusic, stopLobbyMusic } from './music.js';
 
 const app = document.getElementById('app');
 let currentScreen = 'welcome';
@@ -19,11 +20,9 @@ function renderScreen(screen) {
 }
 
 function navigate(screen) {
-  // Если это ре-рендер того же стола — без fade
   if (currentScreen === screen && screen === 'table') {
     return renderTable(app, navigate);
   }
-
   if (navigating) return;
   navigating = true;
 
@@ -32,6 +31,13 @@ function navigate(screen) {
   setTimeout(() => {
     currentScreen = screen;
     renderScreen(screen);
+
+    // Музыка: играет только в лобби
+    if (screen === 'welcome' || screen === 'create' || screen === 'join') {
+      startLobbyMusic();
+    } else {
+      stopLobbyMusic();
+    }
 
     app.classList.remove('fade-out');
     app.classList.add('fade-in');
@@ -68,6 +74,23 @@ window.addEventListener('falsh', e => {
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 2200);
 });
+
+// === SPLASH (приветствие при заходе) ===
+function hideSplash() {
+  const sp = document.getElementById('splash');
+  if (!sp) return;
+  sp.classList.add('hide');
+  setTimeout(() => sp.remove(), 600);
+}
+
+// Показываем splash 1.8 сек при первом заходе за сессию
+const shownSplash = sessionStorage.getItem('splashShown');
+if (shownSplash) {
+  hideSplash();
+} else {
+  sessionStorage.setItem('splashShown', '1');
+  setTimeout(hideSplash, 1800);
+}
 
 if (state.me?.roomId) {
   socket.emit('joinRoom', { roomId: state.me.roomId, name: state.me.name, playerId: state.me.id }, r => {
