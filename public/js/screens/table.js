@@ -15,7 +15,7 @@ let infoOpen = false;
 let iconsVisible = false;
 let iconsTimer = null;
 
-// ==================== СВАЙП-ИКОНКИ ====================
+// ==================== СВАЙП-ИКОНКИ СЛЕВА ====================
 function ensureSwipeIcons() {
   let el = document.getElementById('swipeIcons');
   if (!el) {
@@ -30,23 +30,35 @@ function ensureSwipeIcons() {
     `;
     document.body.appendChild(el);
   }
+  let trig = document.getElementById('swipeTrigger');
+  if (!trig) {
+    trig = document.createElement('button');
+    trig.id = 'swipeTrigger';
+    trig.className = 'swipe-trigger';
+    trig.textContent = '›';
+    document.body.appendChild(trig);
+  }
   return el;
 }
 
 function showSwipeIcons() {
   const el = document.getElementById('swipeIcons');
+  const trig = document.getElementById('swipeTrigger');
   if (!el) return;
   iconsVisible = true;
   el.classList.add('show');
+  if (trig) trig.classList.add('hidden');
   if (iconsTimer) clearTimeout(iconsTimer);
   iconsTimer = setTimeout(hideSwipeIcons, 3000);
 }
 
 function hideSwipeIcons() {
   const el = document.getElementById('swipeIcons');
+  const trig = document.getElementById('swipeTrigger');
   if (!el) return;
   iconsVisible = false;
   el.classList.remove('show');
+  if (trig) trig.classList.remove('hidden');
   if (iconsTimer) { clearTimeout(iconsTimer); iconsTimer = null; }
 }
 
@@ -55,7 +67,7 @@ function setupSwipe() {
   if (swipeSetupDone) return;
   swipeSetupDone = true;
 
-  let startY = 0;
+  let startX = 0;
   let started = false;
 
   document.addEventListener('touchstart', (e) => {
@@ -64,29 +76,29 @@ function setupSwipe() {
     if (e.target.closest('.emoji-bar')) return;
     if (e.target.closest('.chat-panel')) return;
     if (e.target.closest('.info-modal')) return;
-    const y = e.touches[0].clientY;
-    if (y > window.innerHeight - 50) {
-      startY = y;
+    if (e.target.closest('.swipe-trigger')) return;
+    if (e.target.closest('.settings-btn')) return;
+    const x = e.touches[0].clientX;
+    if (x < 40) {
+      startX = x;
       started = true;
     }
   }, { passive: true });
 
   document.addEventListener('touchmove', (e) => {
     if (!started) return;
-    const y = e.touches[0].clientY;
-    const dy = startY - y;
-    if (dy > 50) {
+    const x = e.touches[0].clientX;
+    const dx = x - startX;
+    if (dx > 50) {
       showSwipeIcons();
       started = false;
-    } else if (dy < -30 && iconsVisible) {
+    } else if (dx < -30 && iconsVisible) {
       hideSwipeIcons();
       started = false;
     }
   }, { passive: true });
 
-  document.addEventListener('touchend', () => {
-    started = false;
-  }, { passive: true });
+  document.addEventListener('touchend', () => { started = false; }, { passive: true });
 
   document.addEventListener('click', (e) => {
     if (!iconsVisible) return;
@@ -94,7 +106,14 @@ function setupSwipe() {
     if (e.target.closest('.emoji-bar')) return;
     if (e.target.closest('.chat-panel')) return;
     if (e.target.closest('.info-modal')) return;
+    if (e.target.closest('.swipe-trigger')) return;
     hideSwipeIcons();
+  }, true);
+
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('#swipeTrigger')) {
+      showSwipeIcons();
+    }
   }, true);
 }
 
@@ -369,16 +388,13 @@ export function renderTable(app, navigate) {
     <div class="err" id="err"></div>
   `;
 
-  // Свайп-иконки — всегда в DOM, вне #app
   ensureSwipeIcons();
   bindSwipeIconHandlers(app, navigate);
-
   if (iconsVisible) {
     const el = document.getElementById('swipeIcons');
     if (el) el.classList.add('show');
   }
 
-  // ============ ОБРАБОТЧИКИ ============
   const err = m => { const e = document.getElementById('err'); if (e) e.textContent = m; };
   const g = id => document.getElementById(id);
 

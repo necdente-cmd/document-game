@@ -7,6 +7,9 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
     "express": "^4.19.2",
     "socket.io": "^4.7.5"
   }

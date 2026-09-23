@@ -1,14 +1,14 @@
-import { loadName, saveName, saveMe, loadOpts, saveOpts, applyTheme, AVATARS, loadAvatar, saveAvatar } from '../state.js';
+import { loadName, saveName, saveMe, loadOpts, saveOpts, applyTheme, loadAvatar, saveAvatar, AVATARS } from '../state.js';
 import { socket } from '../socket.js';
 
 export function renderCreate(app, navigate) {
   const savedName = loadName();
   const savedOpts = loadOpts();
-  const savedAvatar = loadAvatar();
   const deckStyle = savedOpts.deckStyle || 'figures';
   const backColor = savedOpts.backColor || 'blue';
   const docSet    = savedOpts.docSet    || 'classic';
   const theme     = savedOpts.theme     || 'classic';
+  let pickedAvatar = loadAvatar() || AVATARS[0];
 
   const backColors = ['black','blue','green','orange','purple','red'];
   const backs = backColors.map(c => `
@@ -24,8 +24,8 @@ export function renderCreate(app, navigate) {
       <img src="/cards/simplecard_heart_12.png" alt="simple">
     </div>`;
 
-  const avatarGrid = AVATARS.map(a => `
-    <div class="avatar-choice ${a===savedAvatar?'sel':''}" data-avatar="${a}">${a}</div>
+  const avatarsHtml = AVATARS.map(a => `
+    <div class="avatar-choice ${a===pickedAvatar?'sel':''}" data-avatar="${a}">${a}</div>
   `).join('');
 
   app.innerHTML = `
@@ -33,10 +33,8 @@ export function renderCreate(app, navigate) {
       <h2 style="text-align:center;">Настройки игры</h2>
       <label>Ваше имя</label>
       <input id="name" placeholder="Имя" value="${savedName}">
-
       <label>Аватарка</label>
-      <div class="avatar-grid" id="avatarPick">${avatarGrid}</div>
-
+      <div class="avatar-picker" id="avatarPick">${avatarsHtml}</div>
       <label>Стиль колоды</label>
       <div class="choice-row" id="deckPick">${styles}</div>
       <label>Рубашка</label>
@@ -58,10 +56,13 @@ export function renderCreate(app, navigate) {
       <div class="err" id="err"></div>
     </div>`;
 
-  let pickedDeck = deckStyle;
-  let pickedBack = backColor;
-  let pickedAvatar = savedAvatar;
+  let pickedDeck = deckStyle, pickedBack = backColor;
 
+  document.getElementById('avatarPick').onclick = e => {
+    const el = e.target.closest('[data-avatar]'); if (!el) return;
+    pickedAvatar = el.dataset.avatar;
+    [...document.querySelectorAll('#avatarPick .avatar-choice')].forEach(x => x.classList.toggle('sel', x === el));
+  };
   document.getElementById('deckPick').onclick = e => {
     const el = e.target.closest('[data-deck]'); if (!el) return;
     pickedDeck = el.dataset.deck;
@@ -72,16 +73,12 @@ export function renderCreate(app, navigate) {
     pickedBack = el.dataset.back;
     [...document.querySelectorAll('#backPick .choice')].forEach(x => x.classList.toggle('sel', x === el));
   };
-  document.getElementById('avatarPick').onclick = e => {
-    const el = e.target.closest('[data-avatar]'); if (!el) return;
-    pickedAvatar = el.dataset.avatar;
-    [...document.querySelectorAll('#avatarPick .avatar-choice')].forEach(x => x.classList.toggle('sel', x === el));
-  };
   document.getElementById('theme').onchange = e => applyTheme(e.target.value);
   document.getElementById('backBtn').onclick = () => navigate('welcome');
 
   document.getElementById('createBtn').onclick = () => {
     const name = document.getElementById('name').value.trim() || 'Игрок';
+    saveAvatar(pickedAvatar);
     const opts = {
       maxPlayers: 4,
       docSet: document.getElementById('docSet').value,
@@ -90,15 +87,15 @@ export function renderCreate(app, navigate) {
       backColor: pickedBack,
       handSize: 6,
       scale: 'medium',
+      avatar: pickedAvatar,
     };
     saveName(name);
-    saveAvatar(pickedAvatar);
     saveOpts(opts);
     applyTheme(opts.theme);
 
-    socket.emit('createRoom', { name, avatar: pickedAvatar, opts }, async (r) => {
+    socket.emit('createRoom', { name, opts }, async (r) => {
       if (!r.ok) return document.getElementById('err').textContent = r.err;
-      saveMe({ name, avatar: pickedAvatar, id: r.playerId, roomId: r.roomId });
+      saveMe({ name, id: r.playerId, roomId: r.roomId, avatar: pickedAvatar });
       try { await navigator.clipboard.writeText(r.roomId); } catch {}
       navigate('table');
     });

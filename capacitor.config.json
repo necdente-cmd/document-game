@@ -1,0 +1,9 @@
+{
+  "appId": "com.document.game",
+  "appName": "Документ",
+  "webDir": "public",
+  "server": {
+    "url": "http://129.151.203.202:3000",
+    "cleartext": true
+  }
+}

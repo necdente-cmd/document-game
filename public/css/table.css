@@ -6,7 +6,7 @@
   overflow: hidden;
 }
 
-/* ==================== КОЛОДА (вертикально) + КОЗЫРЬ (горизонтально снизу-справа) ==================== */
+/* ==================== КОЛОДА + КОЗЫРЬ ==================== */
 .deck-area {
   position: absolute;
   top: calc(12px * var(--scale));
@@ -19,8 +19,6 @@
   width: calc(var(--card-w) + var(--card-h) * 1.05);
   height: calc(var(--card-h) + var(--card-w) * 0.9);
 }
-
-/* Колода — вертикально сверху-слева */
 .deck-stack {
   position: absolute;
   top: 0;
@@ -31,8 +29,6 @@
   filter: drop-shadow(0 2px 5px rgba(0,0,0,.6));
 }
 .deck-stack .card { position: absolute; top: 0; left: 0; }
-
-/* Козырь — горизонтально, выглядывает снизу-справа из-под колоды */
 .trump-under {
   position: absolute;
   top: calc(var(--card-h) * 0.55);
@@ -247,31 +243,33 @@
 }
 .hand .card:active { cursor: grabbing; }
 
-/* ==================== ИКОНКИ СВАЙПОМ СНИЗУ ==================== */
+/* ==================== ИКОНКИ СВАЙПОМ СЛЕВА ==================== */
 .swipe-icons {
   position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translate(-50%, 100%);
+  left: 0;
+  top: 50%;
+  transform: translate(-100%, -50%);
   transition: transform .25s ease-out;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   gap: 10px;
-  padding: 8px 14px 10px 14px;
-  background: rgba(0,0,0,.88);
-  border-top-left-radius: 18px;
-  border-top-right-radius: 18px;
+  padding: 12px 10px 12px 10px;
+  background: rgba(0,0,0,.9);
+  border-top-right-radius: 16px;
+  border-bottom-right-radius: 16px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
   z-index: 300;
-  box-shadow: 0 -4px 20px rgba(0,0,0,.7);
+  box-shadow: 4px 0 20px rgba(0,0,0,.7);
   width: fit-content;
   pointer-events: auto;
 }
 .swipe-icons.show {
-  transform: translate(-50%, 0);
+  transform: translate(0, -50%);
 }
 .swipe-icons .icon-btn {
-  width: calc(48px * var(--scale));
-  height: calc(48px * var(--scale));
+  width: calc(46px * var(--scale));
+  height: calc(46px * var(--scale));
   border-radius: 50%;
   border: none;
   background: rgba(255,255,255,.12);
@@ -288,7 +286,33 @@
 .swipe-icons .icon-btn:active { transform: scale(.9); background: rgba(255,255,255,.25); }
 .swipe-icons .icon-btn.active { background: var(--acc); color: #000; }
 
-/* ==================== КНОПКА ДЕЙСТВИЯ (поднята выше) ==================== */
+.swipe-trigger {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 64px;
+  background: rgba(0,0,0,.7);
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+  border: none;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  z-index: 299;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 2px 0 10px rgba(0,0,0,.5);
+  transition: background .15s;
+}
+.swipe-trigger:active { background: rgba(0,0,0,.9); }
+.swipe-trigger.hidden { display: none; }
+
+/* ==================== КНОПКА ДЕЙСТВИЯ ==================== */
 .action-center {
   position: absolute;
   bottom: calc(100px * var(--scale));
@@ -347,7 +371,7 @@
 .extra-actions .b1 { background: #f39c12; color: #000; }
 .extra-actions .b4 { background: #8e44ad; color: #fff; }
 
-/* ==================== ПАНЕЛЬ СМАЙЛОВ — ПРИЖАТА К ЛЕВОМУ КРАЮ ==================== */
+/* ==================== ПАНЕЛЬ СМАЙЛОВ — СЛЕВА ==================== */
 .emoji-bar {
   position: fixed !important;
   left: 0 !important;
@@ -410,11 +434,7 @@
   text-align: center;
   box-shadow: 0 10px 40px rgba(0,0,0,.8);
 }
-.info-modal-inner h3 {
-  margin: 0 0 16px;
-  font-size: 20px;
-  color: var(--acc);
-}
+.info-modal-inner h3 { margin: 0 0 16px; font-size: 20px; color: var(--acc); }
 .info-row {
   display: flex;
   justify-content: space-between;

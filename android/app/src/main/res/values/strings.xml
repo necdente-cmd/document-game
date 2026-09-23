@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Документ</string>
+    <string name="title_activity_main">Документ</string>
+    <string name="package_name">com.document.game</string>
+    <string name="custom_url_scheme">com.document.game</string>
+</resources>

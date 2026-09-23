@@ -66,15 +66,11 @@ export function pub(r, forId) {
     players: r.players.map(p => {
       const isMe = p.id === forId;
       return {
-        id: p.id,
-        name: p.name,
-        seat: p.seat,
-        team: p.team,
-        avatar: p.avatar || '😎',
+        id: p.id, name: p.name, seat: p.seat, team: p.team,
         handCount: isMe ? p.hand.length : null,
-        connected: p.connected,
-        out: p.out,
+        connected: p.connected, out: p.out,
         isHost: p.id === r.hostId,
+        avatar: p.avatar || '',
       };
     }),
     myHand: me ? me.hand : [],
