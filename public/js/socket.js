@@ -1,4 +1,5 @@
 import { state, saveMe, applyTheme, applyScale, beep, vibrate } from './state.js';
+import { playSound } from './sound.js';
 
 export const socket = io({
   reconnection: true,
@@ -10,12 +11,33 @@ export const socket = io({
 
 export function bindSocket(onStateChange) {
   socket.on('state', (s) => {
+    const prev = state.server;
     const startedNewRound = s.phase === 'playing' && state.lastPhaseForDeal !== 'playing';
     state.lastPhaseForDeal = s.phase;
 
-    const wasMyTurn = state.server && state.server.turnSeat === state.server.mySeat;
+    // Мой ход
+    const wasMyTurn = prev && prev.turnSeat === prev.mySeat;
     const nowMyTurn = s.turnSeat === s.mySeat;
-    if (nowMyTurn && !wasMyTurn) vibrate(80);
+    if (nowMyTurn && !wasMyTurn) {
+      vibrate(80);
+      playSound('your-turn');
+    }
+
+    // Звуки карт
+    if (prev && prev.phase === 'playing' && s.phase === 'playing') {
+      const prevCards = prev.field?.cards?.length || 0;
+      const nowCards  = s.field?.cards?.length || 0;
+      if (nowCards > prevCards) playSound('play-card');
+      if (prevCards > 0 && nowCards === 0) playSound('take-cards');
+    }
+
+    // Победа / поражение в кону
+    if (prev && prev.roundWins && s.roundWins) {
+      const myTeam  = s.myTeam;
+      const oppTeam = 1 - myTeam;
+      if ((s.roundWins[myTeam]  || 0) > (prev.roundWins[myTeam]  || 0)) playSound('win');
+      if ((s.roundWins[oppTeam] || 0) > (prev.roundWins[oppTeam] || 0)) playSound('lose');
+    }
 
     state.server = s;
     if (s.opts) {
@@ -35,6 +57,7 @@ export function bindSocket(onStateChange) {
 
   socket.on('reaction', ({ seat, emoji }) => {
     vibrate(30);
+    playSound('reaction');
     window.dispatchEvent(new CustomEvent('reaction', { detail: { seat, emoji } }));
   });
 
