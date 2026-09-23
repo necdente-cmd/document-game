@@ -39,6 +39,7 @@ export function drawTo(r, prioritySeat = null) {
     if (!r.players[s].out && !order.includes(s)) order.push(s);
   }
 
+  // Добор до 6
   let changed = true;
   while (changed && r.deck.length > 0) {
     changed = false;
@@ -51,6 +52,7 @@ export function drawTo(r, prioritySeat = null) {
     }
   }
 
+  // Отдать козырь если колода пуста
   if (r.deck.length === 0 && r.trumpCard) {
     let target = null;
     for (const seat of order) {
@@ -62,6 +64,17 @@ export function drawTo(r, prioritySeat = null) {
       target.hand.push(r.trumpCard);
       r.trumpCard = null;
       log(r, `Козырная карта → ${target.name}`);
+    }
+  }
+
+  // ✅ ФИКС: после добора помечаем out тех, у кого 0 карт и добор невозможен
+  const deckEmpty = r.deck.length === 0 && !r.trumpCard;
+  if (deckEmpty) {
+    for (const p of r.players) {
+      if (!p.out && p.hand.length === 0) {
+        p.out = true;
+        log(r, `${p.name} вышел (карт нет, добор невозможен)`);
+      }
     }
   }
 }

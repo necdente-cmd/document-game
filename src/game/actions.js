@@ -45,8 +45,7 @@ export function registerGameHandlers(io, socket, ctx) {
     if (!defender || defender.out) return err('Защитник недоступен');
     if (!defender.connected) return err(`⏳ ${defender.name} отошёл — ждём возвращения`);
 
-    // ✅ ФИКС: «Не поместится в руках»
-    // Лимит фиксируется в начале атаки = min(карт_защитника, MAX_ATTACK)
+    // «Не поместится в руках»
     const current = r.field ? r.field.cards.length : 0;
     const limit = r.field
       ? r.field.limit
@@ -61,25 +60,26 @@ export function registerGameHandlers(io, socket, ctx) {
         defender: defenderSeat,
         cards: [],
         passedSeats: [],
-        limit: Math.min(defender.hand.length, MAX_ATTACK),  // ← фиксируем лимит
+        limit: Math.min(defender.hand.length, MAX_ATTACK),
       };
       r.lastAttacker = p.seat;
       r.lastTarget = defenderSeat;
     }
 
-    // ✅ ФИКС: навязанный документ — помечаем карты-документы защитника
     const defenderDoc = docsOf(r)[defender.team];
 
     for (const id of cardIds) {
       const idx = p.hand.findIndex(x => x.id === id);
       const c = p.hand.splice(idx, 1)[0];
-      const isForced = (c.r === defenderDoc);   // это документ ЗАЩИТНИКА → навязанный
+      const isForced = (c.r === defenderDoc);
       r.field.cards.push({ card: c, beatenBy: null, fromSeat: p.seat, isForced });
     }
 
     log(r, `${p.name} → ${cardIds.length} карт(ы) → ${defender.name}`);
-    if (p.hand.length === 0) p.out = true;
-    if (checkTeamExitWin(r)) return broadcast(r);
+
+    // ✅ ФИКС: НЕ помечаем out здесь — сделаем это после добора в drawTo
+    // (проверка checkTeamExitWin тоже убирается — она сработает после взятки)
+
     broadcast(r);
   });
 
@@ -90,7 +90,6 @@ export function registerGameHandlers(io, socket, ctx) {
     const entry = r.field.cards.find(x => x.card.id === targetId && !x.beatenBy);
     if (!entry) return err('Нет такой карты');
 
-    // ✅ ФИКС: навязанный документ нельзя бить
     if (entry.isForced) return err('Это ваш документ — нужно поднять всё');
 
     const myDoc = docsOf(r)[p.team];
@@ -112,14 +111,12 @@ export function registerGameHandlers(io, socket, ctx) {
     const p = getMe(); if (!p || r.field.defender !== p.seat) return err('Не вы защищаетесь');
     if (r.pendingFalsh) return err('Уже есть запрос на фальш');
 
-    // ✅ ФИКС: фальш доступен только после того, как защитник побил ≥ 1 карту
     const beatenCount = r.field.cards.filter(x => x.beatenBy).length;
     if (beatenCount === 0) return err('Сначала побейте хотя бы одну карту');
 
     const idx = r.field.cards.findIndex(x => x.card.id === cardId && !x.beatenBy);
     if (idx < 0) return err('Эту карту нельзя вернуть');
 
-    // ✅ ФИКС: навязанный документ нельзя фальшить
     if (r.field.cards[idx].isForced) return err('Навязанный документ нельзя вернуть');
 
     const entry = r.field.cards[idx];
@@ -161,7 +158,6 @@ export function registerGameHandlers(io, socket, ctx) {
       card: { r: card.r, s: card.s },
     }));
 
-    // Если поле опустело — ход атакующему, обязательная цель та же
     if (r.field.cards.length === 0) {
       r.field = null;
       r.turnSeat = attackerSeat;
@@ -198,6 +194,8 @@ export function registerGameHandlers(io, socket, ctx) {
     r.forcedTarget = null;
     drawTo(r, attackerSeat);
     log(r, `${p.name} поднял. Ход у ${r.players[r.turnSeat].name}`);
+    // ✅ ФИКС: проверяем "оба вышли" после добора
+    if (checkTeamExitWin(r)) return broadcast(r);
     broadcast(r);
   });
 
@@ -226,11 +224,13 @@ export function registerGameHandlers(io, socket, ctx) {
     const attackerSeat = r.field.attacker;
     r.field = null;
     r.turnSeat = p.seat;
-    r.forcedTarget = null;   // ✅ ФИКС: защитник атакует СЛЕДУЮЩЕГО по часовой
+    r.forcedTarget = null;
     r.lastAttacker = null;
-    r.lastTarget = null;     // ✅ ФИКС: сброс — pickTarget возьмёт opps[0]
+    r.lastTarget = null;
     drawTo(r, attackerSeat);
     log(r, `${p.name}: «Бито!» Ход у ${r.players[r.turnSeat].name}`);
+    // ✅ ФИКС: проверяем "оба вышли" после добора
+    if (checkTeamExitWin(r)) return broadcast(r);
     broadcast(r);
   });
 
