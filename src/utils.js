@@ -34,24 +34,26 @@ export function partnerOut(r, seat) {
   return partner ? partner.out : true;
 }
 
+// ✅ ИСПРАВЛЕНО: ход строго по часовой стрелке
 export function opponentsOf(r, attackerSeat) {
   const partner = partnerOf(attackerSeat);
   const list = [];
   for (let i = 1; i <= 3; i++) {
-    const s = (attackerSeat - i + 4) % 4;
-    if (s === partner) continue;
-    if (r.players[s].out) continue;
+    const s = (attackerSeat + i) % 4;      // ← ПЛЮС, по часовой
+    if (s === partner) continue;           // партнёра пропускаем
+    if (r.players[s].out) continue;        // вышедших пропускаем
     list.push(s);
   }
   return list;
 }
 
+// ✅ ИСПРАВЛЕНО: убрано условие, заставлявшее партнёра бить того же защитника
 export function pickTarget(r, attackerSeat) {
   const opps = opponentsOf(r, attackerSeat);
   if (opps.length === 0) return null;
   if (opps.length === 1) return opps[0];
-  if (r.lastAttacker != null && partnerOf(r.lastAttacker) === attackerSeat
-      && r.lastTarget != null && opps.includes(r.lastTarget)) return r.lastTarget;
+
+  // Чередование: если был предыдущий защитник — берём следующего по часовой
   if (r.lastTarget != null && opps.includes(r.lastTarget)) {
     const idx = opps.indexOf(r.lastTarget);
     return opps[(idx + 1) % opps.length];
