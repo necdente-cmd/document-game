@@ -8,6 +8,10 @@ const FILES = {
   'win':        '/sounds/win.mp3',
   'lose':       '/sounds/lose.mp3',
   'reaction':   '/sounds/reaction.mp3',
+  'chat':       '/sounds/chat.mp3',
+  'button':     '/sounds/button.mp3',
+  'falsh':      '/sounds/falsh.mp3',
+  'defend':     '/sounds/defend.mp3',
 };
 
 const cache = {};
@@ -26,7 +30,8 @@ function isMuted() {
   return false;
 }
 
-export function playSound(name) {
+// Проиграть звук (безопасно — если файла нет, тихо ничего не делает)
+export function playSound(name, opts = {}) {
   if (isMuted()) return;
   const src = FILES[name];
   if (!src) return;
@@ -34,8 +39,12 @@ export function playSound(name) {
   if (!a) {
     a = new Audio(src);
     a.preload = 'auto';
-    a.volume = 0.7;
+    a.volume = opts.volume != null ? opts.volume : 0.7;
+    // Защита от 404 — не спамить в консоль
+    a.addEventListener('error', () => {}, { once: true });
     cache[name] = a;
+  } else if (opts.volume != null) {
+    a.volume = opts.volume;
   }
   try {
     a.currentTime = 0;
@@ -44,6 +53,7 @@ export function playSound(name) {
   } catch {}
 }
 
+// Прогрев всех звуков (после первого клика/тапа)
 export function preloadSounds() {
   if (preloaded) return;
   preloaded = true;
@@ -52,11 +62,13 @@ export function preloadSounds() {
       const a = new Audio(src);
       a.preload = 'auto';
       a.volume = 0.7;
+      a.addEventListener('error', () => {}, { once: true });
       cache[k] = a;
     }
   });
 }
 
+// Автопрогрев после первого взаимодействия
 ['touchstart','click','keydown'].forEach(evt => {
   document.addEventListener(evt, preloadSounds, { once: true, passive: true });
 });

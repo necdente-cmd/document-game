@@ -23,11 +23,18 @@ export function bindSocket(onStateChange) {
       playSound('your-turn');
     }
 
-    // Звуки карт
+    // Звуки карт (дифф по количеству карт / битых)
     if (prev && prev.phase === 'playing' && s.phase === 'playing') {
-      const prevCards = prev.field?.cards?.length || 0;
-      const nowCards  = s.field?.cards?.length || 0;
+      const prevCards  = prev.field?.cards?.length || 0;
+      const nowCards   = s.field?.cards?.length || 0;
+      const prevBeaten = prev.field?.cards?.filter(x => x.beatenBy).length || 0;
+      const nowBeaten  = s.field?.cards?.filter(x => x.beatenBy).length || 0;
+
+      // Положили новую карту
       if (nowCards > prevCards) playSound('play-card');
+      // Защитник побил карту
+      if (nowBeaten > prevBeaten) playSound('defend');
+      // Поле очистилось (все забрали)
       if (prevCards > 0 && nowCards === 0) playSound('take-cards');
     }
 
@@ -63,10 +70,13 @@ export function bindSocket(onStateChange) {
 
   socket.on('falsh', ({ byName, targetName, card }) => {
     vibrate([50, 30, 50]);
+    playSound('falsh');
     window.dispatchEvent(new CustomEvent('falsh', { detail: { byName, targetName, card } }));
   });
 
   socket.on('chat', ({ seat, name, text, time }) => {
+    // Звук чата — только если это НЕ моё сообщение
+    if (name && name !== state.me?.name) playSound('chat');
     window.dispatchEvent(new CustomEvent('chat', { detail: { seat, name, text, time } }));
   });
 

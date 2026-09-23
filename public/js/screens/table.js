@@ -8,6 +8,7 @@ import { openSettings } from '../ui/settings.js';
 import { openChat } from '../ui/chat.js';
 import { initDrag } from '../drag.js';
 import { EMOJIS } from '../emojis.js';
+import { playSound } from '../sound.js';
 
 let sortMode = 0;
 let infoOpen = false;
@@ -418,18 +419,19 @@ export function renderTable(app, navigate) {
     const code = document.getElementById('roomCode').textContent;
     try { await navigator.clipboard.writeText(code); cc.textContent = '✅ ОК'; setTimeout(() => cc.textContent = '📋 Скопировать', 1500); } catch {}
   };
-  const st = g('startBtn'); if (st) st.onclick = () => socket.emit('startGame');
+  const st = g('startBtn'); if (st) st.onclick = () => { playSound('button'); socket.emit('startGame'); };
 
-  const pu = g('pickUpBtn');   if (pu) pu.onclick = () => { socket.emit('pickUp'); state.defendTarget = null; };
-  const th = g('throwBtn');    if (th) th.onclick = () => socket.emit('throwDocs');
-  const si = g('swapInitBtn'); if (si) si.onclick = () => socket.emit('swapInitiate');
-  const sa = g('swapAskBtn');  if (sa) sa.onclick = () => socket.emit('swapAsk');
-  const ps = g('passBtn');     if (ps) ps.onclick = () => socket.emit('passDocsRequest');
-  const pas = g('pasBtn');     if (pas) pas.onclick = () => socket.emit('endAttack');
+  const pu = g('pickUpBtn');   if (pu) pu.onclick = () => { playSound('button'); socket.emit('pickUp'); state.defendTarget = null; };
+  const th = g('throwBtn');    if (th) th.onclick = () => { playSound('button'); socket.emit('throwDocs'); };
+  const si = g('swapInitBtn'); if (si) si.onclick = () => { playSound('button'); socket.emit('swapInitiate'); };
+  const sa = g('swapAskBtn');  if (sa) sa.onclick = () => { playSound('button'); socket.emit('swapAsk'); };
+  const ps = g('passBtn');     if (ps) ps.onclick = () => { playSound('button'); socket.emit('passDocsRequest'); };
+  const pas = g('pasBtn');     if (pas) pas.onclick = () => { playSound('button'); socket.emit('endAttack'); };
 
-  const bi = g('bitoBtn');     if (bi) bi.onclick = () => socket.emit('bito');
+  const bi = g('bitoBtn');     if (bi) bi.onclick = () => { playSound('button'); socket.emit('bito'); };
   const fl = g('falshBtn');    if (fl) fl.onclick = () => {
     if (!state.defendTarget) return err('Сначала тапните карту врага');
+    playSound('button');
     socket.emit('falsh', { cardId: state.defendTarget });
     state.defendTarget = null;
   };
@@ -443,9 +445,9 @@ export function renderTable(app, navigate) {
   };
 
   const sb = g('settingsBtn');
-  if (sb) sb.onclick = () => openSettings(() => renderTable(app, navigate));
+  if (sb) sb.onclick = () => { playSound('button'); openSettings(() => renderTable(app, navigate)); };
 
-    bindOverlays();
+  bindOverlays();
   maybeShowChampion(navigate);
 
   // Восстанавливаем бейдж чата после ре-рендера
@@ -456,23 +458,27 @@ export function renderTable(app, navigate) {
 function bindSwipeIconHandlers(app, navigate) {
   const sortBtn = document.getElementById('sortBtn');
   if (sortBtn) sortBtn.onclick = () => {
+    playSound('button');
     hideSwipeIcons();
     sortMode = (sortMode + 1) % 3;
     renderTable(app, navigate);
   };
   const emojiToggle = document.getElementById('emojiToggle');
   if (emojiToggle) emojiToggle.onclick = () => {
+    playSound('button');
     hideSwipeIcons();
     state.emojiOpen = !state.emojiOpen;
     renderTable(app, navigate);
   };
   const chatBtn = document.getElementById('chatBtn');
   if (chatBtn) chatBtn.onclick = () => {
+    playSound('button');
     hideSwipeIcons();
     openChat();
   };
   const infoBtn = document.getElementById('infoBtn');
   if (infoBtn) infoBtn.onclick = () => {
+    playSound('button');
     hideSwipeIcons();
     infoOpen = !infoOpen;
     if (infoOpen) showInfoModal();

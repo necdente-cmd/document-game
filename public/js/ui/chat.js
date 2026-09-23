@@ -1,6 +1,7 @@
 import { state } from '../state.js';
 import { socket } from '../socket.js';
 import { esc } from '../card.js';
+import { playSound } from '../sound.js';
 
 const messages = [];
 
@@ -34,7 +35,6 @@ function renderMessagesHtml() {
   `).join('');
 }
 
-// Обновление бейджа на иконке 💬
 export function updateChatBadge() {
   const btn = document.getElementById('chatBtn');
   if (!btn) return;
@@ -53,7 +53,6 @@ export function updateChatBadge() {
 }
 
 export function openChat() {
-  // Сбрасываем непрочитанные + убираем бейдж
   state.chatUnread = 0;
   updateChatBadge();
 
@@ -77,6 +76,7 @@ export function openChat() {
     `;
 
     document.getElementById('closeChat').onclick = () => {
+      playSound('button');
       panel.classList.remove('open');
       if (window.onChatClose) window.onChatClose();
     };
@@ -86,6 +86,7 @@ export function openChat() {
       const input = document.getElementById('chatInput');
       const text = input.value.trim();
       if (!text) return;
+      playSound('button');
       socket.emit('chat', { text });
       input.value = '';
     };
