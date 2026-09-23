@@ -32,7 +32,6 @@ function navigate(screen) {
     currentScreen = screen;
     renderScreen(screen);
 
-    // Музыка: играет только в лобби
     if (screen === 'welcome' || screen === 'create' || screen === 'join') {
       startLobbyMusic();
     } else {
@@ -83,13 +82,12 @@ function hideSplash() {
   setTimeout(() => sp.remove(), 600);
 }
 
-// Показываем splash 1.8 сек при первом заходе за сессию
 const shownSplash = sessionStorage.getItem('splashShown');
 if (shownSplash) {
   hideSplash();
 } else {
   sessionStorage.setItem('splashShown', '1');
-  setTimeout(hideSplash, 1800);
+  setTimeout(hideSplash, 2800);
 }
 
 if (state.me?.roomId) {

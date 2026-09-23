@@ -91,6 +91,92 @@ body {
 }
 #app { height: 100dvh; display: flex; flex-direction: column; }
 
+/* ==================== ПЛАВНЫЕ ПЕРЕХОДЫ ЭКРАНОВ ==================== */
+#app { transition: opacity .15s ease-out; }
+#app.fade-out { opacity: 0; }
+#app.fade-in  { opacity: 0; transition: none; }
+
+/* ==================== SPLASH (приветствие) ==================== */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: radial-gradient(ellipse at 50% 40%, #0f4d3a 0%, #061d14 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity .6s ease-out;
+  pointer-events: none;
+  overflow: hidden;
+}
+.splash.hide { opacity: 0; }
+
+.splash-inner {
+  text-align: center;
+  position: relative;
+  padding: 20px;
+}
+
+/* Заголовок «Документ» */
+.splash-title {
+  font-size: 42px;
+  font-weight: 900;
+  color: #f1c40f;
+  letter-spacing: 5px;
+  text-shadow: 0 0 28px rgba(241,196,15,.55);
+  opacity: 0;
+  animation: titleIn .55s cubic-bezier(.22,.9,.35,1) 0ms forwards;
+  will-change: transform, opacity, filter;
+}
+@keyframes titleIn {
+  0%   { opacity: 0; transform: scale(.35); filter: blur(14px); }
+  60%  { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+
+/* Масти — падают сверху */
+.splash-emojis {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 14px;
+  margin-bottom: 10px;
+  height: 54px;
+  align-items: center;
+  position: relative;
+}
+.splash-emojis .se {
+  font-size: 42px;
+  line-height: 1;
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(-300px) rotate(-40deg) scale(.5);
+  animation: emojiFall .68s cubic-bezier(.34,1.56,.64,1) forwards;
+  animation-delay: calc(500ms + var(--i) * 110ms);
+  filter: drop-shadow(0 6px 14px rgba(0,0,0,.55));
+  will-change: transform, opacity;
+}
+@keyframes emojiFall {
+  0%   { opacity: 0; transform: translateY(-300px) rotate(-40deg) scale(.5); }
+  50%  { opacity: 1; }
+  72%  { transform: translateY(8px) rotate(8deg) scale(1.18); }
+  100% { opacity: 1; transform: translateY(0) rotate(0) scale(1); }
+}
+
+/* Подпись снизу */
+.splash-sub {
+  font-size: 14px;
+  color: #9ac6b6;
+  margin-top: 8px;
+  letter-spacing: 2px;
+  opacity: 0;
+  animation: subIn .6s ease-out 1500ms forwards;
+}
+@keyframes subIn {
+  0%   { opacity: 0; transform: translateY(10px); }
+  100% { opacity: .8; transform: translateY(0); }
+}
+
 /* ==================== ЛОББИ ==================== */
 .lobby {
   padding: 24px;
@@ -115,6 +201,55 @@ body {
 [data-theme="paper"] .lobby input, [data-theme="paper"] .lobby select { background: rgba(0,0,0,.05); }
 .lobby button { background: var(--acc); color: #000; font-weight: 700; cursor: pointer; }
 .lobby button:active { transform: scale(.98); }
+
+/* ==================== НОВОЕ ЛОББИ (welcome) ==================== */
+.welcome-title {
+  text-align: center;
+  font-size: 32px;
+  margin: 40px 0 6px;
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+.welcome-sub {
+  text-align: center;
+  font-size: 13px;
+  opacity: .6;
+  margin-bottom: 32px;
+  letter-spacing: 1px;
+}
+.welcome-btn {
+  padding: 20px;
+  font-size: 18px;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  transition: transform .12s;
+}
+.welcome-btn:active { transform: scale(.97); }
+.welcome-btn.primary {
+  background: var(--acc);
+  color: #000;
+  box-shadow: 0 6px 24px rgba(241,196,15,.35);
+}
+.welcome-btn.secondary {
+  background: #95a5a6;
+  color: #000;
+}
+.welcome-footer {
+  position: absolute;
+  bottom: 14px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20px;
+  font-size: 12px;
+  opacity: .65;
+}
+.welcome-author { cursor: pointer; transition: opacity .15s; }
+.welcome-author:active { opacity: 1; }
+.welcome-author b { color: var(--acc); }
 
 /* ==================== КНОПКИ ==================== */
 .b1 { background: var(--acc); color: #000; }
@@ -159,6 +294,7 @@ body {
   justify-content: center;
 }
 .icon-btn:active { transform: scale(.95); }
+.icon-btn.active { background: var(--acc); color: #000; }
 [data-theme="paper"] .icon-btn { background: rgba(0,0,0,.08); }
 
 /* ==================== ВЫБОР АВАТАРА ==================== */
@@ -240,19 +376,16 @@ body {
   letter-spacing: .3px;
 }
 
-/* Классика — зелёное сукно, коричневое дерево */
 .theme-preview[data-theme-val="classic"] { background: #4a2c1a; }
 .theme-preview[data-theme-val="classic"] .tp-inner {
   background: radial-gradient(circle at 50% 45%, #16543f 0%, #0b3d2e 55%, #041a13 100%);
 }
 
-/* Тёмная — синее сукно, чёрное дерево */
 .theme-preview[data-theme-val="dark"] { background: #1a1a1a; }
 .theme-preview[data-theme-val="dark"] .tp-inner {
   background: radial-gradient(circle at 50% 45%, #182a44 0%, #0d1b2a 55%, #050a14 100%);
 }
 
-/* Неон — чёрное сукно, светящаяся рама */
 .theme-preview[data-theme-val="neon"] {
   background: #1a0d2e;
   box-shadow: 0 0 10px rgba(0,229,255,.35);
@@ -270,133 +403,19 @@ body {
     inset 0 0 14px rgba(0,229,255,.5);
 }
 
-/* Бумага — бежевое сукно, светлое дерево */
 .theme-preview[data-theme-val="paper"] { background: #d4a574; }
 .theme-preview[data-theme-val="paper"] .tp-inner {
   background: radial-gradient(circle at 50% 45%, #f5e8d3 0%, #e8dcc0 55%, #d4c4a0 100%);
 }
 .theme-preview[data-theme-val="paper"] .tp-label { color: #333; }
 
-/* Тёмная тема лобби — подписи превью белым */
 [data-theme="dark"] .theme-preview .tp-label,
 [data-theme="neon"] .theme-preview .tp-label,
 [data-theme="classic"] .theme-preview .tp-label { color: #fff; }
 [data-theme="paper"] .theme-preview .tp-label { color: #333; }
 
-/* Адаптив: на очень узких экранах — 2 колонки */
 @media (max-width: 360px) {
   .theme-grid { grid-template-columns: repeat(2, 1fr); }
-}
-
-/* ==================== ПЛАВНЫЕ ПЕРЕХОДЫ ЭКРАНОВ ==================== */
-#app {
-  transition: opacity .15s ease-out;
-}
-#app.fade-out {
-  opacity: 0;
-}
-#app.fade-in {
-  opacity: 0;
-  transition: none;
-}
-
-/* ==================== SPLASH (приветствие) ==================== */
-.splash {
-  position: fixed;
-  inset: 0;
-  z-index: 99999;
-  background: radial-gradient(ellipse at 50% 40%, #0f4d3a 0%, #061d14 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity .6s ease-out;
-  pointer-events: none;
-}
-.splash.hide { opacity: 0; }
-.splash-inner {
-  text-align: center;
-  animation: splashIn .8s ease-out;
-}
-@keyframes splashIn {
-  0%   { opacity: 0; transform: scale(.85); }
-  100% { opacity: 1; transform: scale(1); }
-}
-.splash-logo-img {
-  width: 220px;
-  height: 220px;
-  object-fit: contain;
-  margin-bottom: 10px;
-  filter: drop-shadow(0 0 32px rgba(241,196,15,.45));
-  animation: splashLogoIn 1.1s cubic-bezier(.22,.9,.35,1);
-}
-@keyframes splashLogoIn {
-  0%   { opacity: 0; transform: scale(.65) rotate(-8deg); }
-  55%  { opacity: 1; transform: scale(1.08) rotate(3deg); }
-  100% { transform: scale(1) rotate(0); }
-}
-.splash-sub {
-  font-size: 13px;
-  color: #9ac6b6;
-  margin-top: 4px;
-  letter-spacing: 1px;
-  opacity: .8;
-}
-
-/* ==================== НОВОЕ ЛОББИ (welcome) ==================== */
-.welcome-title {
-  text-align: center;
-  font-size: 32px;
-  margin: 40px 0 6px;
-  font-weight: 900;
-  letter-spacing: 2px;
-}
-.welcome-sub {
-  text-align: center;
-  font-size: 13px;
-  opacity: .6;
-  margin-bottom: 32px;
-  letter-spacing: 1px;
-}
-.welcome-btn {
-  padding: 20px;
-  font-size: 18px;
-  border-radius: 14px;
-  border: none;
-  cursor: pointer;
-  font-weight: 700;
-  transition: transform .12s;
-}
-.welcome-btn:active { transform: scale(.97); }
-.welcome-btn.primary {
-  background: var(--acc);
-  color: #000;
-  box-shadow: 0 6px 24px rgba(241,196,15,.35);
-}
-.welcome-btn.secondary {
-  background: #95a5a6;
-  color: #000;
-}
-.welcome-footer {
-  position: absolute;
-  bottom: 14px;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: space-between;
-  padding: 0 20px;
-  font-size: 12px;
-  opacity: .65;
-}
-.welcome-author {
-  cursor: pointer;
-  transition: opacity .15s;
-}
-.welcome-author:active { opacity: 1; }
-.welcome-author b { color: var(--acc); }
-
-.icon-btn.active {
-  background: var(--acc);
-  color: #000;
 }
 
 /* ==================== МОДАЛКА «О РАЗРАБОТЧИКЕ» ==================== */
