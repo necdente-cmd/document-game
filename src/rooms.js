@@ -60,7 +60,6 @@ export function pub(r, forId) {
     team: r.pendingSwap.team,
   } : null;
 
-  // ✅ Количество карт в колоде (0 / >0)
   const deckCount = r.deck.length;
   const trumpReminder = (deckCount === 0 && !r.trumpCard && r.trumpSuit) ? r.trumpSuit : null;
 

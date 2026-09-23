@@ -1,5 +1,5 @@
 import { uid } from './utils.js';
-import { rooms, newRoom, log, clearDisconnectTimer } from './rooms.js';
+import { rooms, newRoom, log, clearDisconnectTimer, pub } from './rooms.js';
 import { startRound } from './game/round.js';
 import { registerGameHandlers } from './game/actions.js';
 import { DISCONNECT_TIMEOUT_MS } from './constants.js';
@@ -77,6 +77,13 @@ export function setupHandlers(io, broadcast) {
       broadcast(r);
     });
 
+    // 🎯 СИНХРОНИЗАЦИЯ ПРИ ВОЗВРАТЕ ИЗ ФОНА
+    socket.on('syncState', () => {
+      const r = rooms.get(rid); if (!r) return;
+      const p = getMe(); if (!p) return;
+      socket.emit('state', pub(r, p.id));
+    });
+
     // СТАРТ ИГРЫ
     socket.on('startGame', () => {
       const r = rooms.get(rid); if (!r) return;
@@ -124,7 +131,6 @@ export function setupHandlers(io, broadcast) {
       const r = rooms.get(rid); if (!r) return;
       const p = getMe(); if (!p) return;
 
-      // голос: выключаем
       if (p.voiceEnabled) {
         p.voiceEnabled = false;
         io.to(r.id).emit('voice-peer-left', { playerId: p.id });
@@ -163,7 +169,6 @@ export function setupHandlers(io, broadcast) {
       const r = rooms.get(rid); if (!r) return;
       const p = r.players.find(x => x.id === pid);
       if (p) {
-        // голос: сообщаем остальным
         if (p.voiceEnabled) {
           p.voiceEnabled = false;
           io.to(r.id).emit('voice-peer-left', { playerId: p.id });
@@ -193,15 +198,11 @@ export function setupHandlers(io, broadcast) {
       const p = getMe(); if (!p) return;
       p.voiceEnabled = true;
 
-      // какие игроки уже в голосе (кроме меня) — они станут пирами
       const peers = r.players
         .filter(x => x.voiceEnabled && x.id !== pid)
         .map(x => x.id);
 
-      // мне сообщаем список пиров (инициирую офферы)
       socket.emit('voice-peers', { peers });
-
-      // остальным сообщаем что я в голосе
       socket.to(r.id).emit('voice-peer-joined', { playerId: pid });
     });
 
@@ -212,7 +213,6 @@ export function setupHandlers(io, broadcast) {
       socket.to(r.id).emit('voice-peer-left', { playerId: pid });
     });
 
-    // пересылка сигналов (offer/answer/ICE) между игроками одной комнаты
     socket.on('voice-signal', ({ to, data }) => {
       const r = rooms.get(rid); if (!r) return;
       const target = r.players.find(x => x.id === to);

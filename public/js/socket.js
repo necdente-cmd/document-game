@@ -89,11 +89,34 @@ export function bindSocket(onStateChange) {
     vibrate(100);
   });
 
-  socket.on('connect', () => console.log('[socket] connected'));
+  socket.on('connect', () => {
+    console.log('[socket] connected');
+    // При переподключении — просим свежий state (если мы в комнате)
+    if (state.me?.roomId) {
+      socket.emit('syncState');
+    }
+  });
   socket.on('disconnect', () => console.log('[socket] disconnected'));
 
+  // ✅ Синхронизация при возврате из фона (мобильные)
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && socket.disconnected) socket.connect();
+    if (document.visibilityState !== 'visible') return;
+    if (socket.disconnected) {
+      socket.connect();
+    } else {
+      socket.emit('syncState');
+    }
+  });
+
+  window.addEventListener('focus', () => {
+    if (socket.disconnected) {
+      socket.connect();
+    } else {
+      socket.emit('syncState');
+    }
+    setTimeout(() => {
+      if (socket.connected) socket.emit('syncState');
+    }, 500);
   });
 
   // 🎤 голосовой чат
