@@ -27,6 +27,7 @@ export function setupHandlers(io, broadcast) {
         id: pid, name: name || 'Игрок', seat: 0, team: 0,
         hand: [], connected: true, out: false,
         avatar: (opts && opts.avatar) || '',
+        voiceEnabled: false,
       });
       socket.join(pid);
       socket.join(r.id);
@@ -48,6 +49,7 @@ export function setupHandlers(io, broadcast) {
           existing.connected = true;
           if (name) existing.name = name;
           if (avatar) existing.avatar = avatar;
+          if (existing.voiceEnabled === undefined) existing.voiceEnabled = false;
           socket.join(pid);
           socket.join(r.id);
           log(r, `${existing.name} вернулся`);
@@ -67,6 +69,7 @@ export function setupHandlers(io, broadcast) {
         id: pid, name: name || `Игрок ${seat + 1}`, seat,
         team: seat % 2, hand: [], connected: true, out: false,
         avatar: avatar || '',
+        voiceEnabled: false,
       });
       socket.join(pid);
       socket.join(r.id);
@@ -121,6 +124,12 @@ export function setupHandlers(io, broadcast) {
       const r = rooms.get(rid); if (!r) return;
       const p = getMe(); if (!p) return;
 
+      // голос: выключаем
+      if (p.voiceEnabled) {
+        p.voiceEnabled = false;
+        io.to(r.id).emit('voice-peer-left', { playerId: p.id });
+      }
+
       if (r.phase === 'lobby') {
         r.players = r.players.filter(x => x.id !== p.id);
         r.players.forEach((x, i) => { x.seat = i; x.team = i % 2; });
@@ -154,6 +163,11 @@ export function setupHandlers(io, broadcast) {
       const r = rooms.get(rid); if (!r) return;
       const p = r.players.find(x => x.id === pid);
       if (p) {
+        // голос: сообщаем остальным
+        if (p.voiceEnabled) {
+          p.voiceEnabled = false;
+          io.to(r.id).emit('voice-peer-left', { playerId: p.id });
+        }
         p.connected = false;
         log(r, `${p.name} отключился`);
         if (r.phase !== 'lobby') {
@@ -171,6 +185,39 @@ export function setupHandlers(io, broadcast) {
         }
       }
       broadcast(r);
+    });
+
+    // ==================== 🎤 ГОЛОСОВОЙ ЧАТ ====================
+    socket.on('voice-enabled', () => {
+      const r = rooms.get(rid); if (!r) return;
+      const p = getMe(); if (!p) return;
+      p.voiceEnabled = true;
+
+      // какие игроки уже в голосе (кроме меня) — они станут пирами
+      const peers = r.players
+        .filter(x => x.voiceEnabled && x.id !== pid)
+        .map(x => x.id);
+
+      // мне сообщаем список пиров (инициирую офферы)
+      socket.emit('voice-peers', { peers });
+
+      // остальным сообщаем что я в голосе
+      socket.to(r.id).emit('voice-peer-joined', { playerId: pid });
+    });
+
+    socket.on('voice-disabled', () => {
+      const r = rooms.get(rid); if (!r) return;
+      const p = getMe(); if (!p) return;
+      p.voiceEnabled = false;
+      socket.to(r.id).emit('voice-peer-left', { playerId: pid });
+    });
+
+    // пересылка сигналов (offer/answer/ICE) между игроками одной комнаты
+    socket.on('voice-signal', ({ to, data }) => {
+      const r = rooms.get(rid); if (!r) return;
+      const target = r.players.find(x => x.id === to);
+      if (!target) return;
+      io.to(to).emit('voice-signal', { from: pid, data });
     });
 
     registerGameHandlers(io, socket, ctx);

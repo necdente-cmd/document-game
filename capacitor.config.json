@@ -3,7 +3,7 @@
   "appName": "Документ",
   "webDir": "public",
   "server": {
-    "url": "http://129.151.203.202:3000",
-    "cleartext": true
+    "url": "https://document-game.duckdns.org",
+    "androidScheme": "https"
   }
 }

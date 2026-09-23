@@ -1,6 +1,7 @@
 import { state, saveMe, applyTheme, applyScale, beep, vibrate } from './state.js';
 import { playSound } from './sound.js';
 import { toastErr } from './ui/toast.js';
+import { bindVoiceSocket } from './voice.js';
 
 export const socket = io({
   reconnection: true,
@@ -16,7 +17,6 @@ export function bindSocket(onStateChange) {
     const startedNewRound = s.phase === 'playing' && state.lastPhaseForDeal !== 'playing';
     state.lastPhaseForDeal = s.phase;
 
-    // === Мой ход ===
     const wasMyTurn = prev && prev.turnSeat === prev.mySeat;
     const nowMyTurn = s.turnSeat === s.mySeat;
     if (nowMyTurn && !wasMyTurn) {
@@ -24,7 +24,6 @@ export function bindSocket(onStateChange) {
       playSound('your-turn');
     }
 
-    // === Звуки и анимации игрового поля ===
     if (prev && prev.phase === 'playing' && s.phase === 'playing') {
       const prevCards  = prev.field?.cards?.length || 0;
       const nowCards   = s.field?.cards?.length || 0;
@@ -34,11 +33,10 @@ export function bindSocket(onStateChange) {
       if (nowCards > prevCards) playSound('play-card');
       if (nowBeaten > prevBeaten) playSound('defend');
 
-      // Поле полностью очистилось — БИТО или ПОДНЯТЬ
       if (prevCards > 0 && nowCards === 0) {
         playSound('take-cards');
         const wasDefender = prev.field.defender;
-        const isBito = s.turnSeat === wasDefender;  // после бито ход у защитника
+        const isBito = s.turnSeat === wasDefender;
         state.pendingFieldFly = {
           type: isBito ? 'bito' : 'pickup',
           defenderSeat: wasDefender,
@@ -46,7 +44,6 @@ export function bindSocket(onStateChange) {
       }
     }
 
-    // === Победа / поражение ===
     if (prev && prev.roundWins && s.roundWins) {
       const myTeam  = s.myTeam;
       const oppTeam = 1 - myTeam;
@@ -98,6 +95,9 @@ export function bindSocket(onStateChange) {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && socket.disconnected) socket.connect();
   });
+
+  // 🎤 голосовой чат
+  bindVoiceSocket();
 }
 
 export function reconnectIfNeeded() {

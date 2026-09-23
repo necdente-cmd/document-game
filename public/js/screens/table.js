@@ -10,6 +10,7 @@ import { initDrag } from '../drag.js';
 import { EMOJIS } from '../emojis.js';
 import { playSound } from '../sound.js';
 import { toastErr, toastOk } from '../ui/toast.js';
+import { enableVoice, disableVoice, setMicOn } from '../voice.js';
 
 let sortMode = 0;
 let infoOpen = false;
@@ -83,7 +84,7 @@ function playDealAnimation() {
   });
 }
 
-// ==================== ЗАХВАТ ПОЗИЦИЙ КАРТ ПОЛЯ (для БИТО / ПОДНЯТЬ) ====================
+// ==================== ЗАХВАТ ПОЗИЦИЙ КАРТ ПОЛЯ ====================
 function captureFieldForFly() {
   const fly = state.pendingFieldFly;
   if (!fly || fly.positions) return;
@@ -100,7 +101,7 @@ function captureFieldForFly() {
   });
 }
 
-// ==================== АНИМАЦИЯ УЛЁТА КАРТ СО СТОЛА ====================
+// ==================== АНИМАЦИЯ УЛЁТА КАРТ ====================
 function playPendingFieldFly() {
   const fly = state.pendingFieldFly;
   if (!fly) return;
@@ -174,6 +175,23 @@ function ensureSwipeIcons() {
     `;
     document.body.appendChild(el);
   }
+  // 🎤 Кнопка микрофона (обновляется отдельно, чтобы не пересоздавать весь HTML)
+  let micBtn = document.getElementById('micBtn');
+  if (!micBtn) {
+    micBtn = document.createElement('button');
+    micBtn.id = 'micBtn';
+    micBtn.title = 'Микрофон';
+    el.insertBefore(micBtn, el.querySelector('#chatBtn'));
+  }
+  micBtn.className = 'icon-btn ' + (
+    state.voiceActive
+      ? (state.micOn ? 'voice-on' : 'voice-muted')
+      : ''
+  );
+  micBtn.textContent = state.voiceActive
+    ? (state.micOn ? '🎤' : '🔇')
+    : '🎤';
+
   let trig = document.getElementById('swipeTrigger');
   if (!trig) {
     trig = document.createElement('button');
@@ -306,7 +324,6 @@ export function renderTable(app, navigate) {
   const s = state.server;
   if (!s) return;
 
-  // 🃏 Захватить позиции карт поля перед заменой HTML
   captureFieldForFly();
 
   applyTheme(s.opts.theme);
@@ -371,10 +388,10 @@ export function renderTable(app, navigate) {
       </div>
     `).join('');
 
-   lobbyBar = `
-  <div class="waiting">
-    <img src="/logo.png" class="lobby-logo" alt="Документ">
-    <div class="waiting-label">Код комнаты</div>
+    lobbyBar = `
+      <div class="waiting">
+        <img src="/logo.png" class="lobby-logo" alt="Документ">
+        <div class="waiting-label">Код комнаты</div>
         <button class="waiting-code" id="roomCode" title="Тапни, чтобы скопировать">${esc(s.id)}</button>
         <div class="waiting-players-grid">
           ${playerCards}${emptyCards}
@@ -402,6 +419,7 @@ export function renderTable(app, navigate) {
     passNotice = `<div class="pass-notice wait">⏳ Ждём ${esc(wname)} — отошёл</div>`;
   }
 
+  // ===== СИДЕНЬЯ с голосовым speaking =====
   const seats = s.players.filter(p => p.seat !== mySeat).map(p => {
     const isThisInPassed = passedSeats.includes(p.seat);
     const offlineBadge = !p.connected ? '<div class="badge-off">⚠ отошёл</div>' : '';
@@ -410,8 +428,9 @@ export function renderTable(app, navigate) {
     const st = playerState(s, p.seat);
     const stCls = st === 'бьёт' ? 'beat' : st === 'думает' ? 'think' : st === 'ходит' ? 'move'
                 : st === 'отошёл' ? 'out' : '';
+    const isSpeaking = (state.voiceSpeakingSeats || []).includes(p.seat);
     return `
-      <div class="seat ${pos} ${p.seat===s.turnSeat?'active':''} ${p.out?'out':''} ${!p.connected?'offline':''}" data-seat="${p.seat}">
+      <div class="seat ${pos} ${p.seat===s.turnSeat?'active':''} ${p.out?'out':''} ${!p.connected?'offline':''} ${isSpeaking?'speaking':''}" data-seat="${p.seat}">
         <div class="name">${esc(p.name)} ${p.team===myTeam?'★':'✗'}</div>
         <div class="avatar">${getAvatar(p.seat)}</div>
         ${st ? `<div class="state ${stCls}">${st}</div>` : ''}
@@ -420,26 +439,37 @@ export function renderTable(app, navigate) {
       </div>`;
   }).join('');
 
+  // ===== ДЕК: стопка / козырь / масть-напоминание =====
   let deckArea = '';
   if (isPlaying || s.phase === 'roundEnd' || s.phase === 'gameEnd') {
-    const stack = Array.from({ length: 4 }).map((_, i) =>
-      `<div class="card back ${isDealing ? 'deal' : ''}" style="top:${i*2}px;left:${i*2}px;z-index:${10+i}">
-        <img src="${backPath(s.opts)}" alt="•" draggable="false">
-      </div>`).join('');
-    deckArea = `
-      <div class="deck-area">
-        <div class="deck-wrapper">
-          <div class="deck-stack">${stack}</div>
-          ${s.trumpCard ? `<div class="trump-under">${cardHtml(s.trumpCard)}</div>` : ''}
-        </div>
-      </div>`;
+    if (s.deckEmpty && s.trumpReminder) {
+      // 🎴 Колода пуста + козырь ушёл → показываем масть
+      const isRed = s.trumpReminder === '♥' || s.trumpReminder === '♦';
+      deckArea = `
+        <div class="deck-area">
+          <div class="trump-reminder ${isRed ? 'red' : 'black'}">${s.trumpReminder}</div>
+        </div>`;
+    } else {
+      const stack = Array.from({ length: 4 }).map((_, i) =>
+        `<div class="card back ${isDealing ? 'deal' : ''}" style="top:${i*2}px;left:${i*2}px;z-index:${10+i}">
+          <img src="${backPath(s.opts)}" alt="•" draggable="false">
+        </div>`).join('');
+      deckArea = `
+        <div class="deck-area">
+          <div class="deck-wrapper">
+            <div class="deck-stack">${stack}</div>
+            ${s.trumpCard ? `<div class="trump-under">${cardHtml(s.trumpCard)}</div>` : ''}
+          </div>
+        </div>`;
+    }
   }
 
   const fieldHtml = s.field
     ? s.field.cards.map(e => {
-        const canBeTarget = canDefend && !e.beatenBy && e.card.r !== myDoc;
+        const canBeTarget = canDefend && !e.beatenBy && e.card.r !== myDoc && !e.isForced;
         const cls = ['slot'];
         if (canBeTarget) cls.push('tappable');
+        if (e.isForced) cls.push('forced');
         if (state.defendTarget === e.card.id) cls.push('selected-target');
         return `<div class="${cls.join(' ')}" data-field-card="${e.card.id}">
           ${cardHtml(e.card)}
@@ -501,7 +531,7 @@ export function renderTable(app, navigate) {
   if (waitingForSeat !== undefined) {
     hintHtml = `<div class="hint">⏳ Ждём игрока — скоро вернётся</div>`;
   } else if (canDefend && !bothPassed && !s.pendingPass && !s.pendingSwap && !s.pendingFalsh) {
-    const hasMyDoc = s.field.cards.some(x => !x.beatenBy && x.card.r === myDoc);
+    const hasMyDoc = s.field.cards.some(x => !x.beatenBy && x.card.r === myDoc && !x.isForced);
     if (hasMyDoc) hintHtml = `<div class="hint">⚠ На столе ваш документ — нужно поднять всё</div>`;
     else if (state.defendTarget) hintHtml = `<div class="hint">👆 Тяните зелёную карту или тапните по ней</div>`;
     else hintHtml = `<div class="hint">👆 Тапни карту врага, потом свою — или тяни</div>`;
@@ -534,9 +564,9 @@ export function renderTable(app, navigate) {
 
       ${seats}
       <div class="center">
-  ${!s.field ? `<img src="/logo.png" class="field-watermark" alt="">` : ''}
-  ${fieldHtml}
-</div>
+        ${!s.field ? `<img src="/logo.png" class="field-watermark" alt="">` : ''}
+        ${fieldHtml}
+      </div>
 
       ${overlays}
       ${emojiPanel}
@@ -553,7 +583,6 @@ export function renderTable(app, navigate) {
     <div class="actions">${hintHtml}</div>
   `;
 
-  // 🎬 Запуск анимаций
   playPendingFly();
   playPendingFieldFly();
   playDealAnimation();
@@ -578,6 +607,7 @@ export function renderTable(app, navigate) {
         const fid = slot.dataset.fieldCard;
         const entry = s.field.cards.find(x => x.card.id === fid);
         if (!entry || entry.beatenBy) return;
+        if (entry.isForced) return err('Навязанный документ — только поднять');
         if (entry.card.r === myDoc) return err('Ваш документ — только поднять');
         state.defendTarget = (state.defendTarget === fid) ? null : fid;
         renderTable(app, navigate);
@@ -592,7 +622,6 @@ export function renderTable(app, navigate) {
     };
   }
 
-  // Копирование кода по тапу
   const roomCodeEl = g('roomCode');
   if (roomCodeEl) {
     roomCodeEl.onclick = async () => {
@@ -636,8 +665,19 @@ export function renderTable(app, navigate) {
   bindOverlays();
   maybeShowChampion(navigate);
   import('../ui/chat.js').then(m => m.updateChatBadge?.());
+
+  // 🎤 Перерисовка при изменении "кто говорит"
+  if (!window.__voiceSpeakingBound) {
+    window.__voiceSpeakingBound = true;
+    window.addEventListener('voice-speaking-change', () => {
+      if (document.getElementById('table')) {
+        renderTable(app, navigate);
+      }
+    });
+  }
 }
 
+// Обработчики свайп-иконок
 function bindSwipeIconHandlers(app, navigate) {
   const sortBtn = document.getElementById('sortBtn');
   if (sortBtn) sortBtn.onclick = () => {
@@ -651,6 +691,30 @@ function bindSwipeIconHandlers(app, navigate) {
     state.emojiOpen = !state.emojiOpen;
     renderTable(app, navigate);
   };
+
+  // 🎤 Микрофон
+  const micBtn = document.getElementById('micBtn');
+  if (micBtn) micBtn.onclick = async () => {
+    playSound('button');
+    if (!state.voiceActive) {
+      const ok = await enableVoice();
+      if (ok) {
+        state.micOn = true;
+        setMicOn(true);
+        try { localStorage.setItem('micOn', '1'); } catch {}
+        toastOk('🎤 Микрофон включён');
+      } else {
+        toastErr('Не удалось получить доступ к микрофону');
+      }
+    } else {
+      state.micOn = !state.micOn;
+      setMicOn(state.micOn);
+      try { localStorage.setItem('micOn', state.micOn ? '1' : '0'); } catch {}
+    }
+    hideSwipeIcons();
+    renderTable(app, navigate);
+  };
+
   const chatBtn = document.getElementById('chatBtn');
   if (chatBtn) chatBtn.onclick = () => { hideSwipeIcons(); openChat(); };
   const infoBtn = document.getElementById('infoBtn');
