@@ -1,3 +1,40 @@
+/* ==================== ШРИФТЫ (локально) ==================== */
+@font-face {
+  font-family: 'Playfair';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/playfair-display-v40-cyrillic_latin-700.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Playfair';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url('/fonts/playfair-display-v40-cyrillic_latin-900.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/montserrat-v31-cyrillic_latin-regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/montserrat-v31-cyrillic_latin-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/montserrat-v31-cyrillic_latin-700.woff2') format('woff2');
+}
+
 /* ==================== ТЕМЫ ==================== */
 :root {
   --bg: #0d3b2e;
@@ -10,6 +47,8 @@
   --acc: #f1c40f;
   --text: #fff;
   --scale: 1;
+  --font-title: 'Playfair', Georgia, serif;
+  --font-body: 'Montserrat', system-ui, -apple-system, sans-serif;
 }
 
 [data-theme="classic"] {
@@ -84,12 +123,30 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body);
+  font-weight: 400;
   background: var(--bg);
   color: var(--text);
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 #app { height: 100dvh; display: flex; flex-direction: column; }
+
+/* ==================== ЗАГОЛОВКИ (Playfair) ==================== */
+h1, h2, h3, h4,
+.splash-title,
+.welcome-title,
+.waiting-code,
+.champ-title {
+  font-family: var(--font-title);
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+
+/* Кнопки — Montserrat SemiBold */
+button, input, select, textarea {
+  font-family: var(--font-body);
+}
 
 /* ==================== ПЛАВНЫЕ ПЕРЕХОДЫ ЭКРАНОВ ==================== */
 #app { transition: opacity .15s ease-out; }
@@ -117,15 +174,15 @@ body {
   padding: 20px;
 }
 
-/* Заголовок «Документ» */
 .splash-title {
-  font-size: 42px;
+  font-family: var(--font-title);
+  font-size: 52px;
   font-weight: 900;
   color: #f1c40f;
-  letter-spacing: 5px;
+  letter-spacing: 4px;
   text-shadow: 0 0 28px rgba(241,196,15,.55);
   opacity: 0;
-  animation: titleIn .55s cubic-bezier(.22,.9,.35,1) 0ms forwards;
+  animation: titleIn .65s cubic-bezier(.22,.9,.35,1) 0ms forwards;
   will-change: transform, opacity, filter;
 }
 @keyframes titleIn {
@@ -134,7 +191,6 @@ body {
   100% { opacity: 1; transform: scale(1); filter: blur(0); }
 }
 
-/* Масти — падают сверху */
 .splash-emojis {
   display: flex;
   justify-content: center;
@@ -163,12 +219,14 @@ body {
   100% { opacity: 1; transform: translateY(0) rotate(0) scale(1); }
 }
 
-/* Подпись снизу */
 .splash-sub {
+  font-family: var(--font-body);
   font-size: 14px;
+  font-weight: 500;
   color: #9ac6b6;
   margin-top: 8px;
-  letter-spacing: 2px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
   opacity: 0;
   animation: subIn .6s ease-out 1500ms forwards;
 }
@@ -188,14 +246,14 @@ body {
   width: 100%;
   overflow-y: auto;
 }
-.lobby h2 { margin: 0 0 8px; font-size: 26px; }
+.lobby h2 { font-family: var(--font-title); margin: 0 0 8px; font-size: 28px; font-weight: 900; letter-spacing: 2px; }
 .lobby label { font-size: 13px; opacity: .85; margin-bottom: -4px; margin-top: 6px; font-weight: 600; }
 .lobby input, .lobby select, .lobby button {
   padding: 12px;
   border-radius: 10px;
   border: none;
   font-size: 16px;
-  font-family: inherit;
+  font-family: var(--font-body);
 }
 .lobby input, .lobby select { background: rgba(255,255,255,.1); color: var(--text); }
 [data-theme="paper"] .lobby input, [data-theme="paper"] .lobby select { background: rgba(0,0,0,.05); }
@@ -204,18 +262,22 @@ body {
 
 /* ==================== НОВОЕ ЛОББИ (welcome) ==================== */
 .welcome-title {
+  font-family: var(--font-title);
   text-align: center;
-  font-size: 32px;
+  font-size: 40px;
   margin: 40px 0 6px;
   font-weight: 900;
-  letter-spacing: 2px;
+  letter-spacing: 3px;
 }
 .welcome-sub {
+  font-family: var(--font-body);
   text-align: center;
-  font-size: 13px;
+  font-size: 12px;
   opacity: .6;
   margin-bottom: 32px;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 500;
 }
 .welcome-btn {
   padding: 20px;
@@ -224,7 +286,9 @@ body {
   border: none;
   cursor: pointer;
   font-weight: 700;
+  font-family: var(--font-body);
   transition: transform .12s;
+  letter-spacing: .5px;
 }
 .welcome-btn:active { transform: scale(.97); }
 .welcome-btn.primary {
@@ -249,7 +313,7 @@ body {
 }
 .welcome-author { cursor: pointer; transition: opacity .15s; }
 .welcome-author:active { opacity: 1; }
-.welcome-author b { color: var(--acc); }
+.welcome-author b { color: var(--acc); font-weight: 700; }
 
 /* ==================== КНОПКИ ==================== */
 .b1 { background: var(--acc); color: #000; }
@@ -325,14 +389,13 @@ body {
   background: rgba(241,196,15,.2);
 }
 
-/* ==================== ВЫБОР ТЕМЫ СТОЛА (превью) ==================== */
+/* ==================== ВЫБОР ТЕМЫ СТОЛА ==================== */
 .theme-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
   margin-top: 4px;
 }
-
 .theme-preview {
   cursor: pointer;
   border-radius: 10px;
@@ -350,7 +413,6 @@ body {
   border-color: var(--acc);
   box-shadow: 0 0 14px rgba(241,196,15,.55);
 }
-
 .theme-preview .tp-inner {
   width: 100%;
   height: 42px;
@@ -368,24 +430,20 @@ body {
     inset 0 0 0 1px rgba(0,0,0,.6),
     inset 0 0 0 3px rgba(255,255,255,.06);
 }
-
 .theme-preview .tp-label {
   font-size: 10px;
   font-weight: 600;
   opacity: .85;
   letter-spacing: .3px;
 }
-
 .theme-preview[data-theme-val="classic"] { background: #4a2c1a; }
 .theme-preview[data-theme-val="classic"] .tp-inner {
   background: radial-gradient(circle at 50% 45%, #16543f 0%, #0b3d2e 55%, #041a13 100%);
 }
-
 .theme-preview[data-theme-val="dark"] { background: #1a1a1a; }
 .theme-preview[data-theme-val="dark"] .tp-inner {
   background: radial-gradient(circle at 50% 45%, #182a44 0%, #0d1b2a 55%, #050a14 100%);
 }
-
 .theme-preview[data-theme-val="neon"] {
   background: #1a0d2e;
   box-shadow: 0 0 10px rgba(0,229,255,.35);
@@ -402,13 +460,11 @@ body {
     inset 0 0 0 3px #00e5ff,
     inset 0 0 14px rgba(0,229,255,.5);
 }
-
 .theme-preview[data-theme-val="paper"] { background: #d4a574; }
 .theme-preview[data-theme-val="paper"] .tp-inner {
   background: radial-gradient(circle at 50% 45%, #f5e8d3 0%, #e8dcc0 55%, #d4c4a0 100%);
 }
 .theme-preview[data-theme-val="paper"] .tp-label { color: #333; }
-
 [data-theme="dark"] .theme-preview .tp-label,
 [data-theme="neon"] .theme-preview .tp-label,
 [data-theme="classic"] .theme-preview .tp-label { color: #fff; }
