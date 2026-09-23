@@ -32,7 +32,6 @@ export function initDrag(onRender) {
     const dy = e.clientY - drag.startY;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
-    // Быстрый старт drag — 4px (было 10px)
     if (!drag.isDragging && dist > 4) {
       drag.isDragging = true;
       drag.el.classList.add('dragging');
@@ -92,6 +91,17 @@ function clearHighlight() {
   document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
 }
 
+// Запомнить позицию карты для анимации полёта
+function rememberFly(cardId) {
+  const srcEl = document.querySelector(`#hand .card[data-id="${cardId}"]`);
+  if (!srcEl) return;
+  const r = srcEl.getBoundingClientRect();
+  state.pendingFly = {
+    cardId,
+    from: { left: r.left, top: r.top, w: r.width, h: r.height },
+  };
+}
+
 function handleDrop(x, y, cardId) {
   const s = state.server;
   if (!s) return;
@@ -112,6 +122,7 @@ function handleDrop(x, y, cardId) {
       if (entry.card.r === myDoc) return;
       if (card.r === myDoc && card.s !== s.trumpSuit) return;
       if (!beatsUI(card, entry.card, s.trumpSuit)) return;
+      rememberFly(cardId);
       socket.emit('defend', { targetId, withId: cardId });
       return;
     }
@@ -124,6 +135,7 @@ function handleDrop(x, y, cardId) {
     const inField = x >= rect.left - 60 && x <= rect.right + 60 &&
                     y >= rect.top - 60 && y <= rect.bottom + 60;
     if (inField) {
+      rememberFly(cardId);
       socket.emit('attack', { cardIds: [cardId] });
       return;
     }

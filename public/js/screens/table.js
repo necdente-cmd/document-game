@@ -15,6 +15,45 @@ let infoOpen = false;
 let iconsVisible = false;
 let iconsTimer = null;
 
+// ==================== АНИМАЦИЯ ПОЛЁТА КАРТЫ ====================
+function playPendingFly() {
+  const pf = state.pendingFly;
+  if (!pf) return;
+  state.pendingFly = null;
+
+  requestAnimationFrame(() => {
+    const newEl = document.querySelector(`.center .card[data-id="${pf.cardId}"]`);
+    if (!newEl) return;
+
+    const r = newEl.getBoundingClientRect();
+    const dx = pf.from.left - r.left;
+    const dy = pf.from.top  - r.top;
+    const sx = pf.from.w / r.width;
+    const sy = pf.from.h / r.height;
+
+    // Мгновенно перемещаем карту в старую позицию
+    newEl.style.transition = 'none';
+    newEl.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
+    newEl.style.transformOrigin = 'top left';
+    newEl.style.zIndex = '9999';
+    newEl.style.pointerEvents = 'none';
+
+    // Форсируем reflow
+    void newEl.offsetHeight;
+
+    // Плавно летим в новую позицию
+    newEl.style.transition = 'transform 320ms cubic-bezier(.2,.7,.3,1)';
+    newEl.style.transform = '';
+
+    setTimeout(() => {
+      newEl.style.transition = '';
+      newEl.style.transformOrigin = '';
+      newEl.style.zIndex = '';
+      newEl.style.pointerEvents = '';
+    }, 340);
+  });
+}
+
 // ==================== СВАЙП-ИКОНКИ СЛЕВА ====================
 function ensureSwipeIcons() {
   let el = document.getElementById('swipeIcons');
@@ -388,6 +427,9 @@ export function renderTable(app, navigate) {
     <div class="err" id="err"></div>
   `;
 
+  // 🃏 Анимация полёта карты (если есть отложенная)
+  playPendingFly();
+
   ensureSwipeIcons();
   bindSwipeIconHandlers(app, navigate);
   if (iconsVisible) {
@@ -431,7 +473,7 @@ export function renderTable(app, navigate) {
   const bi = g('bitoBtn');     if (bi) bi.onclick = () => { playSound('button'); socket.emit('bito'); };
   const fl = g('falshBtn');    if (fl) fl.onclick = () => {
     if (!state.defendTarget) return err('Сначала тапните карту врага');
-    playSound('button');
+    playSound('falsh');
     socket.emit('falsh', { cardId: state.defendTarget });
     state.defendTarget = null;
   };
@@ -470,11 +512,10 @@ function bindSwipeIconHandlers(app, navigate) {
     state.emojiOpen = !state.emojiOpen;
     renderTable(app, navigate);
   };
-    const chatBtn = document.getElementById('chatBtn');
+  const chatBtn = document.getElementById('chatBtn');
   if (chatBtn) chatBtn.onclick = () => {
     hideSwipeIcons();
     openChat();
-  };
   };
   const infoBtn = document.getElementById('infoBtn');
   if (infoBtn) infoBtn.onclick = () => {
