@@ -59,6 +59,11 @@ export function pub(r, forId) {
     to: r.pendingSwap.to,
     team: r.pendingSwap.team,
   } : null;
+
+  // ✅ Количество карт в колоде (0 / >0)
+  const deckCount = r.deck.length;
+  const trumpReminder = (deckCount === 0 && !r.trumpCard && r.trumpSuit) ? r.trumpSuit : null;
+
   return {
     id: r.id,
     opts: r.opts,
@@ -76,7 +81,9 @@ export function pub(r, forId) {
     myHand: me ? me.hand : [],
     mySeat: me ? me.seat : -1,
     myTeam: me ? me.team : -1,
-    deckCount: null,
+    deckCount,
+    deckEmpty: deckCount === 0,
+    trumpReminder,
     trumpCard: r.trumpCard,
     trumpSuit: r.trumpSuit,
     docs,
