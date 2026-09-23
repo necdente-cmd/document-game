@@ -287,3 +287,15 @@ body {
 @media (max-width: 360px) {
   .theme-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ==================== ПЛАВНЫЕ ПЕРЕХОДЫ ЭКРАНОВ ==================== */
+#app {
+  transition: opacity .15s ease-out;
+}
+#app.fade-out {
+  opacity: 0;
+}
+#app.fade-in {
+  opacity: 0;
+  transition: none;
+}

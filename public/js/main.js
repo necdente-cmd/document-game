@@ -7,15 +7,38 @@ import { renderTable } from './screens/table.js';
 
 const app = document.getElementById('app');
 let currentScreen = 'welcome';
+let navigating = false;
 
-function navigate(screen) {
-  currentScreen = screen;
+function renderScreen(screen) {
   app.dataset.screen = screen;
   if (screen === 'welcome') return renderWelcome(app, navigate);
   if (screen === 'create')  return renderCreate(app, navigate);
   if (screen === 'join')    return renderJoin(app, navigate);
   if (screen === 'table')   return renderTable(app, navigate);
   renderWelcome(app, navigate);
+}
+
+function navigate(screen) {
+  // Если это ре-рендер того же стола — без fade
+  if (currentScreen === screen && screen === 'table') {
+    return renderTable(app, navigate);
+  }
+
+  if (navigating) return;
+  navigating = true;
+
+  app.classList.add('fade-out');
+
+  setTimeout(() => {
+    currentScreen = screen;
+    renderScreen(screen);
+
+    app.classList.remove('fade-out');
+    app.classList.add('fade-in');
+    requestAnimationFrame(() => app.classList.remove('fade-in'));
+
+    navigating = false;
+  }, 150);
 }
 
 loadMe();
@@ -33,13 +56,10 @@ bindSocket(() => {
     }
   } else {
     if (!app.dataset.screen) navigate('welcome');
-    else navigate(currentScreen);
+    else if (currentScreen !== 'table') navigate(currentScreen);
   }
 });
 
-// Реакции — слушатель в ui/overlays.js
-
-// Баннер фальша
 window.addEventListener('falsh', e => {
   const { byName, targetName, card } = e.detail;
   const el = document.createElement('div');

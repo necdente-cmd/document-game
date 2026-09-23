@@ -16,6 +16,7 @@ let infoOpen = false;
 let iconsVisible = false;
 let iconsTimer = null;
 
+// ==================== АНИМАЦИЯ ПОЛЁТА КАРТЫ (рука → стол) ====================
 function playPendingFly() {
   const pf = state.pendingFly;
   if (!pf) return;
@@ -45,6 +46,120 @@ function playPendingFly() {
   });
 }
 
+// ==================== АНИМАЦИЯ РАЗДАЧИ (колода → рука) ====================
+function playDealAnimation() {
+  if (!state.dealKey) return;
+  const cards = document.querySelectorAll('.hand .card');
+  if (!cards.length) return;
+
+  const deckEl = document.querySelector('.deck-area');
+  const deckRect = deckEl
+    ? deckEl.getBoundingClientRect()
+    : { left: 20, top: 20, width: 60, height: 90 };
+  const deckCx = deckRect.left + deckRect.width / 2;
+  const deckCy = deckRect.top  + deckRect.height / 2;
+
+  cards.forEach((el, i) => {
+    const finalTransform = el.style.transform || '';
+    const r = el.getBoundingClientRect();
+    const cardCx = r.left + r.width / 2;
+    const cardCy = r.top  + r.height / 2;
+    const dx = deckCx - cardCx;
+    const dy = deckCy - cardCy;
+
+    el.style.transition = 'none';
+    el.style.transform = `translate(${dx}px, ${dy}px) scale(0.35) rotate(-180deg)`;
+    el.style.opacity = '0';
+
+    void el.offsetHeight;
+
+    el.style.transition = 'transform 0.55s cubic-bezier(.2,.7,.3,1), opacity 0.35s';
+    const delay = 60 + i * 65;
+    setTimeout(() => {
+      el.style.transform = finalTransform;
+      el.style.opacity = '1';
+    }, delay);
+    setTimeout(() => { el.style.transition = ''; }, delay + 620);
+  });
+}
+
+// ==================== ЗАХВАТ ПОЗИЦИЙ КАРТ ПОЛЯ (для БИТО / ПОДНЯТЬ) ====================
+function captureFieldForFly() {
+  const fly = state.pendingFieldFly;
+  if (!fly || fly.positions) return;
+  fly.positions = [];
+  document.querySelectorAll('.center .slot').forEach(slot => {
+    slot.querySelectorAll('.card').forEach(cardEl => {
+      const r = cardEl.getBoundingClientRect();
+      const img = cardEl.querySelector('img');
+      fly.positions.push({
+        src: img ? img.src : '',
+        left: r.left, top: r.top, w: r.width, h: r.height,
+      });
+    });
+  });
+}
+
+// ==================== АНИМАЦИЯ УЛЁТА КАРТ СО СТОЛА ====================
+function playPendingFieldFly() {
+  const fly = state.pendingFieldFly;
+  if (!fly) return;
+  state.pendingFieldFly = null;
+  if (!fly.positions || !fly.positions.length) return;
+
+  const tableEl = document.getElementById('table');
+  const tableRect = tableEl
+    ? tableEl.getBoundingClientRect()
+    : { right: window.innerWidth, left: 0, top: 0, bottom: window.innerHeight };
+
+  let targetCx, targetCy, rot;
+  if (fly.type === 'pickup') {
+    const defEl = document.querySelector(`.seat[data-seat="${fly.defenderSeat}"] .avatar`);
+    const r = defEl ? defEl.getBoundingClientRect() : null;
+    if (r) {
+      targetCx = r.left + r.width / 2;
+      targetCy = r.top  + r.height / 2;
+    } else {
+      targetCx = tableRect.right + 60;
+      targetCy = tableRect.top + 100;
+    }
+    rot = -15;
+  } else {
+    targetCx = tableRect.right + 80;
+    targetCy = tableRect.top + 80;
+    rot = 25;
+  }
+
+  fly.positions.forEach((p, i) => {
+    const img = document.createElement('img');
+    img.src = p.src;
+    img.style.cssText = `
+      position: fixed;
+      left: ${p.left}px;
+      top: ${p.top}px;
+      width: ${p.w}px;
+      height: ${p.h}px;
+      z-index: 9998;
+      pointer-events: none;
+      border-radius: 6px;
+      box-shadow: 0 6px 16px rgba(0,0,0,.5);
+      transition: all 0.55s cubic-bezier(.4,0,.5,1);
+      transition-delay: ${i * 30}ms;
+      will-change: transform, opacity;
+    `;
+    document.body.appendChild(img);
+
+    requestAnimationFrame(() => {
+      const dx = targetCx - (p.left + p.w / 2);
+      const dy = targetCy - (p.top  + p.h / 2);
+      img.style.transform = `translate(${dx}px, ${dy}px) scale(0.35) rotate(${rot}deg)`;
+      img.style.opacity = '0';
+    });
+    setTimeout(() => img.remove(), 1000 + i * 30);
+  });
+}
+
+// ==================== СВАЙП-ИКОНКИ ====================
 function ensureSwipeIcons() {
   let el = document.getElementById('swipeIcons');
   if (!el) {
@@ -133,6 +248,7 @@ function setupSwipe() {
   }, true);
 }
 
+// ==================== МОДАЛКА СВЕДЕНИЙ ====================
 function showInfoModal() {
   const s = state.server;
   if (!s) return;
@@ -158,6 +274,7 @@ function showInfoModal() {
   document.getElementById('infoClose').onclick = close;
 }
 
+// ==================== СОРТИРОВКА РУКИ ====================
 function sortHand(hand, myDoc, trumpSuit) {
   const RV = { '6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14 };
   const SO = { '♠':0, '♥':1, '♦':2, '♣':3 };
@@ -188,6 +305,9 @@ function sortHand(hand, myDoc, trumpSuit) {
 export function renderTable(app, navigate) {
   const s = state.server;
   if (!s) return;
+
+  // 🃏 Захватить позиции карт поля перед заменой HTML
+  captureFieldForFly();
 
   applyTheme(s.opts.theme);
   setupSwipe();
@@ -228,19 +348,38 @@ export function renderTable(app, navigate) {
 
   const myTurnNow = isPlaying && isMyTurn && !iAmOut && !s.pendingPass && !s.pendingSwap && !s.pendingFalsh;
 
+  // ==================== ЛОББИ ====================
   let lobbyBar = '';
   if (s.phase === 'lobby') {
     const playersCount = s.players.length;
     const maxP = s.opts.maxPlayers;
     const isHost = meP?.isHost;
+    const emptySlots = Math.max(0, maxP - playersCount);
+
+    const playerCards = s.players.map(p => `
+      <div class="wp-card ${p.isHost?'host':''}">
+        <div class="wp-avatar">${getAvatar(p.seat)}</div>
+        <div class="wp-name">${esc(p.name)}</div>
+        ${p.isHost ? '<div class="wp-host">Хост</div>' : ''}
+      </div>
+    `).join('');
+
+    const emptyCards = Array.from({ length: emptySlots }).map(() => `
+      <div class="wp-card wp-empty">
+        <div class="wp-avatar">·</div>
+        <div class="wp-name">Ждём…</div>
+      </div>
+    `).join('');
+
     lobbyBar = `
       <div class="waiting">
-        <div class="waiting-title">Код комнаты</div>
-        <div class="waiting-code" id="roomCode">${esc(s.id)}</div>
-        <button class="copy-btn" id="copyCode">📋 Скопировать</button>
-        <div class="waiting-info">Игроков: <b>${playersCount} / ${maxP}</b></div>
-        <div class="waiting-players">
-          ${s.players.map(p => `<div class="waiting-player ${p.isHost?'host':''}">${getAvatar(p.seat)} ${esc(p.name)}${p.isHost?' (хост)':''}</div>`).join('')}
+        <div class="waiting-label">Код комнаты</div>
+        <button class="waiting-code" id="roomCode" title="Тапни, чтобы скопировать">${esc(s.id)}</button>
+        <div class="waiting-players-grid">
+          ${playerCards}${emptyCards}
+        </div>
+        <div class="waiting-status">
+          ${playersCount} / ${maxP} игроков ${playersCount < maxP ? '<span class="dots"><span>.</span><span>.</span><span>.</span></span>' : ''}
         </div>
         ${isHost && playersCount === maxP
           ? `<button class="start-big" id="startBtn">▶ Начать игру</button>`
@@ -342,7 +481,6 @@ export function renderTable(app, navigate) {
     extraActions.push(`<button class="b4" id="falshBtn">🃏 ФАЛЬШ</button>`);
   }
 
-  // Подсветка карт, которые бьют выбранную цель
   let beatsTarget = null;
   if (canDefend && state.defendTarget && s.field) {
     const entry = s.field.cards.find(x => x.card.id === state.defendTarget && !x.beatenBy);
@@ -411,7 +549,11 @@ export function renderTable(app, navigate) {
     <div class="actions">${hintHtml}</div>
   `;
 
+  // 🎬 Запуск анимаций
   playPendingFly();
+  playPendingFieldFly();
+  playDealAnimation();
+
   ensureSwipeIcons();
   bindSwipeIconHandlers(app, navigate);
   if (iconsVisible) {
@@ -424,13 +566,10 @@ export function renderTable(app, navigate) {
 
   initDrag(() => renderTable(app, navigate));
 
-  // ===== Тап по полю =====
   const centerEl = document.querySelector('.center');
   if (centerEl) {
     centerEl.onclick = e => {
       const slot = e.target.closest('[data-field-card]');
-
-      // Тап по карте врага (защитник)
       if (slot && canDefend) {
         const fid = slot.dataset.fieldCard;
         const entry = s.field.cards.find(x => x.card.id === fid);
@@ -440,8 +579,6 @@ export function renderTable(app, navigate) {
         renderTable(app, navigate);
         return;
       }
-
-      // Тап по полю (атакующий с выбранными картами)
       if (!slot && isMyTurn && !iAmOut && !s.field && state.selected.size > 0) {
         const cardIds = [...state.selected];
         state.selected.clear();
@@ -451,16 +588,19 @@ export function renderTable(app, navigate) {
     };
   }
 
-  const cc = g('copyCode');
-  if (cc) cc.onclick = async () => {
-    const code = document.getElementById('roomCode').textContent;
-    try {
-      await navigator.clipboard.writeText(code);
-      cc.textContent = '✅ ОК';
-      toastOk('Код скопирован');
-      setTimeout(() => cc.textContent = '📋 Скопировать', 1500);
-    } catch {}
-  };
+  // Копирование кода по тапу
+  const roomCodeEl = g('roomCode');
+  if (roomCodeEl) {
+    roomCodeEl.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(s.id);
+        toastOk('Код скопирован: ' + s.id);
+      } catch {
+        toastErr('Не удалось скопировать');
+      }
+    };
+  }
+
   const st = g('startBtn'); if (st) st.onclick = () => { playSound('button'); socket.emit('startGame'); };
 
   const pu = g('pickUpBtn');   if (pu) pu.onclick = () => { playSound('button'); socket.emit('pickUp'); state.defendTarget = null; };
