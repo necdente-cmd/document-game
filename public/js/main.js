@@ -37,28 +37,9 @@ bindSocket(() => {
   }
 });
 
-// Реакции
-window.addEventListener('reaction', e => {
-  const { seat, emoji } = e.detail;
-  const table = document.getElementById('table');
-  if (!table || !state.server) return;
-  const posMap = {
-    bottom: 'bottom:190px; left:50%; transform:translateX(-50%)',
-    top:    'top:80px; left:50%; transform:translateX(-50%)',
-    left:   'top:40%; left:100px',
-    right:  'top:40%; right:100px',
-  };
-  const mySeat = state.server.mySeat;
-  const posKey = ['bottom','right','top','left'][((seat - mySeat + 4) % 4)] || 'top';
-  const pos = posMap[posKey] || posMap.top;
-  const el = document.createElement('div');
-  el.className = 'reaction';
-  el.textContent = emoji;
-  el.style.cssText = pos + ';position:absolute';
-  table.appendChild(el);
-  setTimeout(() => el.remove(), 2000);
-});
+// Реакции — слушатель в ui/overlays.js
 
+// Баннер фальша
 window.addEventListener('falsh', e => {
   const { byName, targetName, card } = e.detail;
   const el = document.createElement('div');

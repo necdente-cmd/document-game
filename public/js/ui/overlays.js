@@ -125,3 +125,32 @@ export function bindOverlays() {
   const sm = g('startMeBtn');      if (sm) sm.onclick = () => socket.emit('chooseStart', { seat: state.server.mySeat });
   const sp = g('startPartnerBtn'); if (sp) sp.onclick = () => socket.emit('chooseStart', { seat: (state.server.mySeat + 2) % 4 });
 }
+
+// ==================== ЖИВЫЕ РЕАКЦИИ ====================
+window.addEventListener('reaction', (e) => {
+  const { seat, emoji } = e.detail;
+  if (!state.server) return;
+  const table = document.getElementById('table');
+  if (!table) return;
+
+  // Якорь: аватар игрока, или (для себя) область руки
+  let r;
+  const avatarEl = document.querySelector(`.seat[data-seat="${seat}"] .avatar`);
+  if (avatarEl) {
+    r = avatarEl.getBoundingClientRect();
+  } else {
+    const hand = document.getElementById('hand');
+    r = hand ? hand.getBoundingClientRect()
+             : { left: innerWidth/2, top: innerHeight-100, width: 0, height: 0 };
+  }
+  const cx = r.left + r.width  / 2;
+  const cy = r.top  + r.height / 2;
+
+  const el = document.createElement('div');
+  el.className = 'reaction-fly';
+  el.textContent = emoji;
+  el.style.left = cx + 'px';
+  el.style.top  = cy + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+});

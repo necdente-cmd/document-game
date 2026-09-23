@@ -7,8 +7,7 @@ import { showHistory } from '../ui/history.js';
 import { openSettings } from '../ui/settings.js';
 import { openChat } from '../ui/chat.js';
 import { initDrag } from '../drag.js';
-
-const EMOJIS = ['👍','😂','😡','😭','🔥','💪','🤔','😎','👏','🎯'];
+import { EMOJIS } from '../emojis.js';
 
 let sortMode = 0;
 let infoOpen = false;
@@ -255,7 +254,7 @@ export function renderTable(app, navigate) {
     const stCls = st === 'бьёт' ? 'beat' : st === 'думает' ? 'think' : st === 'ходит' ? 'move'
                 : st === 'отошёл' ? 'out' : '';
     return `
-      <div class="seat ${pos} ${p.seat===s.turnSeat?'active':''} ${p.out?'out':''} ${!p.connected?'offline':''}">
+      <div class="seat ${pos} ${p.seat===s.turnSeat?'active':''} ${p.out?'out':''} ${!p.connected?'offline':''}" data-seat="${p.seat}">
         <div class="name">${esc(p.name)} ${p.team===myTeam?'★':'✗'}</div>
         <div class="avatar">${getAvatar(p.seat)}</div>
         ${st ? `<div class="state ${stCls}">${st}</div>` : ''}
