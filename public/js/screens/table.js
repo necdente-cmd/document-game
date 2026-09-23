@@ -9,42 +9,33 @@ import { openChat } from '../ui/chat.js';
 import { initDrag } from '../drag.js';
 import { EMOJIS } from '../emojis.js';
 import { playSound } from '../sound.js';
+import { toastErr, toastOk } from '../ui/toast.js';
 
 let sortMode = 0;
 let infoOpen = false;
 let iconsVisible = false;
 let iconsTimer = null;
 
-// ==================== АНИМАЦИЯ ПОЛЁТА КАРТЫ ====================
 function playPendingFly() {
   const pf = state.pendingFly;
   if (!pf) return;
   state.pendingFly = null;
-
   requestAnimationFrame(() => {
     const newEl = document.querySelector(`.center .card[data-id="${pf.cardId}"]`);
     if (!newEl) return;
-
     const r = newEl.getBoundingClientRect();
     const dx = pf.from.left - r.left;
     const dy = pf.from.top  - r.top;
     const sx = pf.from.w / r.width;
     const sy = pf.from.h / r.height;
-
-    // Мгновенно перемещаем карту в старую позицию
     newEl.style.transition = 'none';
     newEl.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
     newEl.style.transformOrigin = 'top left';
     newEl.style.zIndex = '9999';
     newEl.style.pointerEvents = 'none';
-
-    // Форсируем reflow
     void newEl.offsetHeight;
-
-    // Плавно летим в новую позицию
     newEl.style.transition = 'transform 320ms cubic-bezier(.2,.7,.3,1)';
     newEl.style.transform = '';
-
     setTimeout(() => {
       newEl.style.transition = '';
       newEl.style.transformOrigin = '';
@@ -54,7 +45,6 @@ function playPendingFly() {
   });
 }
 
-// ==================== СВАЙП-ИКОНКИ СЛЕВА ====================
 function ensureSwipeIcons() {
   let el = document.getElementById('swipeIcons');
   if (!el) {
@@ -105,9 +95,7 @@ let swipeSetupDone = false;
 function setupSwipe() {
   if (swipeSetupDone) return;
   swipeSetupDone = true;
-
-  let startX = 0;
-  let started = false;
+  let startX = 0, started = false;
 
   document.addEventListener('touchstart', (e) => {
     if (e.target.closest('.card')) return;
@@ -118,23 +106,14 @@ function setupSwipe() {
     if (e.target.closest('.swipe-trigger')) return;
     if (e.target.closest('.settings-btn')) return;
     const x = e.touches[0].clientX;
-    if (x < 40) {
-      startX = x;
-      started = true;
-    }
+    if (x < 40) { startX = x; started = true; }
   }, { passive: true });
 
   document.addEventListener('touchmove', (e) => {
     if (!started) return;
-    const x = e.touches[0].clientX;
-    const dx = x - startX;
-    if (dx > 50) {
-      showSwipeIcons();
-      started = false;
-    } else if (dx < -30 && iconsVisible) {
-      hideSwipeIcons();
-      started = false;
-    }
+    const dx = e.touches[0].clientX - startX;
+    if (dx > 50) { showSwipeIcons(); started = false; }
+    else if (dx < -30 && iconsVisible) { hideSwipeIcons(); started = false; }
   }, { passive: true });
 
   document.addEventListener('touchend', () => { started = false; }, { passive: true });
@@ -150,13 +129,10 @@ function setupSwipe() {
   }, true);
 
   document.addEventListener('click', (e) => {
-    if (e.target.closest('#swipeTrigger')) {
-      showSwipeIcons();
-    }
+    if (e.target.closest('#swipeTrigger')) showSwipeIcons();
   }, true);
 }
 
-// ==================== МОДАЛКА СВЕДЕНИЙ ====================
 function showInfoModal() {
   const s = state.server;
   if (!s) return;
@@ -182,7 +158,6 @@ function showInfoModal() {
   document.getElementById('infoClose').onclick = close;
 }
 
-// ==================== СОРТИРОВКА РУКИ ====================
 function sortHand(hand, myDoc, trumpSuit) {
   const RV = { '6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14 };
   const SO = { '♠':0, '♥':1, '♦':2, '♣':3 };
@@ -250,6 +225,8 @@ export function renderTable(app, navigate) {
     (s.phase === 'playing') &&
     ((s.field && s.field.defender === p.seat) || (!s.field && s.turnSeat === p.seat))
   ))?.seat;
+
+  const myTurnNow = isPlaying && isMyTurn && !iAmOut && !s.pendingPass && !s.pendingSwap && !s.pendingFalsh;
 
   let lobbyBar = '';
   if (s.phase === 'lobby') {
@@ -323,6 +300,7 @@ export function renderTable(app, navigate) {
         const canBeTarget = canDefend && !e.beatenBy && e.card.r !== myDoc;
         const cls = ['slot'];
         if (canBeTarget) cls.push('tappable');
+        if (state.defendTarget === e.card.id) cls.push('selected-target');
         return `<div class="${cls.join(' ')}" data-field-card="${e.card.id}">
           ${cardHtml(e.card)}
           ${e.beatenBy ? cardHtml(e.beatenBy, { cls:'beaten' }) : ''}
@@ -338,34 +316,22 @@ export function renderTable(app, navigate) {
   let centerActionId = '';
 
   if (canDefend && s.field && s.field.cards.length > 0) {
-    centerActionBtn = '📥<br>ПОДНЯТЬ';
-    centerActionCls = 'b3';
-    centerActionId = 'pickUpBtn';
+    centerActionBtn = '📥<br>ПОДНЯТЬ'; centerActionCls = 'b3'; centerActionId = 'pickUpBtn';
   }
   else if (isMyTurn && !iAmOut && !s.field && partnerIsOut && onlyDocsNow) {
-    centerActionBtn = '🏆<br>БРОСИТЬ';
-    centerActionCls = 'b1';
-    centerActionId = 'throwBtn';
+    centerActionBtn = '🏆<br>БРОСИТЬ'; centerActionCls = 'b1'; centerActionId = 'throwBtn';
   }
   else if (isMyTurn && !iAmOut && !s.field && partnerIsOut && !s.swapUsedByTeam[myTeam] && !onlyDocsNow && s.myHand.length > 0) {
-    centerActionBtn = '🔄<br>ОТДАТЬ';
-    centerActionCls = 'b5';
-    centerActionId = 'swapInitBtn';
+    centerActionBtn = '🔄<br>ОТДАТЬ'; centerActionCls = 'b5'; centerActionId = 'swapInitBtn';
   }
   else if (iAmOut && !partnerIsOut && s.turnSeat === myPartnerSeat && !s.field && !s.swapUsedByTeam[myTeam]) {
-    centerActionBtn = '🔄<br>ВЕРНУТЬСЯ';
-    centerActionCls = 'b5';
-    centerActionId = 'swapAskBtn';
+    centerActionBtn = '🔄<br>ВЕРНУТЬСЯ'; centerActionCls = 'b5'; centerActionId = 'swapAskBtn';
   }
   else if (isMyTurn && !iAmOut && !s.field && !partnerIsOut && onlyDocsNow) {
-    centerActionBtn = '📤<br>ПЕРЕДАТЬ';
-    centerActionCls = 'b2';
-    centerActionId = 'passBtn';
+    centerActionBtn = '📤<br>ПЕРЕДАТЬ'; centerActionCls = 'b2'; centerActionId = 'passBtn';
   }
   else if ((isAttacker || isPartnerOfAttacker) && !iHavePassed) {
-    centerActionBtn = '✋<br>ПАС';
-    centerActionCls = 'b2';
-    centerActionId = 'pasBtn';
+    centerActionBtn = '✋<br>ПАС'; centerActionCls = 'b2'; centerActionId = 'pasBtn';
   }
 
   const extraActions = [];
@@ -376,8 +342,21 @@ export function renderTable(app, navigate) {
     extraActions.push(`<button class="b4" id="falshBtn">🃏 ФАЛЬШ</button>`);
   }
 
+  // Подсветка карт, которые бьют выбранную цель
+  let beatsTarget = null;
+  if (canDefend && state.defendTarget && s.field) {
+    const entry = s.field.cards.find(x => x.card.id === state.defendTarget && !x.beatenBy);
+    if (entry) beatsTarget = entry.card;
+  }
+
   const sortedHand = sortHand(s.myHand, myDoc, s.trumpSuit);
-  const handHtml = renderHandFan(sortedHand, { myDoc, oppDoc, selected: state.selected, isDealing });
+  const handHtml = renderHandFan(sortedHand, {
+    myDoc, oppDoc,
+    selected: state.selected,
+    isDealing,
+    beatsTarget,
+    trumpSuit: s.trumpSuit,
+  });
 
   let hintHtml = '';
   if (waitingForSeat !== undefined) {
@@ -385,12 +364,12 @@ export function renderTable(app, navigate) {
   } else if (canDefend && !bothPassed && !s.pendingPass && !s.pendingSwap && !s.pendingFalsh) {
     const hasMyDoc = s.field.cards.some(x => !x.beatenBy && x.card.r === myDoc);
     if (hasMyDoc) hintHtml = `<div class="hint">⚠ На столе ваш документ — нужно поднять всё</div>`;
-    else if (state.defendTarget) hintHtml = `<div class="hint">👆 Жмите ФАЛЬШ или тяните свою карту на карту врага</div>`;
-    else hintHtml = `<div class="hint">👆 Ты защищаешься — тапни карту врага, потом тяни свою</div>`;
+    else if (state.defendTarget) hintHtml = `<div class="hint">👆 Тяните зелёную карту или тапните по ней</div>`;
+    else hintHtml = `<div class="hint">👆 Тапни карту врага, потом свою — или тяни</div>`;
   } else if (canDefend && bothPassed) {
     hintHtml = `<div class="hint">✋ Все пасанули — решите: БИТО или Поднять</div>`;
   } else if (isAttacker || isPartnerOfAttacker) {
-    hintHtml = `<div class="hint">👆 Ты ходишь — тяни карту в поле</div>`;
+    hintHtml = `<div class="hint">👆 Тяни карту в поле или тапни её и тапни поле</div>`;
   } else if (isMyTurn) {
     hintHtml = `<div class="hint">👆 Твой ход</div>`;
   }
@@ -400,10 +379,16 @@ export function renderTable(app, navigate) {
 
   const overlays = buildOverlays();
 
+  const showScore = isPlaying || s.phase === 'roundEnd';
+  const scoreCorner = showScore
+    ? `<div class="score-corner">${s.roundWins[myTeam]} : ${s.roundWins[1 - myTeam]}</div>`
+    : '';
+
   app.innerHTML = `
-    <div class="table" id="table">
+    <div class="table ${myTurnNow ? 'my-turn' : ''}" id="table">
       ${lobbyBar}
       ${passNotice}
+      ${scoreCorner}
       ${deckArea}
 
       <button class="settings-btn" id="settingsBtn" title="Настройки">⚙️</button>
@@ -424,12 +409,9 @@ export function renderTable(app, navigate) {
     </div>
 
     <div class="actions">${hintHtml}</div>
-    <div class="err" id="err"></div>
   `;
 
-  // 🃏 Анимация полёта карты (если есть отложенная)
   playPendingFly();
-
   ensureSwipeIcons();
   bindSwipeIconHandlers(app, navigate);
   if (iconsVisible) {
@@ -437,29 +419,47 @@ export function renderTable(app, navigate) {
     if (el) el.classList.add('show');
   }
 
-  const err = m => { const e = document.getElementById('err'); if (e) e.textContent = m; };
+  const err = (m) => toastErr(m);
   const g = id => document.getElementById(id);
 
   initDrag(() => renderTable(app, navigate));
 
+  // ===== Тап по полю =====
   const centerEl = document.querySelector('.center');
   if (centerEl) {
     centerEl.onclick = e => {
-      const slot = e.target.closest('[data-field-card]'); if (!slot) return;
-      if (!canDefend) return;
-      const fid = slot.dataset.fieldCard;
-      const entry = s.field.cards.find(x => x.card.id === fid);
-      if (!entry || entry.beatenBy) return;
-      if (entry.card.r === myDoc) return err('Ваш документ — только поднять');
-      state.defendTarget = (state.defendTarget === fid) ? null : fid;
-      renderTable(app, navigate);
+      const slot = e.target.closest('[data-field-card]');
+
+      // Тап по карте врага (защитник)
+      if (slot && canDefend) {
+        const fid = slot.dataset.fieldCard;
+        const entry = s.field.cards.find(x => x.card.id === fid);
+        if (!entry || entry.beatenBy) return;
+        if (entry.card.r === myDoc) return err('Ваш документ — только поднять');
+        state.defendTarget = (state.defendTarget === fid) ? null : fid;
+        renderTable(app, navigate);
+        return;
+      }
+
+      // Тап по полю (атакующий с выбранными картами)
+      if (!slot && isMyTurn && !iAmOut && !s.field && state.selected.size > 0) {
+        const cardIds = [...state.selected];
+        state.selected.clear();
+        socket.emit('attack', { cardIds });
+        return;
+      }
     };
   }
 
   const cc = g('copyCode');
   if (cc) cc.onclick = async () => {
     const code = document.getElementById('roomCode').textContent;
-    try { await navigator.clipboard.writeText(code); cc.textContent = '✅ ОК'; setTimeout(() => cc.textContent = '📋 Скопировать', 1500); } catch {}
+    try {
+      await navigator.clipboard.writeText(code);
+      cc.textContent = '✅ ОК';
+      toastOk('Код скопирован');
+      setTimeout(() => cc.textContent = '📋 Скопировать', 1500);
+    } catch {}
   };
   const st = g('startBtn'); if (st) st.onclick = () => { playSound('button'); socket.emit('startGame'); };
 
@@ -491,36 +491,27 @@ export function renderTable(app, navigate) {
 
   bindOverlays();
   maybeShowChampion(navigate);
-
-  // Восстанавливаем бейдж чата после ре-рендера
   import('../ui/chat.js').then(m => m.updateChatBadge?.());
 }
 
-// Обработчики свайп-иконок
 function bindSwipeIconHandlers(app, navigate) {
   const sortBtn = document.getElementById('sortBtn');
   if (sortBtn) sortBtn.onclick = () => {
-    playSound('button');
-    hideSwipeIcons();
+    playSound('button'); hideSwipeIcons();
     sortMode = (sortMode + 1) % 3;
     renderTable(app, navigate);
   };
   const emojiToggle = document.getElementById('emojiToggle');
   if (emojiToggle) emojiToggle.onclick = () => {
-    playSound('button');
-    hideSwipeIcons();
+    playSound('button'); hideSwipeIcons();
     state.emojiOpen = !state.emojiOpen;
     renderTable(app, navigate);
   };
   const chatBtn = document.getElementById('chatBtn');
-  if (chatBtn) chatBtn.onclick = () => {
-    hideSwipeIcons();
-    openChat();
-  };
+  if (chatBtn) chatBtn.onclick = () => { hideSwipeIcons(); openChat(); };
   const infoBtn = document.getElementById('infoBtn');
   if (infoBtn) infoBtn.onclick = () => {
-    playSound('button');
-    hideSwipeIcons();
+    playSound('button'); hideSwipeIcons();
     infoOpen = !infoOpen;
     if (infoOpen) showInfoModal();
     else { const m = document.getElementById('infoModal'); if (m) m.remove(); }

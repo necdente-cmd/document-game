@@ -46,8 +46,6 @@ export function posClass(seat) {
   return ['bottom','right','top','left'][((seat - mySeat + 4) % 4)] || 'top';
 }
 
-// ==================== ВЕЕР КАРТ ====================
-// С автосжатием: от 6 карт — сильнее перекрываем, минимум 15px на карту
 export function renderHandFan(cards, options = {}) {
   const n = cards.length;
   if (n === 0) return '';
@@ -56,27 +54,30 @@ export function renderHandFan(cards, options = {}) {
   const oppDoc = options.oppDoc || '';
   const selected = options.selected || new Set();
   const isDealing = options.isDealing || false;
+  const beatsTarget = options.beatsTarget || null;
+  const trumpSuit = options.trumpSuit || null;
 
-  // Реальная ширина карты (учитывает масштаб)
   const cssW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--card-w'));
   const cardW = cssW > 0 ? cssW : 64;
   const gap = 4;
   const fullStep = cardW + gap;
 
-  // Доступная ширина руки: экран минус отступы под иконки (60) и кнопку (100)
   const viewportW = window.innerWidth || 400;
   const availW = Math.max(200, viewportW - 160);
 
-  // Шаг между центрами карт
   let step;
   if (n === 1) step = 0;
   else step = Math.max(15, Math.min(fullStep, availW / (n - 1)));
 
   const spread = (n - 1) * step;
-
-  // Очень лёгкая дуга и наклон
   const angleStep = n > 1 ? Math.min(2.5, 15 / n) : 0;
   const arcHeight = 8;
+
+  function cardBeatsIt(c) {
+    if (!beatsTarget || !trumpSuit) return false;
+    if (c.r === myDoc && c.s !== trumpSuit) return false;
+    return beatsUI(c, beatsTarget, trumpSuit);
+  }
 
   return cards.map((c, i) => {
     const t = n > 1 ? i / (n - 1) : 0.5;
@@ -84,15 +85,17 @@ export function renderHandFan(cards, options = {}) {
     const angle = (t - 0.5) * angleStep * n / 2;
     const lift = Math.sin(t * Math.PI) * arcHeight;
 
+    const canBeat = cardBeatsIt(c);
+
     const cls = [
       selected.has(c.id) ? 'sel' : '',
       c.r === myDoc ? 'doc' : '',
       (c.r === oppDoc && oppDoc !== myDoc) ? 'opp-doc' : '',
-      isDealing ? 'deal' : ''
+      isDealing ? 'deal' : '',
+      canBeat ? 'can-beat' : '',
     ].filter(Boolean).join(' ');
 
     const style = `transform: translateX(${x.toFixed(1)}px) translateY(-${lift.toFixed(1)}px) rotate(${angle.toFixed(1)}deg); z-index: ${i + 1};`;
-
     return cardHtml(c, { cls, style, dataIndex: i });
   }).join('');
 }

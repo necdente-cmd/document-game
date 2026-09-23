@@ -1,5 +1,6 @@
 import { state, saveMe, applyTheme, applyScale, beep, vibrate } from './state.js';
 import { playSound } from './sound.js';
+import { toastErr } from './ui/toast.js';
 
 export const socket = io({
   reconnection: true,
@@ -15,7 +16,6 @@ export function bindSocket(onStateChange) {
     const startedNewRound = s.phase === 'playing' && state.lastPhaseForDeal !== 'playing';
     state.lastPhaseForDeal = s.phase;
 
-    // Мой ход
     const wasMyTurn = prev && prev.turnSeat === prev.mySeat;
     const nowMyTurn = s.turnSeat === s.mySeat;
     if (nowMyTurn && !wasMyTurn) {
@@ -23,22 +23,16 @@ export function bindSocket(onStateChange) {
       playSound('your-turn');
     }
 
-    // Звуки карт (дифф по количеству карт / битых)
     if (prev && prev.phase === 'playing' && s.phase === 'playing') {
       const prevCards  = prev.field?.cards?.length || 0;
       const nowCards   = s.field?.cards?.length || 0;
       const prevBeaten = prev.field?.cards?.filter(x => x.beatenBy).length || 0;
       const nowBeaten  = s.field?.cards?.filter(x => x.beatenBy).length || 0;
-
-      // Положили новую карту
       if (nowCards > prevCards) playSound('play-card');
-      // Защитник побил карту
       if (nowBeaten > prevBeaten) playSound('defend');
-      // Поле очистилось (все забрали)
       if (prevCards > 0 && nowCards === 0) playSound('take-cards');
     }
 
-    // Победа / поражение в кону
     if (prev && prev.roundWins && s.roundWins) {
       const myTeam  = s.myTeam;
       const oppTeam = 1 - myTeam;
@@ -70,19 +64,17 @@ export function bindSocket(onStateChange) {
 
   socket.on('falsh', ({ byName, targetName, card }) => {
     vibrate([50, 30, 50]);
-    playSound('falsh');
+    playSound('button');
     window.dispatchEvent(new CustomEvent('falsh', { detail: { byName, targetName, card } }));
   });
 
   socket.on('chat', ({ seat, name, text, time }) => {
-    // Звук чата — только если это НЕ моё сообщение
     if (name && name !== state.me?.name) playSound('chat');
     window.dispatchEvent(new CustomEvent('chat', { detail: { seat, name, text, time } }));
   });
 
   socket.on('err', (m) => {
-    const el = document.getElementById('err');
-    if (el) el.textContent = m;
+    toastErr(m);
     vibrate(100);
   });
 
