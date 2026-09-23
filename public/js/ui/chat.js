@@ -12,6 +12,13 @@ window.addEventListener('chat', (e) => {
     box.innerHTML = renderMessagesHtml();
     box.scrollTop = box.scrollHeight;
   }
+  // Если панель закрыта и сообщение не от меня — увеличить счётчик
+  const panel = document.getElementById('chatPanel');
+  const isOpen = panel?.classList.contains('open');
+  if (!isOpen && name !== state.me?.name) {
+    state.chatUnread = (state.chatUnread || 0) + 1;
+    updateChatBadge();
+  }
 });
 
 function renderMessagesHtml() {
@@ -27,9 +34,28 @@ function renderMessagesHtml() {
   `).join('');
 }
 
+// Обновление бейджа на иконке 💬
+export function updateChatBadge() {
+  const btn = document.getElementById('chatBtn');
+  if (!btn) return;
+  const n = state.chatUnread || 0;
+  let badge = btn.querySelector('.chat-badge');
+  if (n <= 0) {
+    if (badge) badge.remove();
+    return;
+  }
+  if (!badge) {
+    badge = document.createElement('span');
+    badge.className = 'chat-badge';
+    btn.appendChild(badge);
+  }
+  badge.textContent = n > 9 ? '9+' : String(n);
+}
+
 export function openChat() {
-  // Сбрасываем непрочитанные
+  // Сбрасываем непрочитанные + убираем бейдж
   state.chatUnread = 0;
+  updateChatBadge();
 
   let panel = document.getElementById('chatPanel');
   if (!panel) {

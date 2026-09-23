@@ -445,8 +445,11 @@ export function renderTable(app, navigate) {
   const sb = g('settingsBtn');
   if (sb) sb.onclick = () => openSettings(() => renderTable(app, navigate));
 
-  bindOverlays();
+    bindOverlays();
   maybeShowChampion(navigate);
+
+  // Восстанавливаем бейдж чата после ре-рендера
+  import('../ui/chat.js').then(m => m.updateChatBadge?.());
 }
 
 // Обработчики свайп-иконок
