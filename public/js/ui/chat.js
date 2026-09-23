@@ -1,7 +1,6 @@
 import { state } from '../state.js';
 import { socket } from '../socket.js';
 import { esc } from '../card.js';
-import { playSound } from '../sound.js';
 
 const messages = [];
 
@@ -76,7 +75,6 @@ export function openChat() {
     `;
 
     document.getElementById('closeChat').onclick = () => {
-      playSound('button');
       panel.classList.remove('open');
       if (window.onChatClose) window.onChatClose();
     };
@@ -86,7 +84,6 @@ export function openChat() {
       const input = document.getElementById('chatInput');
       const text = input.value.trim();
       if (!text) return;
-      playSound('button');
       socket.emit('chat', { text });
       input.value = '';
     };

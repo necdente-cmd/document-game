@@ -470,11 +470,11 @@ function bindSwipeIconHandlers(app, navigate) {
     state.emojiOpen = !state.emojiOpen;
     renderTable(app, navigate);
   };
-  const chatBtn = document.getElementById('chatBtn');
+    const chatBtn = document.getElementById('chatBtn');
   if (chatBtn) chatBtn.onclick = () => {
-    playSound('button');
     hideSwipeIcons();
     openChat();
+  };
   };
   const infoBtn = document.getElementById('infoBtn');
   if (infoBtn) infoBtn.onclick = () => {
