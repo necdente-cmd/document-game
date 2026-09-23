@@ -371,9 +371,10 @@ export function renderTable(app, navigate) {
       </div>
     `).join('');
 
-    lobbyBar = `
-      <div class="waiting">
-        <div class="waiting-label">Код комнаты</div>
+   lobbyBar = `
+  <div class="waiting">
+    <img src="/logo.png" class="lobby-logo" alt="Документ">
+    <div class="waiting-label">Код комнаты</div>
         <button class="waiting-code" id="roomCode" title="Тапни, чтобы скопировать">${esc(s.id)}</button>
         <div class="waiting-players-grid">
           ${playerCards}${emptyCards}
@@ -532,7 +533,10 @@ export function renderTable(app, navigate) {
       <button class="settings-btn" id="settingsBtn" title="Настройки">⚙️</button>
 
       ${seats}
-      <div class="center">${fieldHtml}</div>
+      <div class="center">
+  ${!s.field ? `<img src="/logo.png" class="field-watermark" alt="">` : ''}
+  ${fieldHtml}
+</div>
 
       ${overlays}
       ${emojiPanel}
