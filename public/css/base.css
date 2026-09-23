@@ -57,7 +57,6 @@
   --text: #333;
 }
 
-/* дальше — всё без изменений (scale, общие, лобби, кнопки...) */
 [data-scale="small"]  { --scale: 0.85; }
 [data-scale="medium"] { --scale: 1;    }
 [data-scale="large"]  { --scale: 1.15; }
@@ -79,4 +78,113 @@
 }
 @media (orientation: landscape) and (max-height: 340px) {
   :root { --card-w-base: 34px; --card-h-base: 50px; --hand-h-base: 66px; }
+}
+
+/* ==================== ОБЩИЕ ==================== */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+#app { height: 100dvh; display: flex; flex-direction: column; }
+
+/* ==================== ЛОББИ ==================== */
+.lobby {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 520px;
+  margin: 0 auto;
+  width: 100%;
+  overflow-y: auto;
+}
+.lobby h2 { margin: 0 0 8px; font-size: 26px; }
+.lobby label { font-size: 13px; opacity: .85; margin-bottom: -4px; margin-top: 6px; font-weight: 600; }
+.lobby input, .lobby select, .lobby button {
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  font-size: 16px;
+  font-family: inherit;
+}
+.lobby input, .lobby select { background: rgba(255,255,255,.1); color: var(--text); }
+[data-theme="paper"] .lobby input, [data-theme="paper"] .lobby select { background: rgba(0,0,0,.05); }
+.lobby button { background: var(--acc); color: #000; font-weight: 700; cursor: pointer; }
+.lobby button:active { transform: scale(.98); }
+
+/* ==================== КНОПКИ ==================== */
+.b1 { background: var(--acc); color: #000; }
+.b2 { background: #95a5a6; color: #000; }
+.b3 { background: #e74c3c; color: #fff; }
+.b4 { background: #8e44ad; color: #fff; }
+.b5 { background: #3498db; color: #fff; }
+
+.err { color: #ffb84d; font-size: 13px; min-height: 18px; padding: 4px 0; }
+
+/* ==================== ВЫБОР (колода, рубашка) ==================== */
+.choice-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.choice {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 2px solid rgba(255,255,255,.25);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  background: rgba(255,255,255,.06);
+}
+.choice.sel { border-color: var(--acc); background: rgba(241,196,15,.2); }
+.choice.preview-card { width: 64px; height: 92px; padding: 0; overflow: hidden;
+  display: flex; align-items: center; justify-content: center; }
+.choice.preview-card img { width: 100%; height: 100%; object-fit: cover; }
+.choice.back-swatch { width: 44px; height: 64px; padding: 0; overflow: hidden;
+  border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+.choice.back-swatch img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ==================== КНОПКИ-ИКОНКИ ЛОББИ ==================== */
+.icon-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.12);
+  border: none;
+  color: inherit;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.icon-btn:active { transform: scale(.95); }
+[data-theme="paper"] .icon-btn { background: rgba(0,0,0,.08); }
+
+/* ==================== ВЫБОР АВАТАРА ==================== */
+.avatar-picker {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 6px;
+  margin-top: 4px;
+  padding: 6px;
+  background: rgba(255,255,255,.05);
+  border-radius: 10px;
+}
+[data-theme="paper"] .avatar-picker { background: rgba(0,0,0,.04); }
+.avatar-choice {
+  font-size: 22px;
+  text-align: center;
+  padding: 6px 0;
+  border-radius: 8px;
+  background: rgba(255,255,255,.08);
+  border: 2px solid transparent;
+  cursor: pointer;
+  user-select: none;
+  transition: transform .1s, background .1s, border-color .1s;
+}
+.avatar-choice:active { transform: scale(.9); }
+.avatar-choice.sel {
+  border-color: var(--acc);
+  background: rgba(241,196,15,.2);
 }
