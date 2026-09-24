@@ -1,6 +1,7 @@
 import { state } from '../state.js';
 import { socket } from '../socket.js';
 import { esc } from '../card.js';
+import { t } from '../i18n.js';
 
 const messages = [];
 
@@ -12,7 +13,6 @@ window.addEventListener('chat', (e) => {
     box.innerHTML = renderMessagesHtml();
     box.scrollTop = box.scrollHeight;
   }
-  // Если панель закрыта и сообщение не от меня — увеличить счётчик
   const panel = document.getElementById('chatPanel');
   const isOpen = panel?.classList.contains('open');
   if (!isOpen && name !== state.me?.name) {
@@ -23,7 +23,7 @@ window.addEventListener('chat', (e) => {
 
 function renderMessagesHtml() {
   if (messages.length === 0) {
-    return '<div style="opacity:.5;font-size:13px;">Сообщений пока нет…</div>';
+    return `<div style="opacity:.5;font-size:13px;">${t('chat.noMessages')}</div>`;
   }
   return messages.map(m => `
     <div class="chat-msg">
@@ -64,12 +64,12 @@ export function openChat() {
 
     panel.innerHTML = `
       <div class="chat-head">
-        <span>💬 Чат</span>
+        <span>${t('chat.title')}</span>
         <button id="closeChat">✕</button>
       </div>
       <div class="chat-messages" id="chatMessages"></div>
       <form class="chat-input" id="chatForm">
-        <input id="chatInput" type="text" placeholder="Сообщение..." maxlength="200" autocomplete="off">
+        <input id="chatInput" type="text" placeholder="${t('chat.placeholder')}" maxlength="200" autocomplete="off">
         <button type="submit">→</button>
       </form>
     `;
@@ -87,6 +87,12 @@ export function openChat() {
       socket.emit('chat', { text });
       input.value = '';
     };
+  } else {
+    // Если панель уже есть — обновить тексты
+    const head = panel.querySelector('.chat-head span');
+    if (head) head.textContent = t('chat.title');
+    const input = panel.querySelector('#chatInput');
+    if (input) input.placeholder = t('chat.placeholder');
   }
 
   panel.classList.add('open');

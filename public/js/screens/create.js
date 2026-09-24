@@ -1,6 +1,7 @@
 import { loadName, saveName, saveMe, loadOpts, saveOpts, applyTheme, loadAvatar, saveAvatar, AVATARS } from '../state.js';
 import { socket } from '../socket.js';
 import { rankDisplay } from '../rank-display.js';
+import { t } from '../i18n.js';
 
 export function renderCreate(app, navigate) {
   const savedName = loadName();
@@ -31,7 +32,6 @@ export function renderCreate(app, navigate) {
     <div class="avatar-choice ${a===pickedAvatar?'sel':''}" data-avatar="${a}">${a}</div>
   `).join('');
 
-  // 🎴 Ступени с русскими буквами
   const classicSteps = ['6','10','J','Q','K','A'];
   const shortSteps   = ['6','10','Q','A'];
 
@@ -43,54 +43,54 @@ export function renderCreate(app, navigate) {
   }
 
   const themesHtml = `
-    <div class="theme-preview ${pickedTheme==='classic'?'sel':''}" data-theme-val="classic" title="Классика">
+    <div class="theme-preview ${pickedTheme==='classic'?'sel':''}" data-theme-val="classic">
       <div class="tp-inner"></div>
-      <div class="tp-label">Классика</div>
+      <div class="tp-label">${t('create.themeClassic')}</div>
     </div>
-    <div class="theme-preview ${pickedTheme==='dark'?'sel':''}" data-theme-val="dark" title="Тёмная">
+    <div class="theme-preview ${pickedTheme==='dark'?'sel':''}" data-theme-val="dark">
       <div class="tp-inner"></div>
-      <div class="tp-label">Тёмная</div>
+      <div class="tp-label">${t('create.themeDark')}</div>
     </div>
-    <div class="theme-preview ${pickedTheme==='neon'?'sel':''}" data-theme-val="neon" title="Неон">
+    <div class="theme-preview ${pickedTheme==='neon'?'sel':''}" data-theme-val="neon">
       <div class="tp-inner"></div>
-      <div class="tp-label">Неон</div>
+      <div class="tp-label">${t('create.themeNeon')}</div>
     </div>
-    <div class="theme-preview ${pickedTheme==='paper'?'sel':''}" data-theme-val="paper" title="Бумага">
+    <div class="theme-preview ${pickedTheme==='paper'?'sel':''}" data-theme-val="paper">
       <div class="tp-inner"></div>
-      <div class="tp-label">Бумага</div>
+      <div class="tp-label">${t('create.themePaper')}</div>
     </div>
   `;
 
   app.innerHTML = `
     <div class="lobby">
-      <h2 style="text-align:center;">Настройки игры</h2>
-      <label>Ваше имя</label>
-      <input id="name" placeholder="Имя" value="${savedName}">
-      <label>Аватарка</label>
+      <h2 style="text-align:center;">${t('create.title')}</h2>
+      <label>${t('create.yourName')}</label>
+      <input id="name" placeholder="${t('create.namePlaceholder')}" value="${savedName}">
+      <label>${t('create.avatar')}</label>
       <div class="avatar-picker" id="avatarPick">${avatarsHtml}</div>
-      <label>Стиль колоды</label>
+      <label>${t('create.deckStyle')}</label>
       <div class="choice-row" id="deckPick">${styles}</div>
-      <label>Рубашка</label>
+      <label>${t('create.backColor')}</label>
       <div class="choice-row" id="backPick">${backs}</div>
 
-      <label>Ступени документов</label>
+      <label>${t('create.docSteps')}</label>
       <div class="docset-grid" id="docsetPick">
         <div class="docset-card ${pickedDocSet==='classic'?'sel':''}" data-docset="classic">
-          <div class="docset-name">Классическая</div>
+          <div class="docset-name">${t('create.docClassic')}</div>
           <div class="docset-steps">${stepsHtml(classicSteps)}</div>
-          <div class="docset-desc">6 ступеней</div>
+          <div class="docset-desc">${t('create.docClassicDesc')}</div>
         </div>
         <div class="docset-card ${pickedDocSet==='short'?'sel':''}" data-docset="short">
-          <div class="docset-name">Короткая</div>
+          <div class="docset-name">${t('create.docShort')}</div>
           <div class="docset-steps">${stepsHtml(shortSteps)}</div>
-          <div class="docset-desc">4 ступени</div>
+          <div class="docset-desc">${t('create.docShortDesc')}</div>
         </div>
       </div>
 
-      <label>Тема стола</label>
+      <label>${t('create.tableTheme')}</label>
       <div class="theme-grid" id="themePick">${themesHtml}</div>
-      <button id="createBtn" style="padding:16px; margin-top:12px;">🎮 Создать комнату</button>
-      <button id="backBtn" style="background:#95a5a6; color:#000;">← Назад</button>
+      <button id="createBtn" style="padding:16px; margin-top:12px;">${t('create.createRoom')}</button>
+      <button id="backBtn" style="background:#95a5a6; color:#000;">${t('common.back')}</button>
       <div class="err" id="err"></div>
     </div>`;
 
@@ -112,14 +112,12 @@ export function renderCreate(app, navigate) {
     [...document.querySelectorAll('#backPick .choice')].forEach(x => x.classList.toggle('sel', x === el));
   };
 
-  // 🎴 Выбор ступеней
   document.getElementById('docsetPick').onclick = e => {
     const el = e.target.closest('[data-docset]'); if (!el) return;
     pickedDocSet = el.dataset.docset;
     [...document.querySelectorAll('#docsetPick .docset-card')].forEach(x => x.classList.toggle('sel', x === el));
   };
 
-  // Выбор темы
   document.getElementById('themePick').onclick = e => {
     const el = e.target.closest('[data-theme-val]'); if (!el) return;
     pickedTheme = el.dataset.themeVal;
@@ -130,7 +128,7 @@ export function renderCreate(app, navigate) {
   document.getElementById('backBtn').onclick = () => navigate('welcome');
 
   document.getElementById('createBtn').onclick = () => {
-    const name = document.getElementById('name').value.trim() || 'Игрок';
+    const name = document.getElementById('name').value.trim() || t('common.player');
     saveAvatar(pickedAvatar);
     const opts = {
       maxPlayers: 4,

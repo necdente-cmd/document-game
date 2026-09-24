@@ -2,8 +2,8 @@ import { state } from '../state.js';
 import { cardHtml, esc } from '../card.js';
 import { socket } from '../socket.js';
 import { showReaction } from './reactions.js';
+import { t } from '../i18n.js';
 
-// Главная функция — возвращает HTML всех активных оверлеев
 export function buildOverlays() {
   const s = state.server;
   if (!s) return '';
@@ -27,18 +27,18 @@ export function buildOverlays() {
     let inner = '';
     if (iCanConfirm) {
       inner = `<div class="ov-buttons">
-        <button class="b1" id="confirmPassBtn">✅ Подтвердить</button>
-        <button class="b2" id="cancelPassBtn">✖ Отклонить</button>
+        <button class="b1" id="confirmPassBtn">${t('common.confirm')}</button>
+        <button class="b2" id="cancelPassBtn">${t('common.reject')}</button>
       </div>`;
     } else if (iAmRequester) {
-      inner = `<div class="ov-wait">Ожидание подтверждения…</div>`;
+      inner = `<div class="ov-wait">${t('ov.passDocs.waitConfirm')}</div>`;
     } else if (iAmPartner) {
-      inner = `<div class="ov-wait">Ждём подтверждения противника…</div>`;
+      inner = `<div class="ov-wait">${t('ov.passDocs.waitPartner')}</div>`;
     } else {
-      inner = `<div class="ov-wait">Ожидание…</div>`;
+      inner = `<div class="ov-wait">${t('ov.passDocs.wait')}</div>`;
     }
     html += `<div class="overlay">
-      <div class="ov-title">📢 ${esc(requester?.name || '?')} передаёт документы партнёру</div>
+      <div class="ov-title">${t('ov.passDocs.title', { name: requester?.name || '?' })}</div>
       <div class="ov-cards">${passPending.cards.map(c => cardHtml(c)).join('')}</div>
       ${inner}
     </div>`;
@@ -54,57 +54,34 @@ export function buildOverlays() {
     let inner = '';
     if (swapPending.stage === 'partnerConfirm') {
       inner = iCanDecide
-        ? `<div class="ov-wait">Партнёр просит вернуть его. Отдадите все свои карты?</div>
+        ? `<div class="ov-wait">${t('ov.swap.partnerAsk')}</div>
            <div class="ov-buttons">
-             <button class="b1" id="swapAcceptBtn">✅ Да</button>
-             <button class="b2" id="swapRejectBtn">✖ Нет</button>
+             <button class="b1" id="swapAcceptBtn">${t('common.yes')}</button>
+             <button class="b2" id="swapRejectBtn">${t('common.no')}</button>
            </div>`
-        : `<div class="ov-wait">Ожидание решения партнёра…</div>`;
+        : `<div class="ov-wait">${t('ov.swap.waitPartner')}</div>`;
     } else {
       inner = iCanConfirm
-        ? `<div class="ov-wait">Хозяева передают карты. Подтвердите факт.</div>
+        ? `<div class="ov-wait">${t('ov.swap.opponentConfirm')}</div>
            <div class="ov-buttons">
-             <button class="b1" id="swapConfirmBtn">✅ Подтвердить</button>
+             <button class="b1" id="swapConfirmBtn">${t('common.confirm')}</button>
            </div>`
-        : `<div class="ov-wait">Ожидание…</div>`;
+        : `<div class="ov-wait">${t('ov.swap.wait')}</div>`;
     }
     html += `<div class="overlay">
-      <div class="ov-title">🔄 Своп: ${esc(fromP?.name || '?')} ↔ ${esc(toP?.name || '?')}</div>
+      <div class="ov-title">${t('ov.swap.title', { from: fromP?.name || '?', to: toP?.name || '?' })}</div>
       ${inner}
     </div>`;
   }
 
-  // Фальш
-  const falshPending = s.pendingFalsh;
-  if (falshPending) {
-    const iAmOwner = falshPending.owner === mySeat;
-    const iAmDefender = falshPending.defender === mySeat;
-    if (iAmOwner) {
-      const defenderP = s.players.find(p => p.seat === falshPending.defender);
-      const fcard = s.field?.cards.find(c => c.card.id === falshPending.cardId)?.card;
-      html += `<div class="overlay" style="border-color:#e74c3c;">
-        <div class="ov-title" style="color:#e74c3c;">🃏 ${esc(defenderP?.name || '?')} требует фальш</div>
-        <div class="ov-cards">${fcard ? cardHtml(fcard) : ''}</div>
-        <div class="ov-buttons">
-          <button class="b1" id="falshAcceptBtn">✅ Принять</button>
-          <button class="b3" id="falshRejectBtn">❌ Отказать</button>
-        </div>
-      </div>`;
-    } else if (iAmDefender) {
-      html += `<div class="overlay" style="border-color:#e74c3c;">
-        <div class="ov-title" style="color:#e74c3c;">🃏 Ожидание ответа хозяина карты…</div>
-      </div>`;
-    }
-  }
-
-  // Выбор начала кона
+  // Старт нового кона
   const startPending = s.pendingStart;
   if (startPending && s.phase === 'roundEnd' && myTeam === startPending.winningTeam) {
     html += `<div class="overlay">
-      <div class="ov-title">🏆 Вы выиграли кон! Кто зайдёт в следующем?</div>
+      <div class="ov-title">${t('ov.start.title')}</div>
       <div class="ov-buttons">
-        <button class="b1" id="startMeBtn">Я (${esc(meP?.name || '')})</button>
-        <button class="b1" id="startPartnerBtn">Партнёр (${esc(myPartner?.name || '?')})</button>
+        <button class="b1" id="startMeBtn">${t('ov.start.me', { name: meP?.name || '' })}</button>
+        <button class="b1" id="startPartnerBtn">${t('ov.start.partner', { name: myPartner?.name || '?' })}</button>
       </div>
     </div>`;
   }
@@ -112,7 +89,6 @@ export function buildOverlays() {
   return html;
 }
 
-// Привязка обработчиков оверлеев после рендера
 export function bindOverlays() {
   const g = id => document.getElementById(id);
 
@@ -121,8 +97,6 @@ export function bindOverlays() {
   const sacc = g('swapAcceptBtn'); if (sacc) sacc.onclick = () => socket.emit('swapAccept');
   const srej = g('swapRejectBtn'); if (srej) srej.onclick = () => socket.emit('swapReject');
   const sc = g('swapConfirmBtn');  if (sc) sc.onclick = () => socket.emit('swapConfirm');
-  const fa = g('falshAcceptBtn');  if (fa) fa.onclick = () => socket.emit('falshAccept');
-  const fr = g('falshRejectBtn');  if (fr) fr.onclick = () => socket.emit('falshReject');
   const sm = g('startMeBtn');      if (sm) sm.onclick = () => socket.emit('chooseStart', { seat: state.server.mySeat });
   const sp = g('startPartnerBtn'); if (sp) sp.onclick = () => socket.emit('chooseStart', { seat: (state.server.mySeat + 2) % 4 });
 }

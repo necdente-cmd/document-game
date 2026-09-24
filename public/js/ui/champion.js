@@ -1,6 +1,7 @@
 import { state, saveMe } from '../state.js';
 import { socket } from '../socket.js';
 import { esc } from '../card.js';
+import { t } from '../i18n.js';
 
 // ==================== ФЕЙЕРВЕРК ====================
 function startFireworks(canvas, durationMs = 8000) {
@@ -59,18 +60,14 @@ function startFireworks(canvas, durationMs = 8000) {
       ctx.clearRect(0, 0, W, H);
       return;
     }
-
-    // Trail-эффект: не стираем полностью, а затемняем
     ctx.fillStyle = 'rgba(0,0,0,0.18)';
     ctx.fillRect(0, 0, W, H);
 
-    // Запуск новых ракет
     if (elapsed > nextLaunch) {
       spawnRocket();
       nextLaunch = elapsed + 250 + Math.random() * 400;
     }
 
-    // Ракеты
     for (let i = rockets.length - 1; i >= 0; i--) {
       const r = rockets[i];
       r.x += r.vx;
@@ -79,13 +76,12 @@ function startFireworks(canvas, durationMs = 8000) {
       r.trail.push({ x: r.x, y: r.y });
       if (r.trail.length > 8) r.trail.shift();
 
-      // Рисуем след
       ctx.beginPath();
       ctx.strokeStyle = r.color;
       ctx.lineWidth = 2;
       ctx.moveTo(r.trail[0].x, r.trail[0].y);
-      for (let t = 1; t < r.trail.length; t++) {
-        ctx.lineTo(r.trail[t].x, r.trail[t].y);
+      for (let tt = 1; tt < r.trail.length; tt++) {
+        ctx.lineTo(r.trail[tt].x, r.trail[tt].y);
       }
       ctx.stroke();
 
@@ -95,7 +91,6 @@ function startFireworks(canvas, durationMs = 8000) {
       }
     }
 
-    // Частицы
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
       p.x += p.vx;
@@ -104,11 +99,7 @@ function startFireworks(canvas, durationMs = 8000) {
       p.vx *= 0.985;
       p.vy *= 0.985;
       p.life -= p.decay;
-
-      if (p.life <= 0) {
-        particles.splice(i, 1);
-        continue;
-      }
+      if (p.life <= 0) { particles.splice(i, 1); continue; }
       ctx.globalAlpha = p.life;
       ctx.fillStyle = p.color;
       ctx.beginPath();
@@ -116,20 +107,18 @@ function startFireworks(canvas, durationMs = 8000) {
       ctx.fill();
     }
     ctx.globalAlpha = 1;
-
     rafId = requestAnimationFrame(frame);
   }
   frame();
 }
 
-// ==================== ЭКРАН ЧЕМПИОНА ====================
 export function maybeShowChampion(navigate) {
   const s = state.server;
   if (!s || s.phase !== 'gameEnd' || s.winnerTeam == null) return;
   if (document.getElementById('champOverlay')) return;
 
   const winTeam = s.winnerTeam;
-  const winners = s.players.filter(p => p.team === winTeam).map(p => p.name).join(' и ');
+  const winners = s.players.filter(p => p.team === winTeam).map(p => p.name).join(t('common.and'));
   const minutes = s.gameStartTime ? Math.round((Date.now() - s.gameStartTime) / 60000) : 0;
   const stats = s.playerStats || [0,0,0,0];
   const bestScore = Math.max(...stats);
@@ -142,23 +131,22 @@ export function maybeShowChampion(navigate) {
   el.innerHTML = `
     <canvas id="fireworksCanvas" class="fireworks-canvas"></canvas>
     <div class="champ-content">
-      <div class="champ-title">🏆 Team ${winTeam ? 'B' : 'A'} — ЧЕМПИОН!</div>
+      <div class="champ-title">${t('champion.title', { team: winTeam ? 'B' : 'A' })}</div>
       <div class="champ-names">${esc(winners)}</div>
       <div class="champ-stats">
-        Счёт: ${s.roundWins[0]} : ${s.roundWins[1]}<br>
-        Время партии: ~${minutes} мин<br>
-        Конов сыграно: ${(s.roundHistory || []).length}
+        ${t('champion.score')}: ${s.roundWins[0]} : ${s.roundWins[1]}<br>
+        ${t('champion.time')}: ~${minutes} ${t('common.min')}<br>
+        ${t('champion.rounds')}: ${(s.roundHistory || []).length}
       </div>
-      <div class="champ-best">⭐ Лучший игрок: ${esc(bestNames || '—')} (${bestScore} кон.)</div>
+      <div class="champ-best">${t('champion.best')}: ${esc(bestNames || '—')} (${bestScore} ${t('champion.roundsShort')})</div>
       <div class="champ-buttons">
-        <button id="playAgainBtn" style="background:#f1c40f; color:#000;">🔄 Играть снова</button>
-        <button id="exitMenuBtn" style="background:#95a5a6; color:#000;">🚪 Выйти в меню</button>
+        <button id="playAgainBtn" style="background:#f1c40f; color:#000;">${t('champion.playAgain')}</button>
+        <button id="exitMenuBtn" style="background:#95a5a6; color:#000;">${t('champion.exitMenu')}</button>
       </div>
     </div>
   `;
   document.body.appendChild(el);
 
-  // Запускаем фейерверк
   const canvas = document.getElementById('fireworksCanvas');
   if (canvas) startFireworks(canvas, 12000);
 

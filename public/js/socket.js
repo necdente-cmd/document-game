@@ -2,6 +2,7 @@ import { state, saveMe, applyTheme, applyScale, beep, vibrate } from './state.js
 import { playSound } from './sound.js';
 import { toastErr, toastOk } from './ui/toast.js';
 import { bindVoiceSocket } from './voice.js';
+import { t } from './i18n.js';
 
 export const socket = io({
   reconnection: true,
@@ -41,7 +42,7 @@ export function forceRefresh() {
             state.me.id = r.playerId;
             console.log('[refresh] ✅ rejoined, id:', r.playerId);
             setTimeout(() => socket.emit('syncState'), 200);
-            toastOk('🔄 Синхронизация');
+            toastOk(t('toast.synced'));
           } else {
             console.warn('[refresh] ❌ rejoin failed:', r?.err);
             saveMe(null);
@@ -177,40 +178,26 @@ export function bindSocket(onStateChange) {
     if (!socket.connected) forceRefresh();
   });
 
-  // ==================== 📱 Capacitor App State ====================
-  // Используем window.Capacitor.Plugins.App — работает без bundler
+  // 📱 Capacitor App State
   function setupCapacitorAppState() {
     const Cap = window.Capacitor;
-    if (!Cap || !Cap.isNativePlatform || !Cap.isNativePlatform()) {
-      console.log('[capacitor] not native, skip appStateChange');
-      return false;
-    }
+    if (!Cap || !Cap.isNativePlatform || !Cap.isNativePlatform()) return false;
     const App = Cap.Plugins && Cap.Plugins.App;
-    if (!App || !App.addListener) {
-      console.warn('[capacitor] App plugin not available');
-      return false;
-    }
+    if (!App || !App.addListener) return false;
     try {
       App.addListener('appStateChange', ({ isActive }) => {
-        console.log('[capacitor] appStateChange, isActive:', isActive);
-        if (isActive && state.me?.roomId) {
-          forceRefresh();
-        }
+        if (isActive && state.me?.roomId) forceRefresh();
       });
-      console.log('[capacitor] ✅ appStateChange listener attached');
       return true;
     } catch (e) {
-      console.warn('[capacitor] addListener error:', e);
       return false;
     }
   }
 
-  // Попробуем сразу, если не вышло — повторно через 1.5 сек (когда Capacitor точно загружен)
   if (!setupCapacitorAppState()) {
     setTimeout(() => setupCapacitorAppState(), 1500);
   }
 
-  // 🎤 голосовой чат
   bindVoiceSocket();
 }
 

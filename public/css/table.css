@@ -909,3 +909,37 @@
   font-size: 0.9em;
   opacity: 0.9;
 }
+
+/* ==================== 🌐 ЯЗЫКОВОЙ ПЕРЕКЛЮЧАТЕЛЬ В НАСТРОЙКАХ ==================== */
+.lang-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+.lang-btn {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 2px solid rgba(255,255,255,.15);
+  background: rgba(255,255,255,.06);
+  color: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .15s;
+}
+.lang-btn:active { transform: scale(.97); }
+.lang-btn.sel {
+  border-color: var(--acc);
+  background: rgba(241,196,15,.18);
+  color: var(--acc);
+}
+[data-theme="paper"] .lang-btn {
+  border-color: rgba(0,0,0,.15);
+  background: rgba(0,0,0,.04);
+}
+[data-theme="paper"] .lang-btn.sel {
+  background: rgba(184,134,11,.15);
+  color: #b8860b;
+}

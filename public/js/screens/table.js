@@ -12,6 +12,7 @@ import { playSound } from '../sound.js';
 import { toastErr, toastOk } from '../ui/toast.js';
 import { enableVoice, disableVoice, setMicOn } from '../voice.js';
 import { rankDisplay } from '../rank-display.js';
+import { t } from '../i18n.js';
 
 let sortMode = 0;
 let infoOpen = false;
@@ -155,11 +156,11 @@ function ensureSwipeIcons() {
     el.id = 'swipeIcons';
     el.className = 'swipe-icons';
     el.innerHTML = `
-      <button class="icon-btn" id="refreshBtn" title="Обновить">🔃</button>
-      <button class="icon-btn" id="sortBtn" title="Сортировка">🔄</button>
-      <button class="icon-btn" id="emojiToggle" title="Смайлик">😀</button>
-      <button class="icon-btn" id="chatBtn" title="Чат">💬</button>
-      <button class="icon-btn ${infoOpen?'active':''}" id="infoBtn" title="Сведения">📊</button>
+      <button class="icon-btn" id="refreshBtn" title="Refresh">🔃</button>
+      <button class="icon-btn" id="sortBtn" title="Sort">🔄</button>
+      <button class="icon-btn" id="emojiToggle" title="Emoji">😀</button>
+      <button class="icon-btn" id="chatBtn" title="${t('chat.title')}">💬</button>
+      <button class="icon-btn ${infoOpen?'active':''}" id="infoBtn" title="${t('info.title')}">📊</button>
     `;
     document.body.appendChild(el);
   }
@@ -167,7 +168,7 @@ function ensureSwipeIcons() {
   if (!micBtn) {
     micBtn = document.createElement('button');
     micBtn.id = 'micBtn';
-    micBtn.title = 'Микрофон';
+    micBtn.title = t('settings.mic');
     el.insertBefore(micBtn, el.querySelector('#chatBtn'));
   }
   micBtn.className = 'icon-btn ' + (
@@ -255,12 +256,12 @@ function showInfoModal() {
   el.id = 'infoModal';
   el.innerHTML = `
     <div class="info-modal-inner">
-      <h3>📊 Сведения</h3>
-      <div class="info-row"><span>Козырь</span><b>${esc(s.trumpSuit || '—')}</b></div>
-      <div class="info-row"><span>Мой док</span><b>${esc(myDoc)}</b></div>
-      <div class="info-row"><span>Их док</span><b>${esc(oppDoc)}</b></div>
-      <div class="info-row"><span>Счёт</span><b>${s.roundWins[0]} : ${s.roundWins[1]}</b></div>
-      <button class="info-modal-close" id="infoClose">Закрыть</button>
+      <h3>${t('info.title')}</h3>
+      <div class="info-row"><span>${t('info.trump')}</span><b>${esc(s.trumpSuit || '—')}</b></div>
+      <div class="info-row"><span>${t('info.myDoc')}</span><b>${esc(myDoc)}</b></div>
+      <div class="info-row"><span>${t('info.oppDoc')}</span><b>${esc(oppDoc)}</b></div>
+      <div class="info-row"><span>${t('info.score')}</span><b>${s.roundWins[0]} : ${s.roundWins[1]}</b></div>
+      <button class="info-modal-close" id="infoClose">${t('common.close')}</button>
     </div>
   `;
   document.body.appendChild(el);
@@ -353,28 +354,28 @@ export function renderTable(app, navigate) {
       <div class="wp-card ${p.isHost?'host':''}">
         <div class="wp-avatar">${getAvatar(p.seat)}</div>
         <div class="wp-name">${esc(p.name)}</div>
-        ${p.isHost ? '<div class="wp-host">Хост</div>' : ''}
+        ${p.isHost ? `<div class="wp-host">${t('lobby.host')}</div>` : ''}
       </div>
     `).join('');
 
     const emptyCards = Array.from({ length: emptySlots }).map(() => `
       <div class="wp-card wp-empty">
         <div class="wp-avatar">·</div>
-        <div class="wp-name">Ждём…</div>
+        <div class="wp-name">${t('lobby.waitingSlot')}</div>
       </div>
     `).join('');
 
     lobbyBar = `
       <div class="waiting">
         <img src="/logo.png" class="lobby-logo" alt="Документ">
-        <div class="waiting-label">Код комнаты</div>
-        <button class="waiting-code" id="roomCode" title="Тапни, чтобы скопировать">${esc(s.id)}</button>
+        <div class="waiting-label">${t('lobby.roomCode')}</div>
+        <button class="waiting-code" id="roomCode" title="${t('lobby.copyCode')}">${esc(s.id)}</button>
         <div class="waiting-players-grid">
           ${playerCards}${emptyCards}
         </div>
         ${playersCount === maxP ? `
           <div class="seat-order-block">
-            <div class="so-title">🎯 Расстановка${isHost ? ' (тапни двух игроков чтобы поменять)' : ''}</div>
+            <div class="so-title">${t('lobby.seating')}${isHost ? ' ' + t('lobby.seatingHint') : ''}</div>
             <div class="so-grid">
               ${[0,1,2,3].map(slot => {
                 const posName = ['A1','B2','A3','B4'][slot];
@@ -390,7 +391,7 @@ export function renderTable(app, navigate) {
                   <div class="so-player ${teamCls} ${isPicked ? 'picked' : ''} ${clickable}" data-player-id="${playerAtSlot.id}">
                     <span class="so-pos">${posName}</span>
                     <span class="so-avatar">${avatar}</span>
-                    <span class="so-name">${esc(playerAtSlot.name)}${isMe ? ' <small>(ты)</small>' : ''}</span>
+                    <span class="so-name">${esc(playerAtSlot.name)}${isMe ? ' <small>' + t('lobby.you') + '</small>' : ''}</span>
                     <span class="so-team">${teamIcon}</span>
                   </div>`;
               }).join('')}
@@ -398,32 +399,32 @@ export function renderTable(app, navigate) {
           </div>
         ` : ''}
         <div class="waiting-status">
-          ${playersCount} / ${maxP} игроков ${playersCount < maxP ? '<span class="dots"><span>.</span><span>.</span><span>.</span></span>' : ''}
+          ${playersCount} / ${maxP} ${t('lobby.players')} ${playersCount < maxP ? '<span class="dots"><span>.</span><span>.</span><span>.</span></span>' : ''}
         </div>
         ${isHost && playersCount === maxP
-          ? `<button class="start-big" id="startBtn">▶ Начать игру</button>`
-          : isHost ? `<div class="waiting-hint">Ждём игроков…</div>`
-          : `<div class="waiting-hint">Ждём хоста…</div>`}
+          ? `<button class="start-big" id="startBtn">${t('lobby.startGame')}</button>`
+          : isHost ? `<div class="waiting-hint">${t('lobby.waitingPlayers')}</div>`
+          : `<div class="waiting-hint">${t('lobby.waitingHost')}</div>`}
       </div>`;
   }
 
   let passNotice = '';
   if (s.field && !s.pendingPass && !s.pendingSwap) {
-    if (bothPassed) passNotice = `<div class="pass-notice">⛔ Оба атакующих пасанули</div>`;
+    if (bothPassed) passNotice = `<div class="pass-notice">${t('notice.bothPassed')}</div>`;
     else if (attackerPassed && !partnerOutV && !partnerPassed)
-      passNotice = `<div class="pass-notice info">⏳ Атакующий пасанул — ждём партнёра</div>`;
+      passNotice = `<div class="pass-notice info">${t('notice.attackerPassed')}</div>`;
     else if (partnerPassed && !attackerOut && !attackerPassed)
-      passNotice = `<div class="pass-notice info">⏳ Партнёр пасанул — ждём атакующего</div>`;
+      passNotice = `<div class="pass-notice info">${t('notice.partnerPassed')}</div>`;
   }
   if (waitingForSeat !== undefined) {
     const wname = s.players.find(p => p.seat === waitingForSeat)?.name || '?';
-    passNotice = `<div class="pass-notice wait">⏳ Ждём ${esc(wname)} — отошёл</div>`;
+    passNotice = `<div class="pass-notice wait">${t('notice.waitingSeat', { name: wname })}</div>`;
   }
 
   // ===== СИДЕНЬЯ =====
   const seats = s.players.filter(p => p.seat !== mySeat).map(p => {
     const isThisInPassed = passedSeats.includes(p.seat);
-    const offlineBadge = !p.connected ? '<div class="badge-off">⚠ отошёл</div>' : '';
+    const offlineBadge = !p.connected ? `<div class="badge-off">⚠ ${t('state.offline')}</div>` : '';
     const posArr = ['bottom','left','top','right'];
     const pos = posArr[((p.seat - mySeat + 4) % 4)] || 'top';
     const st = playerState(s, p.seat);
@@ -431,12 +432,20 @@ export function renderTable(app, navigate) {
                 : st === 'отошёл' ? 'out' : '';
     const isSpeaking = (state.voiceSpeakingSeats || []).includes(p.seat);
     const isPartner = p.team === myTeam;
+    // Перевод статуса
+    let stText = st;
+    if (st === 'бьёт')     stText = t('state.beat');
+    if (st === 'думает')   stText = t('state.think');
+    if (st === 'ходит')    stText = t('state.move');
+    if (st === 'поднимает') stText = t('state.pickup');
+    if (st === 'вышел')    stText = t('state.out');
+    if (st === 'отошёл')   stText = t('state.offline');
     return `
       <div class="seat ${pos} ${p.seat===s.turnSeat?'active':''} ${p.out?'out':''} ${!p.connected?'offline':''} ${isSpeaking?'speaking':''} ${isPartner?'is-partner':'is-enemy'}" data-seat="${p.seat}">
         <div class="name">${esc(p.name)} ${isPartner?'★':'✗'}</div>
         <div class="avatar">${getAvatar(p.seat)}</div>
-        ${st ? `<div class="state ${stCls}">${st}</div>` : ''}
-        ${isThisInPassed ? '<div class="pass-badge">⛔ Пас</div>' : ''}
+        ${st ? `<div class="state ${stCls}">${stText}</div>` : ''}
+        ${isThisInPassed ? '<div class="pass-badge">⛔ ' + t('btn.pass').replace(/<br>.*/, '').replace('✋','').trim() + '</div>' : ''}
         ${offlineBadge}
       </div>`;
   }).join('');
@@ -477,7 +486,7 @@ export function renderTable(app, navigate) {
           ${e.beatenBy ? cardHtml(e.beatenBy, { cls:'beaten' }) : ''}
         </div>`;
       }).join('')
-    : `<div style="opacity:.5">— поле пусто —</div>`;
+    : `<div style="opacity:.5">—</div>`;
 
   const onlyDocsNow = s.myHand.length > 0 && s.myHand.every(c => c.r === myDoc);
   const allBeaten = s.field && s.field.cards.length > 0 && s.field.cards.every(x => x.beatenBy);
@@ -487,27 +496,27 @@ export function renderTable(app, navigate) {
   let centerActionId = '';
 
   if (canDefend && s.field && s.field.cards.length > 0) {
-    centerActionBtn = '📥<br>ПОДНЯТЬ'; centerActionCls = 'b3'; centerActionId = 'pickUpBtn';
+    centerActionBtn = t('btn.pickUp'); centerActionCls = 'b3'; centerActionId = 'pickUpBtn';
   }
   else if (isMyTurn && !iAmOut && !s.field && partnerIsOut && onlyDocsNow) {
-    centerActionBtn = '🏆<br>БРОСИТЬ'; centerActionCls = 'b1'; centerActionId = 'throwBtn';
+    centerActionBtn = t('btn.throwDocs'); centerActionCls = 'b1'; centerActionId = 'throwBtn';
   }
   else if (isMyTurn && !iAmOut && !s.field && partnerIsOut && !s.swapUsedByTeam[myTeam] && !onlyDocsNow && s.myHand.length > 0) {
-    centerActionBtn = '🔄<br>ОТДАТЬ'; centerActionCls = 'b5'; centerActionId = 'swapInitBtn';
+    centerActionBtn = t('btn.giveCards'); centerActionCls = 'b5'; centerActionId = 'swapInitBtn';
   }
   else if (iAmOut && !partnerIsOut && s.turnSeat === myPartnerSeat && !s.field && !s.swapUsedByTeam[myTeam]) {
-    centerActionBtn = '🔄<br>ВЕРНУТЬСЯ'; centerActionCls = 'b5'; centerActionId = 'swapAskBtn';
+    centerActionBtn = t('btn.return'); centerActionCls = 'b5'; centerActionId = 'swapAskBtn';
   }
   else if (isMyTurn && !iAmOut && !s.field && !partnerIsOut && onlyDocsNow) {
-    centerActionBtn = '📤<br>ПЕРЕДАТЬ'; centerActionCls = 'b2'; centerActionId = 'passBtn';
+    centerActionBtn = t('btn.passDocs'); centerActionCls = 'b2'; centerActionId = 'passBtn';
   }
   else if ((isAttacker || isPartnerOfAttacker) && !iHavePassed) {
-    centerActionBtn = '✋<br>ПАС'; centerActionCls = 'b2'; centerActionId = 'pasBtn';
+    centerActionBtn = t('btn.pass'); centerActionCls = 'b2'; centerActionId = 'pasBtn';
   }
 
   const extraActions = [];
   if (canDefend && allBeaten && bothPassed && !s.pendingPass && !s.pendingSwap) {
-    extraActions.push(`<button class="b1" id="bitoBtn">✔ БИТО</button>`);
+    extraActions.push(`<button class="b1" id="bitoBtn">${t('btn.bito')}</button>`);
   }
 
   let beatsTarget = null;
@@ -527,18 +536,18 @@ export function renderTable(app, navigate) {
 
   let hintHtml = '';
   if (waitingForSeat !== undefined) {
-    hintHtml = `<div class="hint">⏳ Ждём игрока — скоро вернётся</div>`;
+    hintHtml = `<div class="hint">${t('hint.waitingSeat')}</div>`;
   } else if (canDefend && !bothPassed && !s.pendingPass && !s.pendingSwap) {
     const hasMyDoc = s.field.cards.some(x => !x.beatenBy && x.card.r === myDoc && !x.isForced);
-    if (hasMyDoc) hintHtml = `<div class="hint">⚠ На столе ваш документ — нужно поднять всё</div>`;
-    else if (state.defendTarget) hintHtml = `<div class="hint">👆 Тяните свою карту на карту врага</div>`;
-    else hintHtml = `<div class="hint">👆 Тапни карту врага, потом свою — или тяни</div>`;
+    if (hasMyDoc) hintHtml = `<div class="hint">${t('hint.hasYourDoc')}</div>`;
+    else if (state.defendTarget) hintHtml = `<div class="hint">${t('hint.pullCard')}</div>`;
+    else hintHtml = `<div class="hint">${t('hint.tapEnemyCard')}</div>`;
   } else if (canDefend && bothPassed) {
-    hintHtml = `<div class="hint">✋ Все пасанули — решите: БИТО или Поднять</div>`;
+    hintHtml = `<div class="hint">${t('hint.decideBito')}</div>`;
   } else if (isAttacker || isPartnerOfAttacker) {
-    hintHtml = `<div class="hint">👆 Тяни карту в поле или тапни её и тапни поле</div>`;
+    hintHtml = `<div class="hint">${t('hint.pullToField')}</div>`;
   } else if (isMyTurn) {
-    hintHtml = `<div class="hint">👆 Твой ход</div>`;
+    hintHtml = `<div class="hint">${t('hint.yourTurn')}</div>`;
   }
 
   const emojiPanel = state.emojiOpen ? `<div class="emoji-bar" id="emojiBar">
@@ -553,15 +562,15 @@ export function renderTable(app, navigate) {
 
   let turnBanner = '';
   if (myTurnNow && !s.field) {
-    turnBanner = `<div class="turn-banner attack">🎯 ТВОЙ ХОД</div>`;
+    turnBanner = `<div class="turn-banner attack">${t('banner.yourTurn')}</div>`;
   } else if (myTurnNow && s.field && attackerSeat === mySeat) {
-    turnBanner = `<div class="turn-banner attack">🎯 ТВОЙ ХОД — АТАКУЙ</div>`;
+    turnBanner = `<div class="turn-banner attack">${t('banner.yourTurnAttack')}</div>`;
   } else if (iAmDefending && !state.defendTarget) {
-    turnBanner = `<div class="turn-banner defend">🛡️ ТЫ ЗАЩИЩАЕШЬСЯ — БЕЙ КАРТУ</div>`;
+    turnBanner = `<div class="turn-banner defend">${t('banner.yourDefend')}</div>`;
   } else if (iAmDefending && state.defendTarget) {
-    turnBanner = `<div class="turn-banner defend">🎯 БЕЙ ВЫБРАННУЮ КАРТУ</div>`;
+    turnBanner = `<div class="turn-banner defend">${t('banner.beatSelected')}</div>`;
   } else if ((isAttacker || isPartnerOfAttacker) && !iHavePassed) {
-    turnBanner = `<div class="turn-banner attack-sub">👆 Можешь подкинуть или сказать ПАС</div>`;
+    turnBanner = `<div class="turn-banner attack-sub">${t('banner.canPass')}</div>`;
   }
 
   app.innerHTML = `
@@ -572,7 +581,7 @@ export function renderTable(app, navigate) {
       ${scoreCorner}
       ${deckArea}
 
-      <button class="settings-btn" id="settingsBtn" title="Настройки">⚙️</button>
+      <button class="settings-btn" id="settingsBtn" title="${t('settings.title')}">⚙️</button>
 
       ${seats}
       <div class="center">
@@ -619,8 +628,8 @@ export function renderTable(app, navigate) {
         const fid = slot.dataset.fieldCard;
         const entry = s.field.cards.find(x => x.card.id === fid);
         if (!entry || entry.beatenBy) return;
-        if (entry.isForced) return err('Навязанный документ — только поднять');
-        if (entry.card.r === myDoc) return err('Ваш документ — только поднять');
+        if (entry.isForced) return err(t('err.forcedDocPickUpAll'));
+        if (entry.card.r === myDoc) return err(t('err.yourDocPickUpAll'));
         state.defendTarget = (state.defendTarget === fid) ? null : fid;
         renderTable(app, navigate);
         return;
@@ -639,14 +648,14 @@ export function renderTable(app, navigate) {
     roomCodeEl.onclick = async () => {
       try {
         await navigator.clipboard.writeText(s.id);
-        toastOk('Код скопирован: ' + s.id);
+        toastOk(t('toast.codeCopied') + ': ' + s.id);
       } catch {
-        toastErr('Не удалось скопировать');
+        toastErr(t('toast.copyFailed'));
       }
     };
   }
 
-  // 🎯 Tap-tap расстановка (хост)
+  // 🎯 Tap-tap расстановка
   if (meP?.isHost && s.phase === 'lobby') {
     document.querySelectorAll('.so-player').forEach(el => {
       el.onclick = () => {
@@ -722,7 +731,7 @@ function bindSwipeIconHandlers(app, navigate) {
     refreshBtn.classList.add('spin');
     setTimeout(() => refreshBtn.classList.remove('spin'), 800);
     forceRefresh();
-    toastOk('🔄 Обновлено');
+    toastOk(t('toast.refreshed'));
     setTimeout(hideSwipeIcons, 300);
   };
   const sortBtn = document.getElementById('sortBtn');
@@ -746,9 +755,9 @@ function bindSwipeIconHandlers(app, navigate) {
         state.micOn = true;
         setMicOn(true);
         try { localStorage.setItem('micOn', '1'); } catch {}
-        toastOk('🎤 Микрофон включён');
+        toastOk(t('toast.micOn'));
       } else {
-        toastErr('Не удалось получить доступ к микрофону');
+        toastErr(t('toast.micError'));
       }
     } else {
       state.micOn = !state.micOn;
