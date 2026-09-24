@@ -1,6 +1,6 @@
 import { state, saveMe, applyTheme, applyScale, beep, vibrate } from './state.js';
 import { playSound } from './sound.js';
-import { toastErr } from './ui/toast.js';
+import { toastErr, toastOk } from './ui/toast.js';
 import { bindVoiceSocket } from './voice.js';
 
 export const socket = io({
@@ -8,27 +8,66 @@ export const socket = io({
   reconnectionAttempts: Infinity,
   reconnectionDelay: 1000,
   reconnectionDelayMax: 5000,
-  timeout: 60000,
+  timeout: 20000,
+  transports: ['websocket', 'polling'],
 });
 
-// ==================== 🔄 FORCE REFRESH ====================
-let hiddenAt = 0;
+// ==================== 🔄 ЖЁСТКИЙ РЕКОННЕКТ ====================
+let reconnecting = false;
 
 export function forceRefresh() {
-  console.log('[refresh] forcing refresh, connected:', socket.connected);
-  if (socket.disconnected) {
+  if (reconnecting) return;
+  reconnecting = true;
+  console.log('[refresh] 🔄 hard reconnect');
+
+  try { socket.disconnect(); } catch (e) {}
+
+  setTimeout(() => {
     socket.connect();
-    socket.once('connect', () => {
-      if (state.me?.roomId) socket.emit('syncState');
-      setTimeout(() => {
-        if (socket.connected && state.me?.roomId) socket.emit('syncState');
-      }, 400);
-    });
-  } else {
-    if (state.me?.roomId) socket.emit('syncState');
-  }
+
+    const onConnect = () => {
+      console.log('[refresh] ✅ reconnected, rejoining room...');
+      socket.off('connect', onConnect);
+
+      if (state.me?.roomId) {
+        socket.emit('joinRoom', {
+          roomId: state.me.roomId,
+          name: state.me.name,
+          playerId: state.me.id,
+          avatar: state.me.avatar,
+        }, (r) => {
+          reconnecting = false;
+          if (r && r.ok) {
+            state.me.id = r.playerId;
+            console.log('[refresh] ✅ rejoined, id:', r.playerId);
+            setTimeout(() => socket.emit('syncState'), 200);
+            toastOk('🔄 Синхронизация');
+          } else {
+            console.warn('[refresh] ❌ rejoin failed:', r?.err);
+            saveMe(null);
+            state.server = null;
+            state.me = null;
+            location.href = '/';
+          }
+        });
+      } else {
+        reconnecting = false;
+      }
+    };
+
+    socket.on('connect', onConnect);
+
+    setTimeout(() => {
+      if (reconnecting) {
+        console.warn('[refresh] ⏱ timeout, forcing again');
+        reconnecting = false;
+        forceRefresh();
+      }
+    }, 5000);
+  }, 200);
 }
 
+// ==================== BIND ====================
 export function bindSocket(onStateChange) {
   socket.on('state', (s) => {
     const prev = state.server;
@@ -105,48 +144,71 @@ export function bindSocket(onStateChange) {
   socket.on('err', (m) => {
     toastErr(m);
     vibrate(100);
-    // 💥 Встряска экрана
     document.body.classList.remove('shake');
     void document.body.offsetWidth;
     document.body.classList.add('shake');
     setTimeout(() => document.body.classList.remove('shake'), 400);
   });
 
-  socket.on('connect', () => {
-    console.log('[socket] connected');
-    if (state.me?.roomId) socket.emit('syncState');
-  });
-  socket.on('disconnect', () => console.log('[socket] disconnected'));
+  socket.on('connect', () => console.log('[socket] ✅ connected'));
+  socket.on('disconnect', (reason) => console.log('[socket] ❌ disconnected:', reason));
+  socket.on('reconnect', (attempt) => console.log('[socket] 🔄 reconnected after', attempt));
 
-  // ==================== 🔄 СИНХРОНИЗАЦИЯ ПРИ ВОЗВРАТЕ ====================
+  // ==================== 🔄 ВОЗВРАТ ИЗ ФОНА ====================
+  let hiddenSince = 0;
+
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
-      hiddenAt = Date.now();
+      hiddenSince = Date.now();
       return;
     }
-    // Вернулись в приложение
-    const hiddenMs = hiddenAt ? Date.now() - hiddenAt : 0;
-    hiddenAt = 0;
-    console.log('[visibility] returned after', hiddenMs, 'ms');
+    const hiddenMs = hiddenSince ? Date.now() - hiddenSince : 0;
+    hiddenSince = 0;
+    console.log('[visibility] visible, was hidden', hiddenMs, 'ms');
 
-    if (socket.disconnected) {
+    if (!state.me?.roomId) return;
+    if (hiddenMs > 1000 || !socket.connected) {
       forceRefresh();
-    } else if (hiddenMs > 3000) {
-      // Были в фоне > 3 сек — полный refresh
-      forceRefresh();
-    } else if (state.me?.roomId) {
-      // Коротко уходили — просто запрос свежего state
-      socket.emit('syncState');
     }
   });
 
   window.addEventListener('focus', () => {
-    if (socket.disconnected) {
-      forceRefresh();
-    } else if (state.me?.roomId) {
-      socket.emit('syncState');
-    }
+    if (!state.me?.roomId) return;
+    if (!socket.connected) forceRefresh();
   });
+
+  // ==================== 📱 Capacitor App State ====================
+  // Используем window.Capacitor.Plugins.App — работает без bundler
+  function setupCapacitorAppState() {
+    const Cap = window.Capacitor;
+    if (!Cap || !Cap.isNativePlatform || !Cap.isNativePlatform()) {
+      console.log('[capacitor] not native, skip appStateChange');
+      return false;
+    }
+    const App = Cap.Plugins && Cap.Plugins.App;
+    if (!App || !App.addListener) {
+      console.warn('[capacitor] App plugin not available');
+      return false;
+    }
+    try {
+      App.addListener('appStateChange', ({ isActive }) => {
+        console.log('[capacitor] appStateChange, isActive:', isActive);
+        if (isActive && state.me?.roomId) {
+          forceRefresh();
+        }
+      });
+      console.log('[capacitor] ✅ appStateChange listener attached');
+      return true;
+    } catch (e) {
+      console.warn('[capacitor] addListener error:', e);
+      return false;
+    }
+  }
+
+  // Попробуем сразу, если не вышло — повторно через 1.5 сек (когда Capacitor точно загружен)
+  if (!setupCapacitorAppState()) {
+    setTimeout(() => setupCapacitorAppState(), 1500);
+  }
 
   // 🎤 голосовой чат
   bindVoiceSocket();
