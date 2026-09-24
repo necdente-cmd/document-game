@@ -6,38 +6,59 @@
   border-radius: 14px;
   margin: 4px 4px 0;
 
-  background:
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.35 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
-    radial-gradient(ellipse 90% 75% at 50% 45%,
-      var(--felt-light) 0%,
-      var(--felt) 50%,
-      var(--felt-dark) 100%);
+  background-color: var(--felt);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 
   box-shadow:
-    inset 0 0 0 1px var(--wood-dark),
-    inset 0 0 0 3px var(--wood-light),
-    inset 0 0 0 14px var(--wood),
-    inset 0 0 0 15px var(--wood-dark),
-    inset 0 0 160px 20px rgba(0,0,0,.45);
+    inset 0 0 160px 20px rgba(0,0,0,.45),
+    0 4px 20px rgba(0,0,0,.6);
 }
 
+[data-theme="classic"] .table {
+  background-image: url('/textures/table_classic.jpg');
+}
+[data-theme="dark"] .table {
+  background-image: url('/textures/table_dark.jpg');
+}
 [data-theme="neon"] .table {
+  background-image: url('/textures/table_neon.jpg');
   box-shadow:
-    inset 0 0 0 1px #ff0080,
-    inset 0 0 0 3px #00e5ff,
-    inset 0 0 0 14px var(--wood),
-    inset 0 0 0 15px #00e5ff,
-    inset 0 0 40px rgba(0,229,255,.35),
-    inset 0 0 160px 20px rgba(0,0,0,.6);
+    inset 0 0 160px 20px rgba(0,0,0,.6),
+    inset 0 0 60px rgba(0,229,255,.25),
+    0 4px 20px rgba(0,0,0,.7);
+}
+[data-theme="paper"] .table {
+  background-image: url('/textures/table_paper.jpg'),
+                    radial-gradient(ellipse 90% 75% at 50% 45%,
+                      var(--felt-light) 0%,
+                      var(--felt) 50%,
+                      var(--felt-dark) 100%);
 }
 
-[data-theme="paper"] .table {
-  box-shadow:
-    inset 0 0 0 1px var(--wood-dark),
-    inset 0 0 0 3px var(--wood-light),
-    inset 0 0 0 14px var(--wood),
-    inset 0 0 0 15px var(--wood-dark),
-    inset 0 0 140px 20px rgba(139,106,61,.3);
+/* ==================== ЛОГОТИП В ЛОББИ ==================== */
+.lobby-logo {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  margin: 0 auto 10px;
+  display: block;
+  filter: drop-shadow(0 4px 12px rgba(241,196,15,.4));
+}
+
+/* ==================== ВОДЯНОЙ ЗНАК НА СТОЛЕ ==================== */
+.field-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40%;
+  max-width: 240px;
+  opacity: 0.07;
+  pointer-events: none;
+  z-index: 0;
+  user-select: none;
 }
 
 /* ==================== КОЛОДА + КОЗЫРЬ ==================== */
@@ -81,6 +102,26 @@
   flex-shrink: 0;
   filter: drop-shadow(0 2px 5px rgba(0,0,0,.6));
 }
+
+/* ==================== ИНДИКАТОР КОЗЫРЯ (когда колода пуста) ==================== */
+.trump-reminder {
+  width: calc(var(--card-w) * 1.05);
+  height: calc(var(--card-h) * 1.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--card-h) * 0.72);
+  line-height: 1;
+  opacity: 0.7;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,.6));
+  user-select: none;
+  pointer-events: none;
+  font-weight: 900;
+  transition: opacity .3s;
+}
+.trump-reminder.red   { color: #e74c3c; }
+.trump-reminder.black { color: #eee; }
+[data-theme="paper"] .trump-reminder.black { color: #222; }
 
 /* ==================== СИДЕНЬЯ ==================== */
 .seat {
@@ -198,6 +239,13 @@
 }
 .slot.drag-over { outline: 4px solid #2ecc71; outline-offset: -4px; border-radius: 8px; }
 
+/* Навязанный документ */
+.slot.forced .card:first-child {
+  outline: 3px solid #e74c3c;
+  outline-offset: -3px;
+  box-shadow: 0 0 12px rgba(231, 76, 60, 0.6);
+}
+
 /* ==================== НАСТРОЙКА ==================== */
 .settings-btn {
   position: absolute;
@@ -276,6 +324,71 @@
   will-change: transform;
 }
 .hand .card:active { cursor: grabbing; }
+
+/* ==================== ПУЛЬС «ТВОЙ ХОД» (золотой) ==================== */
+.table.my-turn .bottom-bar .hand {
+  animation: myTurnPulse 2s ease-in-out infinite;
+  border-radius: 16px;
+}
+@keyframes myTurnPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(241,196,15,0); }
+  50%      { box-shadow: 0 0 28px 6px rgba(241,196,15,.55); }
+}
+
+/* ==================== ПУЛЬС «ТЫ ЗАЩИЩАЕШЬСЯ» (зелёный) ==================== */
+.table.my-defend .bottom-bar .hand {
+  animation: myDefendPulse 1.6s ease-in-out infinite;
+  border-radius: 16px;
+}
+@keyframes myDefendPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(46,204,113,0); }
+  50%      { box-shadow: 0 0 30px 8px rgba(46,204,113,.6); }
+}
+
+/* ==================== БОЛЬШОЙ БАННЕР ПРИ СМЕНЕ ХОДА ==================== */
+.turn-banner {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 22px;
+  border-radius: 24px;
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: 2px;
+  z-index: 35;
+  pointer-events: none;
+  box-shadow: 0 6px 20px rgba(0,0,0,.5);
+  white-space: nowrap;
+  animation: bannerIn .35s cubic-bezier(.22,.9,.35,1), bannerPulse 1.8s ease-in-out infinite .35s;
+}
+.turn-banner.attack {
+  background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%);
+  color: #000;
+  text-shadow: none;
+}
+.turn-banner.defend {
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,.3);
+}
+.turn-banner.attack-sub {
+  background: rgba(241,196,15,.85);
+  color: #000;
+  font-size: 12px;
+  letter-spacing: 1px;
+  padding: 6px 16px;
+  font-weight: 700;
+  top: 52px;
+}
+@keyframes bannerIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(.85); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+@keyframes bannerPulse {
+  0%, 100% { transform: translateX(-50%) scale(1); }
+  50%      { transform: translateX(-50%) scale(1.04); }
+}
 
 /* ==================== ИКОНКИ СВАЙПОМ СЛЕВА ==================== */
 .swipe-icons {
@@ -490,47 +603,7 @@
   cursor: pointer;
 }
 
-/* ==================== ОКНО ОЖИДАНИЯ ==================== */
-.waiting {
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0,0,0,.8);
-  border: 2px solid var(--acc);
-  border-radius: 16px;
-  padding: 24px 28px;
-  text-align: center;
-  min-width: 260px;
-  max-width: 90vw;
-  z-index: 50;
-}
-[data-theme="paper"] .waiting { background: rgba(255,255,255,.9); }
-.waiting-title { font-size: 13px; opacity: .8; margin-bottom: 4px; }
-.waiting-code {
-  font-size: 42px; font-weight: 900; letter-spacing: 8px;
-  color: var(--acc); margin: 4px 0 12px;
-  font-family: 'Courier New', monospace;
-}
-[data-theme="paper"] .waiting-code { color: #b8860b; }
-.copy-btn {
-  background: rgba(255,255,255,.15); color: #fff;
-  border: 1px solid rgba(255,255,255,.3);
-  padding: 8px 14px; border-radius: 8px;
-  font-size: 13px; cursor: pointer; margin-bottom: 14px; font-weight: 600;
-}
-.waiting-info { font-size: 14px; margin-bottom: 10px; }
-.waiting-players { display: flex; flex-direction: column; gap: 4px; margin: 8px 0 12px; font-size: 13px; }
-.waiting-player { padding: 6px 10px; background: rgba(255,255,255,.08); border-radius: 6px; }
-.waiting-player.host { background: rgba(241,196,15,.2); }
-.waiting-hint { font-size: 12px; opacity: .7; margin-top: 8px; }
-.start-big {
-  padding: 14px 24px; font-size: 16px; border-radius: 12px;
-  margin-top: 8px; width: 100%;
-  background: var(--acc); color: #000;
-  font-weight: 700; border: none; cursor: pointer;
-}
-
-/* ==================== НОВОЕ ЛОББИ ==================== */
+/* ==================== ОКНО ОЖИДАНИЯ (ЛОББИ) ==================== */
 .waiting {
   position: absolute;
   top: 50%; left: 50%;
@@ -685,50 +758,6 @@
 }
 .start-big:active { transform: scale(.97); }
 
-/* ==================== ЛОГОТИП В ЛОББИ ==================== */
-.lobby-logo {
-  width: 64px;
-  height: 64px;
-  object-fit: contain;
-  margin: 0 auto 10px;
-  display: block;
-  filter: drop-shadow(0 4px 12px rgba(241,196,15,.4));
-}
-
-/* ==================== ВОДЯНОЙ ЗНАК НА СТОЛЕ ==================== */
-.field-watermark {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 40%;
-  max-width: 240px;
-  opacity: 0.07;
-  pointer-events: none;
-  z-index: 0;
-  user-select: none;
-}
-
-/* ==================== ИНДИКАТОР КОЗЫРЯ (когда колода пуста) ==================== */
-.trump-reminder {
-  width: calc(var(--card-w) * 1.05);
-  height: calc(var(--card-h) * 1.05);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(var(--card-h) * 0.72);
-  line-height: 1;
-  opacity: 0.7;
-  filter: drop-shadow(0 4px 12px rgba(0,0,0,.6));
-  user-select: none;
-  pointer-events: none;
-  font-weight: 900;
-  transition: opacity .3s;
-}
-.trump-reminder.red { color: #e74c3c; }
-.trump-reminder.black { color: #eee; }
-[data-theme="paper"] .trump-reminder.black { color: #222; }
-
 /* ==================== ГОЛОСОВОЙ ЧАТ ==================== */
 .icon-btn.voice-on {
   background: #2ecc71 !important;
@@ -739,8 +768,6 @@
   background: #e74c3c !important;
   color: #fff !important;
 }
-
-/* Пульс аватарки когда говорит */
 .seat.speaking .avatar {
   animation: speakPulse 0.9s ease-in-out infinite;
 }
@@ -754,23 +781,3 @@
   font-size: 0.9em;
   opacity: 0.9;
 }
-
-/* ==================== ИНДИКАТОР КОЗЫРЯ (когда колода пуста) ==================== */
-.trump-reminder {
-  width: calc(var(--card-w) * 1.05);
-  height: calc(var(--card-h) * 1.05);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(var(--card-h) * 0.72);
-  line-height: 1;
-  opacity: 0.7;
-  filter: drop-shadow(0 4px 12px rgba(0,0,0,.6));
-  user-select: none;
-  pointer-events: none;
-  font-weight: 900;
-  transition: opacity .3s;
-}
-.trump-reminder.red   { color: #e74c3c; }
-.trump-reminder.black { color: #eee; }
-[data-theme="paper"] .trump-reminder.black { color: #222; }
