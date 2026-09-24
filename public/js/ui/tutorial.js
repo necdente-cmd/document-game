@@ -1,52 +1,56 @@
 // 📚 Туториал — обучение новых игроков
 import { state } from '../state.js';
+import { t } from '../i18n.js';
 
-const SCREENS = [
-  {
-    emoji: '🎴',
-    title: 'Документ',
-    subtitle: 'Карточная игра 2×2',
-    text: 'Ты играешь с одним партнёром против двух соперников. Партнёр всегда сидит напротив тебя.',
-    accent: '#f1c40f',
-  },
-  {
-    emoji: '🏆',
-    title: 'Цель игры',
-    subtitle: 'Дойти до ступени Т',
-    text: 'У каждой команды есть «документ» — свой ранг карт. Начнёте с 6, а за каждый выигранный кон поднимаетесь выше: 6 → 10 → В → Д → К → Т.\n\nПобеждает команда, которая дойдёт до Т и выиграет кон.',
-    accent: '#2ecc71',
-  },
-  {
-    emoji: '👆',
-    title: 'Как ходить',
-    subtitle: 'Атака картой',
-    text: 'В свой ход тяни карту из руки в центр стола. Или тапни её, а потом тапни поле.\n\nПомни: своим документом заходить нельзя! Документ можно только бить (и только козырем).',
-    accent: '#3498db',
-  },
-  {
-    emoji: '🛡️',
-    title: 'Как защищаться',
-    subtitle: 'Всё или ничего',
-    text: 'Когда тебя атакуют, ты либо бьёшь все карты, либо поднимаешь всё.\n\nКак бить: тапни карту врага, потом тапни свою карту в руке. Подходящие карты подсветятся зелёным.',
-    accent: '#e74c3c',
-  },
-  {
-    emoji: '✨',
-    title: 'Особые правила',
-    subtitle: 'Своп · Передача',
-    text: '🔄 Своп — если партнёр вышел, можно отдать ему свои карты (1 раз за кон).\n\n📤 Передача документов — если у тебя только документы, передай их партнёру.',
-    accent: '#8e44ad',
-  },
-  {
-    emoji: '🚀',
-    title: 'Готов!',
-    subtitle: 'Удачи в игре',
-    text: 'Собирай команду, играй с друзьями и побеждай.\n\nНе забывай: 🎤 микрофон — для голосового чата, 💬 чат — для переписки, ⚙️ настройки — для звука и темы.',
-    accent: '#f39c12',
-  },
-];
+function getScreens() {
+  return [
+    {
+      emoji: t('tut.s1.emoji'),
+      title: t('tut.s1.title'),
+      subtitle: t('tut.s1.subtitle'),
+      text: t('tut.s1.text'),
+      accent: '#f1c40f',
+    },
+    {
+      emoji: t('tut.s2.emoji'),
+      title: t('tut.s2.title'),
+      subtitle: t('tut.s2.subtitle'),
+      text: t('tut.s2.text'),
+      accent: '#2ecc71',
+    },
+    {
+      emoji: t('tut.s3.emoji'),
+      title: t('tut.s3.title'),
+      subtitle: t('tut.s3.subtitle'),
+      text: t('tut.s3.text'),
+      accent: '#3498db',
+    },
+    {
+      emoji: t('tut.s4.emoji'),
+      title: t('tut.s4.title'),
+      subtitle: t('tut.s4.subtitle'),
+      text: t('tut.s4.text'),
+      accent: '#e74c3c',
+    },
+    {
+      emoji: t('tut.s5.emoji'),
+      title: t('tut.s5.title'),
+      subtitle: t('tut.s5.subtitle'),
+      text: t('tut.s5.text'),
+      accent: '#8e44ad',
+    },
+    {
+      emoji: t('tut.s6.emoji'),
+      title: t('tut.s6.title'),
+      subtitle: t('tut.s6.subtitle'),
+      text: t('tut.s6.text'),
+      accent: '#f39c12',
+    },
+  ];
+}
 
 export function showTutorial(onClose) {
+  const SCREENS = getScreens();
   let current = 0;
 
   const el = document.createElement('div');
@@ -61,7 +65,7 @@ export function showTutorial(onClose) {
 
     el.innerHTML = `
       <div class="tut-modal" style="--tut-accent: ${s.accent}">
-        <button class="tut-skip" id="tutSkip" title="Пропустить">✕</button>
+        <button class="tut-skip" id="tutSkip" title="${t('tut.skip')}">✕</button>
 
         <div class="tut-progress">
           ${SCREENS.map((_, i) =>
@@ -71,7 +75,7 @@ export function showTutorial(onClose) {
 
         <div class="tut-content">
           <div class="tut-emoji">${s.emoji}</div>
-          <div class="tut-step">Шаг ${current + 1} из ${SCREENS.length}</div>
+          <div class="tut-step">${t('tut.step', { n: current + 1, total: SCREENS.length })}</div>
           <h2 class="tut-title">${s.title}</h2>
           <div class="tut-subtitle">${s.subtitle}</div>
           <p class="tut-text">${s.text.replace(/\n/g, '<br>')}</p>
@@ -79,10 +83,10 @@ export function showTutorial(onClose) {
 
         <div class="tut-buttons">
           ${!isFirst
-            ? `<button class="tut-btn tut-btn-back" id="tutBack">← Назад</button>`
+            ? `<button class="tut-btn tut-btn-back" id="tutBack">${t('tut.back')}</button>`
             : `<div></div>`}
           <button class="tut-btn tut-btn-next" id="tutNext">
-            ${isLast ? '🎮 В игру!' : 'Далее →'}
+            ${isLast ? t('tut.finish') : t('tut.next')}
           </button>
         </div>
       </div>
