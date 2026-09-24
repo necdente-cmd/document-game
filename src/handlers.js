@@ -95,6 +95,35 @@ export function setupHandlers(io, broadcast) {
       socket.emit('state', pub(r, p.id));
     });
 
+    // 🎯 ХОСТ ВЫБИРАЕТ РАССТАНОВКУ (только в лобби)
+    socket.on('setSeatOrder', ({ order }) => {
+      const r = rooms.get(rid); if (!r) return;
+      if (r.hostId !== pid) return err('Только хост может менять расстановку');
+      if (r.phase !== 'lobby') return err('Можно только в лобби');
+      if (!Array.isArray(order)) return err('Неверный формат');
+      if (order.length !== r.players.length) return err('Неверное количество игроков');
+
+      const idSet = new Set(order);
+      if (idSet.size !== order.length) return err('Дубликаты игроков');
+
+      const newPlayers = [];
+      for (const id of order) {
+        const p = r.players.find(x => x.id === id);
+        if (!p) return err('Игрок не найден');
+        newPlayers.push(p);
+      }
+
+      // Меняем места и команды (0,2 = A; 1,3 = B)
+      newPlayers.forEach((p, idx) => {
+        p.seat = idx;
+        p.team = idx % 2;
+      });
+      r.players = newPlayers;
+
+      log(r, `🎯 Хост переставил игроков`);
+      broadcast(r);
+    });
+
     // СТАРТ ИГРЫ
     socket.on('startGame', () => {
       const r = rooms.get(rid); if (!r) return;
