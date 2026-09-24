@@ -44,10 +44,13 @@ export function registerGameHandlers(io, socket, ctx) {
 
     const defenderDoc = docsOf(r)[defender.team];
 
-    // ✅ Ранги, которые уже на столе (включая битые)
+        // ✅ Ранги, которые уже на столе (включая битые + карты защитника)
     const ranksOnTable = new Set();
     if (r.field) {
-      for (const e of r.field.cards) ranksOnTable.add(e.card.r);
+      for (const e of r.field.cards) {
+        ranksOnTable.add(e.card.r);                       // карта атакующего
+        if (e.beatenBy) ranksOnTable.add(e.beatenBy.r);   // ← ФИКС: карта защитника
+      }
     }
 
     // ✅ ВАЛИДАЦИЯ карт
