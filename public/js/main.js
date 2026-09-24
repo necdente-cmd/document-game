@@ -5,6 +5,7 @@ import { renderCreate } from './screens/create.js';
 import { renderJoin } from './screens/join.js';
 import { renderTable } from './screens/table.js';
 import { startLobbyMusic, stopLobbyMusic } from './music.js';
+import { showTutorial, shouldShowTutorial } from './ui/tutorial.js';
 
 const app = document.getElementById('app');
 let currentScreen = 'welcome';
@@ -74,7 +75,7 @@ window.addEventListener('falsh', e => {
   setTimeout(() => el.remove(), 2200);
 });
 
-// === SPLASH (приветствие при заходе) ===
+// === SPLASH ===
 function hideSplash() {
   const sp = document.getElementById('splash');
   if (!sp) return;
@@ -87,7 +88,17 @@ if (shownSplash) {
   hideSplash();
 } else {
   sessionStorage.setItem('splashShown', '1');
-  setTimeout(hideSplash, 2800);
+  setTimeout(() => hideSplash(), 2800);
+}
+
+// === TUTORIAL (при первом заходе) ===
+// Ждём пока splash скроется, потом показываем туториал
+function maybeShowTutorialFirstTime() {
+  if (!shouldShowTutorial()) return;
+  const delay = shownSplash ? 300 : 3000;  // после splash (3 сек) или сразу
+  setTimeout(() => {
+    showTutorial();
+  }, delay);
 }
 
 if (state.me?.roomId) {
@@ -97,4 +108,5 @@ if (state.me?.roomId) {
   });
 } else {
   navigate('welcome');
+  maybeShowTutorialFirstTime();
 }

@@ -2,6 +2,7 @@ import { loadName } from '../state.js';
 import { showRules, showMail, showProfile } from '../ui/modals.js';
 import { toggleMusic, isMusicOn } from '../music.js';
 import { playSound } from '../sound.js';
+import { showTutorial } from '../ui/tutorial.js';
 
 export function renderWelcome(app, navigate) {
   const musicOn = isMusicOn();
@@ -20,6 +21,7 @@ export function renderWelcome(app, navigate) {
 
       <button id="goCreate" class="welcome-btn primary">🎮 Создать игру</button>
       <button id="goJoin"   class="welcome-btn secondary">🔗 Войти по коду</button>
+      <button id="goTutorial" class="welcome-btn tertiary">📚 Как играть</button>
 
       <div class="welcome-footer">
         <span class="welcome-friends">👥 Друзья</span>
@@ -30,6 +32,7 @@ export function renderWelcome(app, navigate) {
 
   document.getElementById('goCreate').onclick = () => { playSound('button'); navigate('create'); };
   document.getElementById('goJoin').onclick   = () => { playSound('button'); navigate('join'); };
+  document.getElementById('goTutorial').onclick = () => { playSound('button'); showTutorial(); };
   document.getElementById('btnRules').onclick = () => { playSound('button'); showRules(); };
   document.getElementById('btnMail').onclick  = () => { playSound('button'); showMail(); };
   document.getElementById('btnProfile').onclick = () => { playSound('button'); showProfile(); };
@@ -44,7 +47,6 @@ export function renderWelcome(app, navigate) {
     };
   }
 
-  // Тап по автору → модалка «О разработчике»
   const authorBtn = document.getElementById('authorBtn');
   if (authorBtn) {
     authorBtn.onclick = () => showAboutDev();

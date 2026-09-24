@@ -506,3 +506,15 @@ body.shake {
   30%, 50%, 70% { transform: translate3d(-5px, 0, 0); }
   40%, 60% { transform: translate3d(5px, 0, 0); }
 }
+
+/* ==================== КНОПКА ТУТОРИАЛА (welcome) ==================== */
+.welcome-btn.tertiary {
+  background: transparent;
+  color: var(--acc);
+  border: 2px solid var(--acc);
+  box-shadow: none;
+  margin-top: 4px;
+}
+.welcome-btn.tertiary:active {
+  background: rgba(241,196,15,.15);
+}
