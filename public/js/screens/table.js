@@ -11,6 +11,7 @@ import { EMOJIS } from '../emojis.js';
 import { playSound } from '../sound.js';
 import { toastErr, toastOk } from '../ui/toast.js';
 import { enableVoice, disableVoice, setMicOn } from '../voice.js';
+import { rankDisplay } from '../rank-display.js';
 
 let sortMode = 0;
 let infoOpen = false;
@@ -147,7 +148,6 @@ function playPendingFieldFly() {
   });
 }
 
-// ==================== СВАЙП-ИКОНКИ ====================
 function ensureSwipeIcons() {
   let el = document.getElementById('swipeIcons');
   if (!el) {
@@ -248,8 +248,8 @@ function showInfoModal() {
   const s = state.server;
   if (!s) return;
   const myTeam = s.myTeam;
-  const myDoc = s.docs[myTeam];
-  const oppDoc = s.docs[1 - myTeam];
+  const myDoc = rankDisplay(s.docs[myTeam]);
+  const oppDoc = rankDisplay(s.docs[1 - myTeam]);
   const el = document.createElement('div');
   el.className = 'info-modal';
   el.id = 'infoModal';
@@ -652,7 +652,6 @@ export function renderTable(app, navigate) {
       el.onclick = () => {
         const playerId = el.dataset.playerId;
         if (!playerId) return;
-
         if (!state.swapPick) {
           state.swapPick = playerId;
           playSound('button');
@@ -665,16 +664,13 @@ export function renderTable(app, navigate) {
           renderTable(app, navigate);
           return;
         }
-
         const p1 = s.players.find(p => p.id === state.swapPick);
         const p2 = s.players.find(p => p.id === playerId);
         if (!p1 || !p2) return;
-
         const sorted = s.players.slice().sort((a,b) => a.seat - b.seat);
         const order = sorted.map(p => p.id);
         order[p1.seat] = p2.id;
         order[p2.seat] = p1.id;
-
         state.swapPick = null;
         playSound('falsh');
         socket.emit('setSeatOrder', { order });
@@ -720,7 +716,6 @@ export function renderTable(app, navigate) {
 }
 
 function bindSwipeIconHandlers(app, navigate) {
-  // 🔃 Обновить
   const refreshBtn = document.getElementById('refreshBtn');
   if (refreshBtn) refreshBtn.onclick = () => {
     playSound('button');
@@ -730,7 +725,6 @@ function bindSwipeIconHandlers(app, navigate) {
     toastOk('🔄 Обновлено');
     setTimeout(hideSwipeIcons, 300);
   };
-
   const sortBtn = document.getElementById('sortBtn');
   if (sortBtn) sortBtn.onclick = () => {
     playSound('button'); hideSwipeIcons();

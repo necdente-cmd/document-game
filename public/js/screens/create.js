@@ -1,5 +1,6 @@
 import { loadName, saveName, saveMe, loadOpts, saveOpts, applyTheme, loadAvatar, saveAvatar, AVATARS } from '../state.js';
 import { socket } from '../socket.js';
+import { rankLadderDisplay } from '../rank-display.js';
 
 export function renderCreate(app, navigate) {
   const savedName = loadName();
@@ -28,6 +29,10 @@ export function renderCreate(app, navigate) {
   const avatarsHtml = AVATARS.map(a => `
     <div class="avatar-choice ${a===pickedAvatar?'sel':''}" data-avatar="${a}">${a}</div>
   `).join('');
+
+  // 🇷🇺 Русские названия ступеней
+  const ladderClassic = rankLadderDisplay(['6', '10', 'J', 'Q', 'K', 'A']);
+  const ladderShort   = rankLadderDisplay(['6', '10', 'Q', 'A']);
 
   const themesHtml = `
     <div class="theme-preview ${pickedTheme==='classic'?'sel':''}" data-theme-val="classic" title="Классика">
@@ -61,8 +66,8 @@ export function renderCreate(app, navigate) {
       <div class="choice-row" id="backPick">${backs}</div>
       <label>Ступени документов</label>
       <select id="docSet">
-        <option value="classic" ${docSet==='classic'?'selected':''}>6 · 10 · J · Q · K · A</option>
-        <option value="short"   ${docSet==='short'  ?'selected':''}>6 · 10 · Q · A</option>
+        <option value="classic" ${docSet==='classic'?'selected':''}>${ladderClassic}</option>
+        <option value="short"   ${docSet==='short'  ?'selected':''}>${ladderShort}</option>
       </select>
       <label>Тема стола</label>
       <div class="theme-grid" id="themePick">${themesHtml}</div>
@@ -94,7 +99,7 @@ export function renderCreate(app, navigate) {
     const el = e.target.closest('[data-theme-val]'); if (!el) return;
     pickedTheme = el.dataset.themeVal;
     [...document.querySelectorAll('#themePick .theme-preview')].forEach(x => x.classList.toggle('sel', x === el));
-    applyTheme(pickedTheme);   // сразу превью на всём экране
+    applyTheme(pickedTheme);
   };
 
   document.getElementById('backBtn').onclick = () => navigate('welcome');
