@@ -6,10 +6,14 @@ import { renderJoin } from './screens/join.js';
 import { renderTable } from './screens/table.js';
 import { startLobbyMusic, stopLobbyMusic } from './music.js';
 import { showTutorial, shouldShowTutorial } from './ui/tutorial.js';
+import { initI18n } from './i18n.js';
 
 const app = document.getElementById('app');
 let currentScreen = 'welcome';
 let navigating = false;
+
+// 🌐 Инициализация языка ДО всего остального
+initI18n();
 
 function renderScreen(screen) {
   app.dataset.screen = screen;
@@ -75,6 +79,13 @@ window.addEventListener('falsh', e => {
   setTimeout(() => el.remove(), 2200);
 });
 
+// 🌐 Смена языка — перерисовка текущего экрана
+window.addEventListener('lang-change-requested', () => {
+  renderScreen(currentScreen);
+  // Если открыт туториал — он и так покажет перевод при следующем открытии
+  // Модалки (правила, почта, профиль) — тоже подхватят при следующем открытии
+});
+
 // === SPLASH ===
 function hideSplash() {
   const sp = document.getElementById('splash');
@@ -92,10 +103,9 @@ if (shownSplash) {
 }
 
 // === TUTORIAL (при первом заходе) ===
-// Ждём пока splash скроется, потом показываем туториал
 function maybeShowTutorialFirstTime() {
   if (!shouldShowTutorial()) return;
-  const delay = shownSplash ? 300 : 3000;  // после splash (3 сек) или сразу
+  const delay = shownSplash ? 300 : 3000;
   setTimeout(() => {
     showTutorial();
   }, delay);
