@@ -1,6 +1,8 @@
 // 🎤 Голосовой чат (WebRTC mesh) — с TURN-сервером
 import { state } from './state.js';
 import { socket } from './socket.js';
+import { toastOk, toastErr } from './ui/toast.js';
+import { t } from './i18n.js';
 
 // Конфиг приходит с сервера (STUN + TURN с временными credentials)
 let ICE_CONFIG = null;
@@ -60,7 +62,7 @@ export async function enableVoice() {
     return false;
   }
 
-  localStream.getAudioTracks().forEach(t => t.enabled = !!state.micOn);
+  localStream.getAudioTracks().forEach(track => track.enabled = !!state.micOn);
   state.voiceActive = true;
 
   try {
@@ -97,7 +99,7 @@ export function disableVoice() {
   audioElements.clear();
 
   if (localStream) {
-    localStream.getTracks().forEach(t => t.stop());
+    localStream.getTracks().forEach(track => track.stop());
     localStream = null;
   }
 
@@ -112,7 +114,7 @@ export function disableVoice() {
 export function setMicOn(on) {
   state.micOn = !!on;
   if (localStream) {
-    localStream.getAudioTracks().forEach(t => t.enabled = state.micOn);
+    localStream.getAudioTracks().forEach(track => track.enabled = state.micOn);
   }
 }
 
