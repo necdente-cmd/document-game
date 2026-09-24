@@ -655,3 +655,39 @@ body.shake {
   .docset-grid { grid-template-columns: 1fr; }
   .step-chip { font-size: 11px; min-width: 20px; height: 22px; }
 }
+
+/* ==================== 🌐 ШРИФТ ДЛЯ КЫРГЫЗСКОГО ЯЗЫКА ==================== */
+/* Кыргызский — Times New Roman (кириллица + ң, ө, ү) */
+[data-lang="ky"],
+[data-lang="ky"] body,
+[data-lang="ky"] button,
+[data-lang="ky"] input,
+[data-lang="ky"] select,
+[data-lang="ky"] textarea,
+[data-lang="ky"] .splash-title,
+[data-lang="ky"] .welcome-title,
+[data-lang="ky"] .waiting-code,
+[data-lang="ky"] .champ-title,
+[data-lang="ky"] .tut-title,
+[data-lang="ky"] h1,
+[data-lang="ky"] h2,
+[data-lang="ky"] h3,
+[data-lang="ky"] h4,
+[data-lang="ky"] p,
+[data-lang="ky"] span,
+[data-lang="ky"] div {
+  font-family: 'Times New Roman', Times, serif !important;
+}
+
+/* Чуть увеличим кыргызский текст — Times чуть мельче */
+[data-lang="ky"] body {
+  font-size: 1.02em;
+}
+[data-lang="ky"] .welcome-title,
+[data-lang="ky"] .splash-title {
+  letter-spacing: 1px;
+}
+[data-lang="ky"] .tut-text {
+  font-size: 15px;
+  line-height: 1.65;
+}

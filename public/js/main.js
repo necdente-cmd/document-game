@@ -82,8 +82,6 @@ window.addEventListener('falsh', e => {
 // 🌐 Смена языка — перерисовка текущего экрана
 window.addEventListener('lang-change-requested', () => {
   renderScreen(currentScreen);
-  // Если открыт туториал — он и так покажет перевод при следующем открытии
-  // Модалки (правила, почта, профиль) — тоже подхватят при следующем открытии
 });
 
 // === SPLASH ===
