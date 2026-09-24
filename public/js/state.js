@@ -11,7 +11,10 @@ export const state = {
   soundOn: true,
   vibrationOn: true,
   micOn: false,
+  voiceActive: false,
+  voiceSpeakingSeats: [],
   lastState: {},
+  swapPick: null,   // 🎯 для tap-tap расстановки
 };
 
 export function loadMe() {
@@ -77,7 +80,6 @@ export function playerState(s, seat) {
   return '';
 }
 
-// Аватарки — большой набор для выбора
 export const AVATARS = [
   '😎','🦊','🐻','🐼','🦁','🐯','🐸','🐙','🦄','🐲','👽','🤖',
   '😺','🐨','🐷','🐔','🐵','🦉','🐺','🐗','🦝','🐹','🐰','🦅',

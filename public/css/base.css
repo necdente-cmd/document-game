@@ -495,3 +495,14 @@ button, input, select, textarea {
   font-size: 14px;
   cursor: pointer;
 }
+
+/* ==================== 💥 ВСТРЯСКА ЭКРАНА ПРИ ОШИБКЕ ==================== */
+body.shake {
+  animation: shakeAnim .35s cubic-bezier(.36,.07,.19,.97);
+}
+@keyframes shakeAnim {
+  10%, 90% { transform: translate3d(-2px, 0, 0); }
+  20%, 80% { transform: translate3d(3px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-5px, 0, 0); }
+  40%, 60% { transform: translate3d(5px, 0, 0); }
+}

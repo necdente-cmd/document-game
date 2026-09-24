@@ -1,5 +1,5 @@
 import { state, saveMe, applyTheme, playerState, getAvatar, savePrefs } from '../state.js';
-import { socket } from '../socket.js';
+import { socket, forceRefresh } from '../socket.js';
 import { cardHtml, backPath, esc, renderHandFan } from '../card.js';
 import { buildOverlays, bindOverlays } from '../ui/overlays.js';
 import { maybeShowChampion } from '../ui/champion.js';
@@ -17,7 +17,6 @@ let infoOpen = false;
 let iconsVisible = false;
 let iconsTimer = null;
 
-// ==================== АНИМАЦИЯ ПОЛЁТА КАРТЫ ====================
 function playPendingFly() {
   const pf = state.pendingFly;
   if (!pf) return;
@@ -47,19 +46,16 @@ function playPendingFly() {
   });
 }
 
-// ==================== АНИМАЦИЯ РАЗДАЧИ ====================
 function playDealAnimation() {
   if (!state.dealKey) return;
   const cards = document.querySelectorAll('.hand .card');
   if (!cards.length) return;
-
   const deckEl = document.querySelector('.deck-area');
   const deckRect = deckEl
     ? deckEl.getBoundingClientRect()
     : { left: 20, top: 20, width: 60, height: 90 };
   const deckCx = deckRect.left + deckRect.width / 2;
   const deckCy = deckRect.top  + deckRect.height / 2;
-
   cards.forEach((el, i) => {
     const finalTransform = el.style.transform || '';
     const r = el.getBoundingClientRect();
@@ -67,13 +63,10 @@ function playDealAnimation() {
     const cardCy = r.top  + r.height / 2;
     const dx = deckCx - cardCx;
     const dy = deckCy - cardCy;
-
     el.style.transition = 'none';
     el.style.transform = `translate(${dx}px, ${dy}px) scale(0.35) rotate(-180deg)`;
     el.style.opacity = '0';
-
     void el.offsetHeight;
-
     el.style.transition = 'transform 0.55s cubic-bezier(.2,.7,.3,1), opacity 0.35s';
     const delay = 60 + i * 65;
     setTimeout(() => {
@@ -84,7 +77,6 @@ function playDealAnimation() {
   });
 }
 
-// ==================== ЗАХВАТ ПОЗИЦИЙ КАРТ ПОЛЯ ====================
 function captureFieldForFly() {
   const fly = state.pendingFieldFly;
   if (!fly || fly.positions) return;
@@ -101,18 +93,15 @@ function captureFieldForFly() {
   });
 }
 
-// ==================== АНИМАЦИЯ УЛЁТА КАРТ ====================
 function playPendingFieldFly() {
   const fly = state.pendingFieldFly;
   if (!fly) return;
   state.pendingFieldFly = null;
   if (!fly.positions || !fly.positions.length) return;
-
   const tableEl = document.getElementById('table');
   const tableRect = tableEl
     ? tableEl.getBoundingClientRect()
     : { right: window.innerWidth, left: 0, top: 0, bottom: window.innerHeight };
-
   let targetCx, targetCy, rot;
   if (fly.type === 'pickup') {
     const defEl = document.querySelector(`.seat[data-seat="${fly.defenderSeat}"] .avatar`);
@@ -130,7 +119,6 @@ function playPendingFieldFly() {
     targetCy = tableRect.top + 80;
     rot = 25;
   }
-
   fly.positions.forEach((p, i) => {
     const img = document.createElement('img');
     img.src = p.src;
@@ -149,7 +137,6 @@ function playPendingFieldFly() {
       will-change: transform, opacity;
     `;
     document.body.appendChild(img);
-
     requestAnimationFrame(() => {
       const dx = targetCx - (p.left + p.w / 2);
       const dy = targetCy - (p.top  + p.h / 2);
@@ -168,6 +155,7 @@ function ensureSwipeIcons() {
     el.id = 'swipeIcons';
     el.className = 'swipe-icons';
     el.innerHTML = `
+      <button class="icon-btn" id="refreshBtn" title="Обновить">🔃</button>
       <button class="icon-btn" id="sortBtn" title="Сортировка">🔄</button>
       <button class="icon-btn" id="emojiToggle" title="Смайлик">😀</button>
       <button class="icon-btn" id="chatBtn" title="Чат">💬</button>
@@ -206,7 +194,7 @@ function showSwipeIcons() {
   el.classList.add('show');
   if (trig) trig.classList.add('hidden');
   if (iconsTimer) clearTimeout(iconsTimer);
-  iconsTimer = setTimeout(hideSwipeIcons, 3000);
+  iconsTimer = setTimeout(hideSwipeIcons, 4000);
 }
 
 function hideSwipeIcons() {
@@ -224,7 +212,6 @@ function setupSwipe() {
   if (swipeSetupDone) return;
   swipeSetupDone = true;
   let startX = 0, started = false;
-
   document.addEventListener('touchstart', (e) => {
     if (e.target.closest('.card')) return;
     if (e.target.closest('.swipe-icons')) return;
@@ -236,16 +223,13 @@ function setupSwipe() {
     const x = e.touches[0].clientX;
     if (x < 40) { startX = x; started = true; }
   }, { passive: true });
-
   document.addEventListener('touchmove', (e) => {
     if (!started) return;
     const dx = e.touches[0].clientX - startX;
     if (dx > 50) { showSwipeIcons(); started = false; }
     else if (dx < -30 && iconsVisible) { hideSwipeIcons(); started = false; }
   }, { passive: true });
-
   document.addEventListener('touchend', () => { started = false; }, { passive: true });
-
   document.addEventListener('click', (e) => {
     if (!iconsVisible) return;
     if (e.target.closest('.swipe-icons')) return;
@@ -255,13 +239,11 @@ function setupSwipe() {
     if (e.target.closest('.swipe-trigger')) return;
     hideSwipeIcons();
   }, true);
-
   document.addEventListener('click', (e) => {
     if (e.target.closest('#swipeTrigger')) showSwipeIcons();
   }, true);
 }
 
-// ==================== МОДАЛКА СВЕДЕНИЙ ====================
 function showInfoModal() {
   const s = state.server;
   if (!s) return;
@@ -287,7 +269,6 @@ function showInfoModal() {
   document.getElementById('infoClose').onclick = close;
 }
 
-// ==================== СОРТИРОВКА РУКИ ====================
 function sortHand(hand, myDoc, trumpSuit) {
   const RV = { '6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14 };
   const SO = { '♠':0, '♥':1, '♦':2, '♣':3 };
@@ -320,7 +301,6 @@ export function renderTable(app, navigate) {
   if (!s) return;
 
   captureFieldForFly();
-
   applyTheme(s.opts.theme);
   setupSwipe();
 
@@ -394,27 +374,25 @@ export function renderTable(app, navigate) {
         </div>
         ${playersCount === maxP ? `
           <div class="seat-order-block">
-            <div class="so-title">🎯 Расстановка${isHost ? ' (нажми чтобы изменить)' : ''}</div>
+            <div class="so-title">🎯 Расстановка${isHost ? ' (тапни двух игроков чтобы поменять)' : ''}</div>
             <div class="so-grid">
               ${[0,1,2,3].map(slot => {
                 const posName = ['A1','B2','A3','B4'][slot];
+                const teamCls = slot % 2 === 0 ? 'team-a' : 'team-b';
                 const playerAtSlot = s.players.find(p => p.seat === slot);
-                if (isHost) {
-                  const opts = s.players.map(pp =>
-                    `<option value="${pp.id}" ${pp.id === playerAtSlot?.id ? 'selected' : ''}>${esc(pp.name)}${pp.id === meP?.id ? ' (ты)' : ''}</option>`
-                  ).join('');
-                  return `
-                    <div class="so-row">
-                      <span class="so-label ${slot%2===0?'team-a':'team-b'}">${posName}</span>
-                      <select class="so-select" data-slot="${slot}">${opts}</select>
-                    </div>`;
-                } else {
-                  return `
-                    <div class="so-row">
-                      <span class="so-label ${slot%2===0?'team-a':'team-b'}">${posName}</span>
-                      <span class="so-value">${esc(playerAtSlot?.name || '—')}</span>
-                    </div>`;
-                }
+                if (!playerAtSlot) return '';
+                const avatar = getAvatar(playerAtSlot.seat);
+                const isMe = playerAtSlot.id === meP?.id;
+                const isPicked = state.swapPick === playerAtSlot.id;
+                const teamIcon = slot % 2 === 0 ? '★' : '✗';
+                const clickable = isHost ? 'so-clickable' : '';
+                return `
+                  <div class="so-player ${teamCls} ${isPicked ? 'picked' : ''} ${clickable}" data-player-id="${playerAtSlot.id}">
+                    <span class="so-pos">${posName}</span>
+                    <span class="so-avatar">${avatar}</span>
+                    <span class="so-name">${esc(playerAtSlot.name)}${isMe ? ' <small>(ты)</small>' : ''}</span>
+                    <span class="so-team">${teamIcon}</span>
+                  </div>`;
               }).join('')}
             </div>
           </div>
@@ -452,9 +430,10 @@ export function renderTable(app, navigate) {
     const stCls = st === 'бьёт' ? 'beat' : st === 'думает' ? 'think' : st === 'ходит' ? 'move'
                 : st === 'отошёл' ? 'out' : '';
     const isSpeaking = (state.voiceSpeakingSeats || []).includes(p.seat);
+    const isPartner = p.team === myTeam;
     return `
-      <div class="seat ${pos} ${p.seat===s.turnSeat?'active':''} ${p.out?'out':''} ${!p.connected?'offline':''} ${isSpeaking?'speaking':''}" data-seat="${p.seat}">
-        <div class="name">${esc(p.name)} ${p.team===myTeam?'★':'✗'}</div>
+      <div class="seat ${pos} ${p.seat===s.turnSeat?'active':''} ${p.out?'out':''} ${!p.connected?'offline':''} ${isSpeaking?'speaking':''} ${isPartner?'is-partner':'is-enemy'}" data-seat="${p.seat}">
+        <div class="name">${esc(p.name)} ${isPartner?'★':'✗'}</div>
         <div class="avatar">${getAvatar(p.seat)}</div>
         ${st ? `<div class="state ${stCls}">${st}</div>` : ''}
         ${isThisInPassed ? '<div class="pass-badge">⛔ Пас</div>' : ''}
@@ -667,29 +646,43 @@ export function renderTable(app, navigate) {
     };
   }
 
-  // 🎯 Расстановка игроков (хост)
-  const soSelects = document.querySelectorAll('.so-select');
-  soSelects.forEach(sel => {
-    sel.onchange = () => {
-      playSound('button');
-      const slot = parseInt(sel.dataset.slot);
-      const newPlayerId = sel.value;
-      const oldP = s.players.find(p => p.seat === slot);
-      if (!oldP || oldP.id === newPlayerId) return;
+  // 🎯 Tap-tap расстановка (хост)
+  if (meP?.isHost && s.phase === 'lobby') {
+    document.querySelectorAll('.so-player').forEach(el => {
+      el.onclick = () => {
+        const playerId = el.dataset.playerId;
+        if (!playerId) return;
 
-      const otherP = s.players.find(p => p.id === newPlayerId);
-      if (!otherP) return;
+        if (!state.swapPick) {
+          state.swapPick = playerId;
+          playSound('button');
+          renderTable(app, navigate);
+          return;
+        }
+        if (state.swapPick === playerId) {
+          state.swapPick = null;
+          playSound('button');
+          renderTable(app, navigate);
+          return;
+        }
 
-      // Собираем текущий порядок (по seat)
-      const sorted = s.players.slice().sort((a,b) => a.seat - b.seat);
-      const order = sorted.map(p => p.id);
-      // Меняем местами
-      order[slot] = newPlayerId;
-      order[otherP.seat] = oldP.id;
+        const p1 = s.players.find(p => p.id === state.swapPick);
+        const p2 = s.players.find(p => p.id === playerId);
+        if (!p1 || !p2) return;
 
-      socket.emit('setSeatOrder', { order });
-    };
-  });
+        const sorted = s.players.slice().sort((a,b) => a.seat - b.seat);
+        const order = sorted.map(p => p.id);
+        order[p1.seat] = p2.id;
+        order[p2.seat] = p1.id;
+
+        state.swapPick = null;
+        playSound('falsh');
+        socket.emit('setSeatOrder', { order });
+      };
+    });
+  } else {
+    state.swapPick = null;
+  }
 
   const st = g('startBtn'); if (st) st.onclick = () => { playSound('button'); socket.emit('startGame'); };
 
@@ -699,7 +692,6 @@ export function renderTable(app, navigate) {
   const sa = g('swapAskBtn');  if (sa) sa.onclick = () => { playSound('button'); socket.emit('swapAsk'); };
   const ps = g('passBtn');     if (ps) ps.onclick = () => { playSound('button'); socket.emit('passDocsRequest'); };
   const pas = g('pasBtn');     if (pas) pas.onclick = () => { playSound('button'); socket.emit('endAttack'); };
-
   const bi = g('bitoBtn');     if (bi) bi.onclick = () => { playSound('button'); socket.emit('bito'); };
 
   const eb = g('emojiBar');
@@ -728,6 +720,17 @@ export function renderTable(app, navigate) {
 }
 
 function bindSwipeIconHandlers(app, navigate) {
+  // 🔃 Обновить
+  const refreshBtn = document.getElementById('refreshBtn');
+  if (refreshBtn) refreshBtn.onclick = () => {
+    playSound('button');
+    refreshBtn.classList.add('spin');
+    setTimeout(() => refreshBtn.classList.remove('spin'), 800);
+    forceRefresh();
+    toastOk('🔄 Обновлено');
+    setTimeout(hideSwipeIcons, 300);
+  };
+
   const sortBtn = document.getElementById('sortBtn');
   if (sortBtn) sortBtn.onclick = () => {
     playSound('button'); hideSwipeIcons();

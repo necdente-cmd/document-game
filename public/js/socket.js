@@ -11,6 +11,24 @@ export const socket = io({
   timeout: 60000,
 });
 
+// ==================== 🔄 FORCE REFRESH ====================
+let hiddenAt = 0;
+
+export function forceRefresh() {
+  console.log('[refresh] forcing refresh, connected:', socket.connected);
+  if (socket.disconnected) {
+    socket.connect();
+    socket.once('connect', () => {
+      if (state.me?.roomId) socket.emit('syncState');
+      setTimeout(() => {
+        if (socket.connected && state.me?.roomId) socket.emit('syncState');
+      }, 400);
+    });
+  } else {
+    if (state.me?.roomId) socket.emit('syncState');
+  }
+}
+
 export function bindSocket(onStateChange) {
   socket.on('state', (s) => {
     const prev = state.server;
@@ -87,36 +105,47 @@ export function bindSocket(onStateChange) {
   socket.on('err', (m) => {
     toastErr(m);
     vibrate(100);
+    // 💥 Встряска экрана
+    document.body.classList.remove('shake');
+    void document.body.offsetWidth;
+    document.body.classList.add('shake');
+    setTimeout(() => document.body.classList.remove('shake'), 400);
   });
 
   socket.on('connect', () => {
     console.log('[socket] connected');
-    // При переподключении — просим свежий state (если мы в комнате)
-    if (state.me?.roomId) {
-      socket.emit('syncState');
-    }
+    if (state.me?.roomId) socket.emit('syncState');
   });
   socket.on('disconnect', () => console.log('[socket] disconnected'));
 
-  // ✅ Синхронизация при возврате из фона (мобильные)
+  // ==================== 🔄 СИНХРОНИЗАЦИЯ ПРИ ВОЗВРАТЕ ====================
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible') return;
+    if (document.visibilityState === 'hidden') {
+      hiddenAt = Date.now();
+      return;
+    }
+    // Вернулись в приложение
+    const hiddenMs = hiddenAt ? Date.now() - hiddenAt : 0;
+    hiddenAt = 0;
+    console.log('[visibility] returned after', hiddenMs, 'ms');
+
     if (socket.disconnected) {
-      socket.connect();
-    } else {
+      forceRefresh();
+    } else if (hiddenMs > 3000) {
+      // Были в фоне > 3 сек — полный refresh
+      forceRefresh();
+    } else if (state.me?.roomId) {
+      // Коротко уходили — просто запрос свежего state
       socket.emit('syncState');
     }
   });
 
   window.addEventListener('focus', () => {
     if (socket.disconnected) {
-      socket.connect();
-    } else {
+      forceRefresh();
+    } else if (state.me?.roomId) {
       socket.emit('syncState');
     }
-    setTimeout(() => {
-      if (socket.connected) socket.emit('syncState');
-    }, 500);
   });
 
   // 🎤 голосовой чат
