@@ -518,3 +518,140 @@ body.shake {
 .welcome-btn.tertiary:active {
   background: rgba(241,196,15,.15);
 }
+
+/* ==================== КНОПКА ТУТОРИАЛА (welcome) ==================== */
+.welcome-btn.tertiary {
+  background: transparent;
+  color: var(--acc);
+  border: 2px solid var(--acc);
+  box-shadow: none;
+  margin-top: 4px;
+}
+.welcome-btn.tertiary:active {
+  background: rgba(241,196,15,.15);
+}
+
+/* ==================== 🎴 КРАСИВЫЙ ВЫБОР СТУПЕНЕЙ ==================== */
+.docset-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+.docset-card {
+  padding: 12px 10px;
+  background: rgba(255,255,255,.05);
+  border: 2px solid rgba(255,255,255,.12);
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: center;
+  transition: all .18s ease;
+  user-select: none;
+  position: relative;
+  overflow: hidden;
+}
+.docset-card:hover {
+  background: rgba(255,255,255,.08);
+  border-color: rgba(255,255,255,.25);
+}
+.docset-card:active {
+  transform: scale(.97);
+}
+.docset-card.sel {
+  border-color: var(--acc);
+  background: rgba(241,196,15,.12);
+  box-shadow: 0 0 16px rgba(241,196,15,.35);
+}
+.docset-card.sel::after {
+  content: '✓';
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  color: var(--acc);
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.docset-name {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  margin-bottom: 8px;
+  color: #fff;
+}
+.docset-card.sel .docset-name {
+  color: var(--acc);
+}
+
+.docset-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-bottom: 6px;
+}
+.step-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 24px;
+  padding: 0 5px;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 900;
+  color: #fff;
+  font-family: 'Playfair', Georgia, serif;
+}
+.docset-card.sel .step-chip {
+  background: rgba(241,196,15,.2);
+  border-color: rgba(241,196,15,.5);
+  color: var(--acc);
+}
+.step-arrow {
+  color: rgba(255,255,255,.35);
+  font-size: 10px;
+  margin: 0 1px;
+}
+.docset-card.sel .step-arrow {
+  color: rgba(241,196,15,.6);
+}
+.docset-desc {
+  font-size: 10px;
+  opacity: .6;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* Paper тема */
+[data-theme="paper"] .docset-card {
+  background: rgba(0,0,0,.04);
+  border-color: rgba(0,0,0,.12);
+}
+[data-theme="paper"] .docset-card:hover {
+  background: rgba(0,0,0,.07);
+}
+[data-theme="paper"] .docset-card.sel {
+  background: rgba(184,134,11,.15);
+}
+[data-theme="paper"] .docset-name { color: #333; }
+[data-theme="paper"] .step-chip {
+  background: rgba(0,0,0,.06);
+  border-color: rgba(0,0,0,.15);
+  color: #333;
+}
+[data-theme="paper"] .docset-card.sel .step-chip {
+  background: rgba(184,134,11,.2);
+  border-color: rgba(184,134,11,.5);
+  color: #b8860b;
+}
+[data-theme="paper"] .step-arrow { color: rgba(0,0,0,.3); }
+
+/* Адаптив: узкие экраны */
+@media (max-width: 360px) {
+  .docset-grid { grid-template-columns: 1fr; }
+  .step-chip { font-size: 11px; min-width: 20px; height: 22px; }
+}

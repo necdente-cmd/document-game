@@ -2,7 +2,6 @@ import { loadName } from '../state.js';
 import { showRules, showMail, showProfile } from '../ui/modals.js';
 import { toggleMusic, isMusicOn } from '../music.js';
 import { playSound } from '../sound.js';
-import { showTutorial } from '../ui/tutorial.js';
 
 export function renderWelcome(app, navigate) {
   const musicOn = isMusicOn();
@@ -11,7 +10,6 @@ export function renderWelcome(app, navigate) {
     <div class="lobby" style="justify-content:center; min-height:100dvh; position:relative;">
       <div style="position:absolute; top:14px; right:14px; display:flex; gap:8px;">
         <button id="btnMusic"   class="icon-btn ${musicOn?'active':''}" title="Музыка">${musicOn ? '🎵' : '🔇'}</button>
-        <button id="btnRules"   class="icon-btn" title="Правила">📜</button>
         <button id="btnMail"    class="icon-btn" title="Почта">✉️</button>
         <button id="btnProfile" class="icon-btn" title="Профиль">🧑</button>
       </div>
@@ -30,11 +28,10 @@ export function renderWelcome(app, navigate) {
     </div>
   `;
 
-  document.getElementById('goCreate').onclick = () => { playSound('button'); navigate('create'); };
-  document.getElementById('goJoin').onclick   = () => { playSound('button'); navigate('join'); };
-  document.getElementById('goTutorial').onclick = () => { playSound('button'); showTutorial(); };
-  document.getElementById('btnRules').onclick = () => { playSound('button'); showRules(); };
-  document.getElementById('btnMail').onclick  = () => { playSound('button'); showMail(); };
+  document.getElementById('goCreate').onclick   = () => { playSound('button'); navigate('create'); };
+  document.getElementById('goJoin').onclick     = () => { playSound('button'); navigate('join'); };
+  document.getElementById('goTutorial').onclick = () => { playSound('button'); showRules(); };
+  document.getElementById('btnMail').onclick    = () => { playSound('button'); showMail(); };
   document.getElementById('btnProfile').onclick = () => { playSound('button'); showProfile(); };
 
   const musicBtn = document.getElementById('btnMusic');

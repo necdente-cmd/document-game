@@ -1,6 +1,6 @@
 import { loadName, saveName, saveMe, loadOpts, saveOpts, applyTheme, loadAvatar, saveAvatar, AVATARS } from '../state.js';
 import { socket } from '../socket.js';
-import { rankLadderDisplay } from '../rank-display.js';
+import { rankDisplay } from '../rank-display.js';
 
 export function renderCreate(app, navigate) {
   const savedName = loadName();
@@ -11,6 +11,7 @@ export function renderCreate(app, navigate) {
   const theme     = savedOpts.theme     || 'classic';
   let pickedAvatar = loadAvatar() || AVATARS[0];
   let pickedTheme  = theme;
+  let pickedDocSet = docSet;
 
   const backColors = ['black','blue','green','orange','purple','red'];
   const backs = backColors.map(c => `
@@ -30,9 +31,16 @@ export function renderCreate(app, navigate) {
     <div class="avatar-choice ${a===pickedAvatar?'sel':''}" data-avatar="${a}">${a}</div>
   `).join('');
 
-  // 🇷🇺 Русские названия ступеней
-  const ladderClassic = rankLadderDisplay(['6', '10', 'J', 'Q', 'K', 'A']);
-  const ladderShort   = rankLadderDisplay(['6', '10', 'Q', 'A']);
+  // 🎴 Ступени с русскими буквами
+  const classicSteps = ['6','10','J','Q','K','A'];
+  const shortSteps   = ['6','10','Q','A'];
+
+  function stepsHtml(steps) {
+    return steps.map((r, i) => `
+      <span class="step-chip">${rankDisplay(r)}</span>
+      ${i < steps.length - 1 ? '<span class="step-arrow">→</span>' : ''}
+    `).join('');
+  }
 
   const themesHtml = `
     <div class="theme-preview ${pickedTheme==='classic'?'sel':''}" data-theme-val="classic" title="Классика">
@@ -64,11 +72,21 @@ export function renderCreate(app, navigate) {
       <div class="choice-row" id="deckPick">${styles}</div>
       <label>Рубашка</label>
       <div class="choice-row" id="backPick">${backs}</div>
+
       <label>Ступени документов</label>
-      <select id="docSet">
-        <option value="classic" ${docSet==='classic'?'selected':''}>${ladderClassic}</option>
-        <option value="short"   ${docSet==='short'  ?'selected':''}>${ladderShort}</option>
-      </select>
+      <div class="docset-grid" id="docsetPick">
+        <div class="docset-card ${pickedDocSet==='classic'?'sel':''}" data-docset="classic">
+          <div class="docset-name">Классическая</div>
+          <div class="docset-steps">${stepsHtml(classicSteps)}</div>
+          <div class="docset-desc">6 ступеней</div>
+        </div>
+        <div class="docset-card ${pickedDocSet==='short'?'sel':''}" data-docset="short">
+          <div class="docset-name">Короткая</div>
+          <div class="docset-steps">${stepsHtml(shortSteps)}</div>
+          <div class="docset-desc">4 ступени</div>
+        </div>
+      </div>
+
       <label>Тема стола</label>
       <div class="theme-grid" id="themePick">${themesHtml}</div>
       <button id="createBtn" style="padding:16px; margin-top:12px;">🎮 Создать комнату</button>
@@ -94,7 +112,14 @@ export function renderCreate(app, navigate) {
     [...document.querySelectorAll('#backPick .choice')].forEach(x => x.classList.toggle('sel', x === el));
   };
 
-  // ===== Выбор темы =====
+  // 🎴 Выбор ступеней
+  document.getElementById('docsetPick').onclick = e => {
+    const el = e.target.closest('[data-docset]'); if (!el) return;
+    pickedDocSet = el.dataset.docset;
+    [...document.querySelectorAll('#docsetPick .docset-card')].forEach(x => x.classList.toggle('sel', x === el));
+  };
+
+  // Выбор темы
   document.getElementById('themePick').onclick = e => {
     const el = e.target.closest('[data-theme-val]'); if (!el) return;
     pickedTheme = el.dataset.themeVal;
@@ -109,7 +134,7 @@ export function renderCreate(app, navigate) {
     saveAvatar(pickedAvatar);
     const opts = {
       maxPlayers: 4,
-      docSet: document.getElementById('docSet').value,
+      docSet: pickedDocSet,
       theme: pickedTheme,
       deckStyle: pickedDeck,
       backColor: pickedBack,
