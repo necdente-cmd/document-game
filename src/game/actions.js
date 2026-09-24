@@ -17,13 +17,9 @@ export function registerGameHandlers(io, socket, ctx) {
     if (!cardIds?.length) return err('Не выбраны карты');
 
     const myDoc = docsOf(r)[p.team];
-    for (const id of cardIds) {
-      const c = p.hand.find(x => x.id === id);
-      if (!c) return err('Карты нет в руке');
-      if (c.r === myDoc) return err(`Своим документом (${myDoc}) нельзя`);
-    }
 
     let defenderSeat;
+    let isFirstAttack = false;
     if (r.field) {
       const attacker = r.field.attacker;
       const partnerSeat = partnerOf(attacker);
@@ -31,6 +27,7 @@ export function registerGameHandlers(io, socket, ctx) {
       if (r.field.passedSeats.includes(p.seat)) return err('Вы уже сказали «Пас»');
       defenderSeat = r.field.defender;
     } else {
+      isFirstAttack = true;
       if (r.turnSeat !== p.seat) return err('Не ваш ход');
       if (r.forcedTarget != null && r.players[r.forcedTarget] && !r.players[r.forcedTarget].out) {
         defenderSeat = r.forcedTarget;
@@ -45,7 +42,47 @@ export function registerGameHandlers(io, socket, ctx) {
     if (!defender || defender.out) return err('Защитник недоступен');
     if (!defender.connected) return err(`⏳ ${defender.name} отошёл — ждём возвращения`);
 
-    // «Не поместится в руках»
+    const defenderDoc = docsOf(r)[defender.team];
+
+    // ✅ Ранги, которые уже на столе (включая битые)
+    const ranksOnTable = new Set();
+    if (r.field) {
+      for (const e of r.field.cards) ranksOnTable.add(e.card.r);
+    }
+
+    // ✅ ВАЛИДАЦИЯ карт
+    for (const id of cardIds) {
+      const c = p.hand.find(x => x.id === id);
+      if (!c) return err('Карты нет в руке');
+
+      // Свой документ — нельзя заходить и нельзя подкидывать
+      if (c.r === myDoc) return err(`Своим документом (${myDoc}) нельзя`);
+
+      // Проверка ранга при ПОДКИДЫВАНИИ
+      if (!isFirstAttack) {
+        const isForced = (c.r === defenderDoc);
+        if (!isForced && !ranksOnTable.has(c.r)) {
+          const allowed = [...ranksOnTable];
+          const extra = (defenderDoc !== myDoc && !ranksOnTable.has(defenderDoc))
+            ? ` или ${defenderDoc}` : '';
+          return err(`Можно подкидывать только: ${allowed.join(', ')}${extra}`);
+        }
+      }
+    }
+
+    // ✅ ФИКС: при первой атаке несколько карт — только одного ранга
+    if (isFirstAttack && cardIds.length > 1) {
+      const ranks = new Set();
+      for (const id of cardIds) {
+        const c = p.hand.find(x => x.id === id);
+        if (c) ranks.add(c.r);
+      }
+      if (ranks.size > 1) {
+        return err('При первой атаке можно заходить только картами одного ранга');
+      }
+    }
+
+    // ✅ «Не поместится в руках»
     const current = r.field ? r.field.cards.length : 0;
     const limit = r.field
       ? r.field.limit
@@ -66,8 +103,6 @@ export function registerGameHandlers(io, socket, ctx) {
       r.lastTarget = defenderSeat;
     }
 
-    const defenderDoc = docsOf(r)[defender.team];
-
     for (const id of cardIds) {
       const idx = p.hand.findIndex(x => x.id === id);
       const c = p.hand.splice(idx, 1)[0];
@@ -76,10 +111,6 @@ export function registerGameHandlers(io, socket, ctx) {
     }
 
     log(r, `${p.name} → ${cardIds.length} карт(ы) → ${defender.name}`);
-
-    // ✅ ФИКС: НЕ помечаем out здесь — сделаем это после добора в drawTo
-    // (проверка checkTeamExitWin тоже убирается — она сработает после взятки)
-
     broadcast(r);
   });
 
@@ -105,77 +136,6 @@ export function registerGameHandlers(io, socket, ctx) {
     broadcast(r);
   });
 
-  // ==================== ФАЛЬШ ====================
-  socket.on('falsh', ({ cardId }) => {
-    const r = rooms.get(getRid()); if (!r || !r.field) return;
-    const p = getMe(); if (!p || r.field.defender !== p.seat) return err('Не вы защищаетесь');
-    if (r.pendingFalsh) return err('Уже есть запрос на фальш');
-
-    const beatenCount = r.field.cards.filter(x => x.beatenBy).length;
-    if (beatenCount === 0) return err('Сначала побейте хотя бы одну карту');
-
-    const idx = r.field.cards.findIndex(x => x.card.id === cardId && !x.beatenBy);
-    if (idx < 0) return err('Эту карту нельзя вернуть');
-
-    if (r.field.cards[idx].isForced) return err('Навязанный документ нельзя вернуть');
-
-    const entry = r.field.cards[idx];
-    const owner = r.players[entry.fromSeat];
-    if (!owner) return err('Хозяин карты не найден');
-    r.pendingFalsh = {
-      cardId: entry.card.id,
-      defender: p.seat,
-      owner: entry.fromSeat,
-    };
-    log(r, `${p.name} требует фальш на ${entry.card.r}${entry.card.s} (хозяин ${owner.name})`);
-    broadcast(r);
-  });
-
-  socket.on('falshAccept', () => {
-    const r = rooms.get(getRid()); if (!r || !r.pendingFalsh) return;
-    const p = getMe(); if (!p) return;
-    if (p.seat !== r.pendingFalsh.owner) return err('Только хозяин карты решает');
-
-    const cardId = r.pendingFalsh.cardId;
-    const defenderSeat = r.pendingFalsh.defender;
-    const attackerSeat = r.field.attacker;
-
-    const idx = r.field.cards.findIndex(x => x.card.id === cardId && !x.beatenBy);
-    if (idx < 0) { r.pendingFalsh = null; return broadcast(r); }
-    const entry = r.field.cards[idx];
-    const card = entry.card;
-    const owner = r.players[entry.fromSeat];
-    const defender = r.players[defenderSeat];
-
-    owner.hand.push(card);
-    if (owner.out) owner.out = false;
-    r.field.cards.splice(idx, 1);
-    r.pendingFalsh = null;
-
-    r.players.forEach(x => io.to(x.id).emit('falsh', {
-      byName: defender ? defender.name : '?',
-      targetName: owner.name,
-      card: { r: card.r, s: card.s },
-    }));
-
-    if (r.field.cards.length === 0) {
-      r.field = null;
-      r.turnSeat = attackerSeat;
-      r.forcedTarget = defenderSeat;
-    }
-    log(r, `${p.name} принял фальш → ${card.r}${card.s} уходит обратно.`);
-    broadcast(r);
-  });
-
-  socket.on('falshReject', () => {
-    const r = rooms.get(getRid()); if (!r || !r.pendingFalsh) return;
-    const p = getMe(); if (!p) return;
-    if (p.seat !== r.pendingFalsh.owner) return err('Только хозяин карты решает');
-    log(r, `${p.name} отказал в фальше`);
-    r.pendingFalsh = null;
-    broadcast(r);
-  });
-
   // ==================== ПОДНЯТЬ ВСЁ ====================
   socket.on('pickUp', () => {
     const r = rooms.get(getRid()); if (!r || !r.field) return;
@@ -194,7 +154,6 @@ export function registerGameHandlers(io, socket, ctx) {
     r.forcedTarget = null;
     drawTo(r, attackerSeat);
     log(r, `${p.name} поднял. Ход у ${r.players[r.turnSeat].name}`);
-    // ✅ ФИКС: проверяем "оба вышли" после добора
     if (checkTeamExitWin(r)) return broadcast(r);
     broadcast(r);
   });
@@ -229,7 +188,6 @@ export function registerGameHandlers(io, socket, ctx) {
     r.lastTarget = null;
     drawTo(r, attackerSeat);
     log(r, `${p.name}: «Бито!» Ход у ${r.players[r.turnSeat].name}`);
-    // ✅ ФИКС: проверяем "оба вышли" после добора
     if (checkTeamExitWin(r)) return broadcast(r);
     broadcast(r);
   });
