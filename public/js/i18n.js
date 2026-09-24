@@ -336,13 +336,13 @@ const KY = {
   'join.enterCode': 'Кодду киргизиңиз',
 
   'lobby.roomCode': 'Бөлмөнүн коду',
-  'lobby.copyCode': 'Көчүрүү үчүн таптаңыз',
+  'lobby.copyCode': 'Көчүрүү үчүн басыңыз',
   'lobby.players': 'оюнчу',
   'lobby.waitingPlayers': 'Оюнчуларды күтүп жатабыз…',
   'lobby.waitingHost': 'Хостту күтүп жатабыз…',
   'lobby.startGame': '▶ Оюнду баштоо',
   'lobby.seating': '🎯 Орунчуларды жайгаштыруу',
-  'lobby.seatingHint': '(эки оюнчуну таптап алмаштырыңыз)',
+  'lobby.seatingHint': '(эки оюнчуну тандап алмаштырыңыз)',
   'lobby.you': '(сиз)',
   'lobby.host': 'Хост',
   'lobby.waitingSlot': 'Күтүп жатабыз…',
@@ -457,11 +457,11 @@ const KY = {
   'tut.s3.emoji': '👆',
   'tut.s3.title': 'Кантип жүрүү керек',
   'tut.s3.subtitle': 'Карта менен чабуу',
-  'tut.s3.text': 'Өз кезегиңизде колуңуздагы картаны столдун ортосуна тартыңыз. Же аны таптап, анан талааны таптаңыз.\n\nЭсиңизде болсун: өз документиңиз менен кирүү болбойт! Документти чабууга гана болот (жана козыр менен гана).',
+  'tut.s3.text': 'Өз кезегиңизде колуңуздагы картаны столдун ортосуна тартыңыз. Же аны басып, анан талааны басыңыз.\n\nЭсиңизде болсун: өз документиңиз менен кирүү болбойт! Документти чабууга гана болот (жана козыр менен гана).',
   'tut.s4.emoji': '🛡️',
   'tut.s4.title': 'Кантип коргонуу керек',
   'tut.s4.subtitle': 'Баары же эч нерсе',
-  'tut.s4.text': 'Сизге чабуул кылганда, же бардык карталарды чабасыз, же баарын көтөрөсүз.\n\nКантип чабуу керек: душмандын картасын таптаңыз, анан колуңуздагы өз картаңызды таптаңыз. Ылайыктуу карталар жашыл түстө белгиленет.',
+  'tut.s4.text': 'Сизге чабуул кылганда, же бардык карталарды чабасыз, же баарын көтөрөсүз.\n\nКантип чабуу керек: душмандын картасын басыңыз, анан колуңуздагы өз картаңызды басыңыз. Ылайыктуу карталар жашыл түстө белгиленет.',
   'tut.s5.emoji': '✨',
   'tut.s5.title': 'Өзгөчө эрежелер',
   'tut.s5.subtitle': 'Алмашуу · Өткөрүү',
@@ -590,4 +590,64 @@ export function t(key, params = {}) {
 export function toggleLang() {
   setLang(currentLang === 'ru' ? 'ky' : 'ru');
   return currentLang;
+}
+
+// ==================== ОБРАТНЫЙ ПЕРЕВОД СЕРВЕРНЫХ СООБЩЕНИЙ ====================
+// Сервер шлёт сообщения на русском. Переводим их через regexp-маппинг.
+
+// Ключи err.* и их русские шаблоны с {var}
+const ERR_KEYS = [
+  'err.roomNotFound', 'err.roomFull', 'err.gameStarted', 'err.onlyHost',
+  'err.needPlayers', 'err.notYourTurn', 'err.noCardsSelected', 'err.cardNotInHand',
+  'err.ownDocCantPlay', 'err.onlyAttackerOrPartner', 'err.youPassed', 'err.noTarget',
+  'err.defenderUnavailable', 'err.defenderOffline', 'err.maxCards',
+  'err.cantBeatOwnDoc', 'err.ownDocOnlyTrump', 'err.doesntBeat', 'err.notDefending',
+  'err.yourDocPickUpAll', 'err.forcedDocPickUpAll', 'err.waitBothPass', 'err.notAllBeaten',
+  'err.docOnTable', 'err.onlyDocsTransfer', 'err.partnerOut', 'err.onlyOpponentConfirms',
+  'err.onlyOpponentCancels', 'err.cantDuringTurn', 'err.alreadyPending', 'err.swapUsed',
+  'err.partnerStillInGame', 'err.youNotOut', 'err.partnerAlsoOut', 'err.notPartnersTurn',
+  'err.notYourDecision', 'err.hasRegularCards', 'err.partnerInGameTransfer',
+  'err.waitConfirmation', 'err.onlyHostSeating', 'err.onlyLobby', 'err.wrongFormat',
+  'err.wrongPlayerCount', 'err.duplicatePlayers', 'err.playerNotFound',
+  'err.notYourTeamChooses', 'err.wrongPlayer', 'err.gameNotOver', 'err.sameRankFirstAttack',
+];
+
+// Кэш скомпилированных регэкспов
+let _errPatterns = null;
+
+function buildErrPatterns() {
+  if (_errPatterns) return _errPatterns;
+  _errPatterns = ERR_KEYS.map(key => {
+    const ruTemplate = RU[key];
+    if (!ruTemplate) return null;
+    // Экранируем всё, потом заменяем экранированные {var} на группы захвата
+    let escaped = ruTemplate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Заменяем \{var\} на (.+?)
+    escaped = escaped.replace(/\\\{(\w+)\\\}/g, '(.+?)');
+    return {
+      key,
+      re: new RegExp('^' + escaped + '$'),
+      vars: [...ruTemplate.matchAll(/\{(\w+)\}/g)].map(m => m[1]),
+    };
+  }).filter(Boolean);
+  return _errPatterns;
+}
+
+// Перевести серверное сообщение. Если не нашли — вернуть как есть.
+export function translateServerMsg(msg) {
+  if (!msg || typeof msg !== 'string') return msg;
+  if (currentLang === 'ru') return msg;
+
+  const trimmed = msg.trim();
+  const patterns = buildErrPatterns();
+
+  for (const { key, re, vars } of patterns) {
+    const m = trimmed.match(re);
+    if (m) {
+      const params = {};
+      vars.forEach((v, i) => { params[v] = m[i + 1]; });
+      return t(key, params);
+    }
+  }
+  return msg;
 }
