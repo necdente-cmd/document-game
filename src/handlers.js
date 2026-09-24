@@ -3,6 +3,7 @@ import { rooms, newRoom, log, clearDisconnectTimer, pub } from './rooms.js';
 import { startRound } from './game/round.js';
 import { registerGameHandlers } from './game/actions.js';
 import { DISCONNECT_TIMEOUT_MS } from './constants.js';
+import { getIceServers } from './turn.js';
 
 export function setupHandlers(io, broadcast) {
   io.on('connection', (socket) => {
@@ -16,6 +17,16 @@ export function setupHandlers(io, broadcast) {
     const err = (m) => socket.emit('err', m);
 
     const ctx = { rooms, broadcast, err, getMe, getRid: () => rid };
+
+    // ==================== 🔐 TURN credentials ====================
+    socket.on('get-ice-servers', () => {
+      try {
+        const servers = getIceServers();
+        socket.emit('ice-servers', servers);
+      } catch (e) {
+        console.error('[turn] getIceServers error:', e);
+      }
+    });
 
     // СОЗДАНИЕ КОМНАТЫ
     socket.on('createRoom', ({ name, opts }, cb) => {
