@@ -75,6 +75,7 @@ export function pub(r, forId) {
         connected: p.connected, out: p.out,
         isHost: p.id === r.hostId,
         avatar: p.avatar || '',
+        voiceEnabled: !!p.voiceEnabled,
       };
     }),
     myHand: me ? me.hand : [],

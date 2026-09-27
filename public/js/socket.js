@@ -39,11 +39,18 @@ export function forceRefresh() {
           avatar: state.me.avatar,
         }, (r) => {
           reconnecting = false;
-          if (r && r.ok) {
+                    if (r && r.ok) {
             state.me.id = r.playerId;
             console.log('[refresh] ✅ rejoined, id:', r.playerId);
             setTimeout(() => socket.emit('syncState'), 200);
             toastOk(t('toast.synced'));
+
+            // 🔊 Восстанавливаем голос если был активен
+            if (state.voiceActive || state.micOn) {
+              import('./voice.js').then(m => {
+                m.restartVoice().catch(e => console.warn('[refresh] voice restart', e));
+              });
+            }
           } else {
             console.warn('[refresh] ❌ rejoin failed:', r?.err);
             saveMe(null);

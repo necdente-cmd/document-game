@@ -10,7 +10,10 @@ import { initDrag } from '../drag.js';
 import { EMOJIS } from '../emojis.js';
 import { playSound } from '../sound.js';
 import { toastErr, toastOk } from '../ui/toast.js';
-import { enableVoice, disableVoice, setMicOn, unlockAudio } from '../voice.js';
+import {
+  enableVoice, disableVoice, setMicOn, unlockAudio,
+  restartVoice, getVoiceDebugInfo, getAudioElements, streamIsLivePublic,
+} from '../voice.js';
 import { rankDisplay } from '../rank-display.js';
 import { t } from '../i18n.js';
 
@@ -280,7 +283,8 @@ function showVoiceDebug() {
     <div class="simple-modal-inner" style="max-width:600px; font-family:monospace; font-size:12px;">
       <h3 style="font-family:inherit;">🧪 Диагностика голосового чата</h3>
       <div id="debugContent" style="max-height:70vh; overflow-y:auto; background:#000; color:#0f0; padding:12px; border-radius:8px; line-height:1.5; white-space:pre-wrap; word-break:break-all;"></div>
-      <div style="margin-top:12px; display:flex; gap:8px;">
+      <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="simple-modal-close-btn" id="debugRestart" style="background:#e67e22; color:#fff;">🔄 Перезапустить голос</button>
         <button class="simple-modal-close-btn" id="debugCopy" style="background:#3498db; color:#fff;">📋 Копировать</button>
         <button class="simple-modal-close-btn" id="debugClose">Закрыть</button>
       </div>
@@ -296,17 +300,30 @@ function showVoiceDebug() {
       setTimeout(() => document.getElementById('debugCopy').textContent = '📋 Копировать', 1500);
     });
   };
+  document.getElementById('debugRestart').onclick = async () => {
+    if (!confirm('Перезапустить голосовой чат? Микрофон будет пересоздан.')) return;
+    const btn = document.getElementById('debugRestart');
+    btn.textContent = '⏳ Перезапуск…';
+    try {
+      await restartVoice();
+      btn.textContent = '✅ Готово';
+      setTimeout(() => { el.remove(); }, 1000);
+    } catch (e) {
+      btn.textContent = '❌ Ошибка';
+      console.error(e);
+    }
+  };
 
   let info = '';
   info += '=== ДИАГНОСТИКА VOICE ===\n';
   info += 'Time: ' + new Date().toLocaleTimeString() + '\n\n';
-
   info += '=== USER AGENT ===\n';
   info += navigator.userAgent + '\n\n';
 
   info += '=== MIC STATE ===\n';
   info += 'state.micOn: ' + (state.micOn ? '✅' : '❌') + '\n';
-  info += 'state.voiceActive: ' + (state.voiceActive ? '✅' : '❌') + '\n\n';
+  info += 'state.voiceActive: ' + (state.voiceActive ? '✅' : '❌') + '\n';
+  info += 'streamIsLive: ' + (streamIsLivePublic() ? '✅' : '❌') + '\n\n';
 
   info += '=== SOCKET ===\n';
   info += 'Connected: ' + (window.socket?.connected ? '✅' : '❌') + '\n';
@@ -325,24 +342,33 @@ function showVoiceDebug() {
   info += '\n';
 
   info += '=== ACTIVE PEERS ===\n';
-  if (window.__voicePeers) {
-    let count = 0;
-    for (const [id, entry] of window.__voicePeers) {
-      count++;
-      info += `  ${id}:\n`;
-      info += `    ICE: ${entry.pc.iceConnectionState}\n`;
-      info += `    Conn: ${entry.pc.connectionState}\n`;
-      info += `    Signal: ${entry.pc.signalingState}\n`;
-    }
-    if (count === 0) info += '  — нет активных соединений\n';
+  const peersDebug = getVoiceDebugInfo();
+  if (peersDebug.length === 0) {
+    info += '  — нет активных соединений\n';
   } else {
-    info += '  window.__voicePeers не доступен\n';
+    peersDebug.forEach(p => {
+      info += `  ${p.id}: ICE=${p.ice}, Conn=${p.conn}, Signal=${p.signal}\n`;
+    });
+  }
+  info += '\n';
+
+  info += '=== AUDIO ELEMENTS ===\n';
+  const audios = getAudioElements();
+  if (audios.length === 0) {
+    info += '  — нет audio элементов\n';
+  } else {
+    audios.forEach(a => {
+      info += `  ${a.id}: paused=${a.paused} muted=${a.muted} vol=${a.volume} hasSrc=${a.hasSrc} tracks=${a.srcTracks}\n`;
+    });
   }
   info += '\n';
 
   info += '=== TURN CREDENTIALS ===\n';
   fetch('/api/turn-test')
-    .then(r => r.json())
+    .then(r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
     .then(data => {
       info += '✅ Ответ:\n' + JSON.stringify(data, null, 2) + '\n\n';
       updateDebugContent(info);
@@ -358,7 +384,6 @@ function showVoiceDebug() {
       const tracks = stream.getAudioTracks();
       info += '✅ getUserMedia OK, tracks: ' + tracks.length + '\n';
       tracks.forEach(t => {
-        const settings = t.getSettings();
         info += `  ${t.label || 'audio'} enabled=${t.enabled} muted=${t.muted}\n`;
       });
       stream.getTracks().forEach(t => t.stop());
@@ -368,6 +393,8 @@ function showVoiceDebug() {
       info += '❌ getUserMedia FAIL: ' + e.name + ' — ' + e.message + '\n';
       updateDebugContent(info);
     });
+
+  updateDebugContent(info);
 
   function updateDebugContent(text) {
     const content = document.getElementById('debugContent');
@@ -447,6 +474,7 @@ export function renderTable(app, navigate) {
   const myTurnNow = isPlaying && isMyTurn && !iAmOut && !s.pendingPass && !s.pendingSwap;
   const iAmDefending = isPlaying && canDefend && !s.pendingPass && !s.pendingSwap;
 
+  // ==================== ЛОББИ ====================
   let lobbyBar = '';
   if (s.phase === 'lobby') {
     const playersCount = s.players.length;

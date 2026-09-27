@@ -86,13 +86,22 @@ export function setupAdminRoutes(app) {
   });
 
   // ==================== ПУБЛИЧНЫЙ API ДЛЯ ИГРОКОВ ====================
-  // (без пароля — чтобы клиент мог получать письма)
   app.get('/api/mails', async (req, res) => {
     try {
       const mails = await getAllMails(100);
       res.json(mails);
     } catch (e) {
       res.status(500).json([]);
+    }
+  });
+
+  // ⚠️ ПУБЛИЧНЫЙ endpoint для диагностики TURN (без пароля)
+  app.get('/api/turn-test', async (req, res) => {
+    try {
+      const { getIceServers } = await import('./turn.js');
+      res.json(getIceServers());
+    } catch (e) {
+      res.status(500).json({ err: e.message });
     }
   });
 
