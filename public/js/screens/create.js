@@ -20,12 +20,27 @@ export function renderCreate(app, navigate) {
       <img src="/cards/${c}_back_suits_dark.png" alt="${c}">
     </div>`).join('');
 
+  // 5 стилей колоды — превью Q♥ (12♥)
   const styles = `
     <div class="choice preview-card ${deckStyle==='figures'?'sel':''}" data-deck="figures">
       <img src="/cards/card_heart_12.png" alt="figures">
+      <div class="deck-label">${t('create.deckFigures')}</div>
     </div>
     <div class="choice preview-card ${deckStyle==='simple'?'sel':''}" data-deck="simple">
       <img src="/cards/simplecard_heart_12.png" alt="simple">
+      <div class="deck-label">${t('create.deckSimple')}</div>
+    </div>
+    <div class="choice preview-card ${deckStyle==='alt1'?'sel':''}" data-deck="alt1">
+      <img src="/cards-alt1/12h.png" alt="alt1">
+      <div class="deck-label">${t('create.deckAlt1')}</div>
+    </div>
+    <div class="choice preview-card ${deckStyle==='alt2'?'sel':''}" data-deck="alt2">
+      <img src="/cards-alt2/12h.png" alt="alt2">
+      <div class="deck-label">${t('create.deckAlt2')}</div>
+    </div>
+    <div class="choice preview-card ${deckStyle==='alt3'?'sel':''}" data-deck="alt3">
+      <img src="/cards-alt3/queen_of_hearts.png" alt="alt3">
+      <div class="deck-label">${t('create.deckAlt3')}</div>
     </div>`;
 
   const classicSteps = ['6','10','J','Q','K','A'];
@@ -57,6 +72,9 @@ export function renderCreate(app, navigate) {
     </div>
   `;
 
+  // Скрывать ли секцию "Рубашка" (у alt1/alt2 свои рубашки)
+  const showBackSection = (deckStyle === 'figures' || deckStyle === 'simple' || deckStyle === 'alt3');
+
   app.innerHTML = `
     <div class="lobby">
       <h2 style="text-align:center;">${t('create.title')}</h2>
@@ -65,9 +83,12 @@ export function renderCreate(app, navigate) {
       <label>${t('create.avatar')}</label>
       ${renderAvatarPicker()}
       <label>${t('create.deckStyle')}</label>
-      <div class="choice-row" id="deckPick">${styles}</div>
-      <label>${t('create.backColor')}</label>
-      <div class="choice-row" id="backPick">${backs}</div>
+      <div class="choice-row deck-row" id="deckPick">${styles}</div>
+
+      <div id="backSection" style="${showBackSection ? '' : 'display:none'}">
+        <label>${t('create.backColor')}</label>
+        <div class="choice-row" id="backPick">${backs}</div>
+      </div>
 
       <label>${t('create.docSteps')}</label>
       <div class="docset-grid" id="docsetPick">
@@ -98,23 +119,30 @@ export function renderCreate(app, navigate) {
     const el = e.target.closest('[data-deck]'); if (!el) return;
     pickedDeck = el.dataset.deck;
     [...document.querySelectorAll('#deckPick .choice')].forEach(x => x.classList.toggle('sel', x === el));
+    // Скрываем "Рубашку" для alt1/alt2 — у них своя рубашка
+    const show = (pickedDeck === 'figures' || pickedDeck === 'simple' || pickedDeck === 'alt3');
+    document.getElementById('backSection').style.display = show ? '' : 'none';
   };
+
   document.getElementById('backPick').onclick = e => {
     const el = e.target.closest('[data-back]'); if (!el) return;
     pickedBack = el.dataset.back;
     [...document.querySelectorAll('#backPick .choice')].forEach(x => x.classList.toggle('sel', x === el));
   };
+
   document.getElementById('docsetPick').onclick = e => {
     const el = e.target.closest('[data-docset]'); if (!el) return;
     pickedDocSet = el.dataset.docset;
     [...document.querySelectorAll('#docsetPick .docset-card')].forEach(x => x.classList.toggle('sel', x === el));
   };
+
   document.getElementById('themePick').onclick = e => {
     const el = e.target.closest('[data-theme-val]'); if (!el) return;
     pickedTheme = el.dataset.themeVal;
     [...document.querySelectorAll('#themePick .theme-preview')].forEach(x => x.classList.toggle('sel', x === el));
     applyTheme(pickedTheme);
   };
+
   document.getElementById('backBtn').onclick = () => navigate('welcome');
 
   document.getElementById('createBtn').onclick = () => {
