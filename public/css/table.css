@@ -230,17 +230,17 @@
   transform: translate(-50%, -50%);
   display: flex;
   flex-wrap: wrap;
-  /* Большой вертикальный gap — битые карты (со сдвигом вверх) не залезают в верхний ряд */
-  gap: calc(36px * var(--scale)) calc(14px * var(--scale));
+  /* РАВНЫЕ зазоры по обеим осям: 40px вертикаль, 40px горизонталь */
+  gap: calc(40px * var(--scale));
   justify-content: center;
   align-content: center;
   align-items: center;
   z-index: 5;
   padding: 4px;
-  /* Ширина = ровно 3 карты + 2 gap'а между ними.
-     Четвёртая карта не влезает → переносится на 2-й ряд. */
-  width: calc(var(--card-w) * 2.7 + 28px);
-  max-width: 82vw;
+  /* Ширина = 3 карты (0.9×) + 2 горизонтальных gap'а (40px × 2 = 80px).
+     4-я карта не влезает → переносится на 2-й ряд. */
+  width: calc(var(--card-w) * 2.7 + 80px);
+  max-width: 94vw;
   box-sizing: border-box;
 }
 .slot {
@@ -265,7 +265,7 @@
 }
 .slot .card.beaten {
   top: calc(-8px * var(--scale));
-  left: calc(16px * var(--scale));
+  left: calc(8px * var(--scale));
   transform: rotate(6deg);
   z-index: 2;
   filter: drop-shadow(0 8px 16px rgba(0,0,0,.75))
