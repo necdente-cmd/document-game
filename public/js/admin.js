@@ -3,19 +3,23 @@ const API = '/api/admin';
 let password = '';
 let playersData = [];
 let eventsData = [];
+let mailsData = [];
 let autoRefreshTimer = null;
+let mailFormOpen = false;
+let editingMailId = null;
 
 // ==================== УТИЛИТЫ ====================
-async function api(path) {
+async function api(path, options = {}) {
   const res = await fetch(API + path, {
-    headers: { 'X-Admin-Password': password },
+    ...options,
+    headers: {
+      'X-Admin-Password': password,
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(options.headers || {}),
+    },
   });
-  if (res.status === 401) {
-    throw new Error('Unauthorized');
-  }
-  if (!res.ok) {
-    throw new Error('HTTP ' + res.status);
-  }
+  if (res.status === 401) throw new Error('Unauthorized');
+  if (!res.ok) throw new Error('HTTP ' + res.status);
   return res.json();
 }
 
@@ -28,6 +32,15 @@ function fmtTime(ts) {
   if (diff < 3_600_000) return Math.floor(diff / 60_000) + ' мин назад';
   if (diff < 86_400_000) return Math.floor(diff / 3_600_000) + ' ч назад';
   return d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function fmtDate(dateStr) {
+  if (!dateStr) return '';
+  try {
+    return new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric' });
+  } catch {
+    return dateStr;
+  }
 }
 
 function esc(s) {
@@ -59,7 +72,7 @@ function showDashboard() {
 async function tryLogin(pass) {
   password = pass;
   try {
-    await api('/stats'); // проверка
+    await api('/stats');
     localStorage.setItem('adminPass', pass);
     showDashboard();
     return true;
@@ -77,33 +90,111 @@ function logout() {
 // ==================== ЗАГРУЗКА ====================
 async function loadAll() {
   try {
-    const [stats, players, events] = await Promise.all([
+    const [stats, players, events, mails] = await Promise.all([
       api('/stats'),
       api('/players?limit=500'),
       api('/events?limit=200'),
+      api('/mails'),
     ]);
     playersData = players.players || [];
     eventsData = events.events || [];
+    mailsData = mails.mails || [];
     renderStats(stats);
+    renderMails();
     renderPlayers();
     renderEvents();
     document.getElementById('updated').textContent = 'Обновлено: ' + new Date().toLocaleTimeString('ru-RU');
     document.getElementById('autoRefresh').textContent = '· автообновление 30с';
   } catch (e) {
     console.error(e);
-    if (e.message === 'Unauthorized') {
-      logout();
-    }
+    if (e.message === 'Unauthorized') logout();
   }
 }
 
-// ==================== РЕНДЕР ====================
+// ==================== РЕНДЕР: СТАТИСТИКА ====================
 function renderStats(stats) {
   document.getElementById('statPlayers').textContent = stats.totalPlayers ?? '—';
   document.getElementById('statGames').textContent = stats.totalGames ?? '—';
   document.getElementById('statActive').textContent = stats.activeToday ?? '—';
 }
 
+// ==================== РЕНДЕР: ПОЧТА ====================
+function renderMails() {
+  const list = document.getElementById('mailsList');
+  if (mailsData.length === 0) {
+    list.innerHTML = '<div class="events-empty">Пока нет писем. Создайте первое!</div>';
+    return;
+  }
+  list.innerHTML = mailsData.map(m => `
+    <div class="mail-item">
+      <div class="mail-item-head">
+        <span class="mail-item-date">${fmtDate(m.date)}</span>
+        <button class="mail-del" data-del="${m.id}" title="Удалить">🗑</button>
+      </div>
+      <div class="mail-item-title">${esc(m.title)}</div>
+      <div class="mail-item-body">${esc(m.body).replace(/\n/g, '<br>')}</div>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('[data-del]').forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.dataset.del;
+      if (!confirm('Удалить это письмо у всех игроков?')) return;
+      try {
+        await api('/mails/' + id, { method: 'DELETE' });
+        mailsData = mailsData.filter(m => String(m.id) !== String(id));
+        renderMails();
+      } catch (e) {
+        alert('Ошибка удаления: ' + e.message);
+      }
+    };
+  });
+}
+
+function openMailForm() {
+  mailFormOpen = true;
+  editingMailId = null;
+  document.getElementById('mailTitle').value = '';
+  document.getElementById('mailDate').value = '';
+  document.getElementById('mailBody').value = '';
+  document.getElementById('mailFormErr').textContent = '';
+  document.getElementById('mailForm').hidden = false;
+  document.getElementById('newMailBtn').hidden = true;
+  document.getElementById('mailTitle').focus();
+}
+
+function closeMailForm() {
+  mailFormOpen = false;
+  editingMailId = null;
+  document.getElementById('mailForm').hidden = true;
+  document.getElementById('newMailBtn').hidden = false;
+  document.getElementById('mailFormErr').textContent = '';
+}
+
+async function saveMail() {
+  const title = document.getElementById('mailTitle').value.trim();
+  const body = document.getElementById('mailBody').value.trim();
+  const date = document.getElementById('mailDate').value || null;
+  const errEl = document.getElementById('mailFormErr');
+
+  if (!title) { errEl.textContent = '⚠ Укажите заголовок'; return; }
+  if (!body)  { errEl.textContent = '⚠ Укажите текст письма'; return; }
+
+  errEl.textContent = 'Отправка…';
+  try {
+    const r = await api('/mails', {
+      method: 'POST',
+      body: JSON.stringify({ title, body, date }),
+    });
+    if (!r.ok) throw new Error(r.err || 'Ошибка');
+    closeMailForm();
+    await loadAll();
+  } catch (e) {
+    errEl.textContent = '❌ ' + e.message;
+  }
+}
+
+// ==================== РЕНДЕР: ИГРОКИ ====================
 function renderPlayers() {
   const query = (document.getElementById('playerSearch').value || '').toLowerCase().trim();
   const filtered = query
@@ -130,6 +221,7 @@ function renderPlayers() {
   `).join('');
 }
 
+// ==================== РЕНДЕР: СОБЫТИЯ ====================
 function renderEvents() {
   const filter = document.getElementById('eventFilter').value;
   const filtered = filter ? eventsData.filter(e => e.type === filter) : eventsData;
@@ -141,20 +233,12 @@ function renderEvents() {
   }
 
   const EVENT_ICON = {
-    join: '🔵',
-    reconnect: '🔄',
-    gameStart: '🎮',
-    roundWin: '🏆',
-    gameWin: '👑',
-    leave: '🔴',
+    join: '🔵', reconnect: '🔄', gameStart: '🎮',
+    roundWin: '🏆', gameWin: '👑', leave: '🔴',
   };
   const EVENT_LABEL = {
-    join: 'вошёл',
-    reconnect: 'переподключился',
-    gameStart: 'игра началась',
-    roundWin: 'кон выигран',
-    gameWin: 'ПАРТИЯ ВЫИГРАНА',
-    leave: 'вышел',
+    join: 'вошёл', reconnect: 'переподключился', gameStart: 'игра началась',
+    roundWin: 'кон выигран', gameWin: 'ПАРТИЯ ВЫИГРАНА', leave: 'вышел',
   };
 
   list.innerHTML = filtered.map(e => {
@@ -199,6 +283,11 @@ document.getElementById('csvBtn').onclick = () => {
 document.getElementById('logoutBtn').onclick = () => {
   if (confirm('Выйти из админки?')) logout();
 };
+
+// Почта
+document.getElementById('newMailBtn').onclick = () => openMailForm();
+document.getElementById('cancelMailBtn').onclick = () => closeMailForm();
+document.getElementById('saveMailBtn').onclick = () => saveMail();
 
 document.getElementById('playerSearch').addEventListener('input', renderPlayers);
 document.getElementById('eventFilter').addEventListener('change', renderEvents);

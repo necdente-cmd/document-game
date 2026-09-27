@@ -1,5 +1,5 @@
 import { loadName } from '../state.js';
-import { showRules, showMail, showProfile } from '../ui/modals.js';
+import { showRules, showMail, showProfile, updateMailBadge } from '../ui/modals.js';
 import { toggleMusic, isMusicOn } from '../music.js';
 import { playSound } from '../sound.js';
 import { t } from '../i18n.js';
@@ -12,7 +12,7 @@ export function renderWelcome(app, navigate) {
     <div class="lobby" style="justify-content:center; min-height:100dvh; position:relative;">
       <div style="position:absolute; top:14px; right:14px; display:flex; gap:8px;">
         <button id="btnLang"    class="icon-btn" title="Язык / Тил"></button>
-        <button id="btnMusic"   class="icon-btn ${musicOn?'active':''}" title="${t('welcome.musicOn')}">${musicOn ? '🎵' : '🔇'}</button>
+        <button id="btnMusic"   class="icon-btn ${musicOn?'active':''}" title="${musicOn ? t('welcome.musicOn') : t('welcome.musicOff')}">${musicOn ? '🎵' : '🔇'}</button>
         <button id="btnMail"    class="icon-btn" title="${t('mail.title')}">✉️</button>
         <button id="btnProfile" class="icon-btn" title="${t('profile.title')}">🧑</button>
       </div>
@@ -41,11 +41,8 @@ export function renderWelcome(app, navigate) {
   const langContainer = document.getElementById('btnLang');
   if (langContainer) {
     const newLangBtn = createLangButton();
-    // Переносим содержимое (текст, onclick) в существующую кнопку
     langContainer.textContent = newLangBtn.textContent;
     langContainer.onclick = newLangBtn.onclick;
-    // Синхронизация флага после клика
-    langContainer.dataset.langBtn = '1';
   }
 
   const musicBtn = document.getElementById('btnMusic');
@@ -62,6 +59,9 @@ export function renderWelcome(app, navigate) {
   if (authorBtn) {
     authorBtn.onclick = () => showAboutDev();
   }
+
+  // 📧 Обновляем бейдж непрочитанных писем
+  updateMailBadge();
 }
 
 function showAboutDev() {

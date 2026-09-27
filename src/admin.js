@@ -1,5 +1,8 @@
 // 🎛 Админ-API — только для разработчика
-import { getRecentPlayers, getRecentEvents, getStats } from './db.js';
+import {
+  getRecentPlayers, getRecentEvents, getStats,
+  getAllMails, createMail, deleteMail,
+} from './db.js';
 
 export function setupAdminRoutes(app) {
   const PASSWORD = process.env.ADMIN_PASSWORD || 'dokument2026';
@@ -44,6 +47,55 @@ export function setupAdminRoutes(app) {
     }
   });
 
+  // ==================== ПОЧТА (CRUD) ====================
+  app.get('/api/admin/mails', checkAuth, async (req, res) => {
+    try {
+      const mails = await getAllMails(200);
+      res.json({ ok: true, mails });
+    } catch (e) {
+      res.status(500).json({ ok: false, err: e.message });
+    }
+  });
+
+  app.post('/api/admin/mails', checkAuth, async (req, res) => {
+    try {
+      const { title, body, date } = req.body || {};
+      if (!title || !body) {
+        return res.status(400).json({ ok: false, err: 'Укажите заголовок и текст' });
+      }
+      const mail = await createMail({
+        title: String(title).trim().slice(0, 200),
+        body: String(body).trim().slice(0, 5000),
+        date: date || null,
+      });
+      res.json({ ok: true, mail });
+    } catch (e) {
+      res.status(500).json({ ok: false, err: e.message });
+    }
+  });
+
+  app.delete('/api/admin/mails/:id', checkAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (!id) return res.status(400).json({ ok: false, err: 'Неверный ID' });
+      await deleteMail(id);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ ok: false, err: e.message });
+    }
+  });
+
+  // ==================== ПУБЛИЧНЫЙ API ДЛЯ ИГРОКОВ ====================
+  // (без пароля — чтобы клиент мог получать письма)
+  app.get('/api/mails', async (req, res) => {
+    try {
+      const mails = await getAllMails(100);
+      res.json(mails);
+    } catch (e) {
+      res.status(500).json([]);
+    }
+  });
+
   // ==================== CSV ЭКСПОРТ ====================
   app.get('/api/admin/players.csv', checkAuth, async (req, res) => {
     try {
@@ -61,7 +113,7 @@ export function setupAdminRoutes(app) {
       ].join(',')).join('\n');
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       res.setHeader('Content-Disposition', 'attachment; filename=players.csv');
-      res.send('\uFEFF' + header + '\n' + rows); // BOM для Excel
+      res.send('\uFEFF' + header + '\n' + rows);
     } catch (e) {
       res.status(500).json({ ok: false, err: e.message });
     }

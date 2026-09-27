@@ -19,6 +19,7 @@ pool.on('error', (err) => {
 export async function initDb() {
   const client = await pool.connect();
   try {
+    // Таблица игроков
     await client.query(`
       CREATE TABLE IF NOT EXISTS players (
         persistent_id TEXT PRIMARY KEY,
@@ -32,6 +33,7 @@ export async function initDb() {
       );
     `);
 
+    // Таблица событий
     await client.query(`
       CREATE TABLE IF NOT EXISTS events (
         id BIGSERIAL PRIMARY KEY,
@@ -43,9 +45,22 @@ export async function initDb() {
       );
     `);
 
+    // Таблица писем
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS mails (
+        id BIGSERIAL PRIMARY KEY,
+        date DATE NOT NULL DEFAULT CURRENT_DATE,
+        title TEXT NOT NULL,
+        body TEXT NOT NULL,
+        created_at BIGINT NOT NULL
+      );
+    `);
+
+    // Индексы
     await client.query(`CREATE INDEX IF NOT EXISTS idx_events_time ON events(time DESC);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_events_persistent ON events(persistent_id);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_players_last_seen ON players(last_seen DESC);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_mails_id ON mails(id DESC);`);
 
     console.log('[db] ✅ Schema ready');
   } catch (e) {
@@ -152,6 +167,43 @@ export async function getStats() {
   } catch (e) {
     console.error('[db] getStats error:', e.message);
     return { totalPlayers: 0, totalGames: 0, activeToday: 0 };
+  }
+}
+
+// ==================== ПОЧТА ====================
+export async function getAllMails(limit = 100) {
+  try {
+    const r = await pool.query(
+      'SELECT id, date, title, body, created_at FROM mails ORDER BY id DESC LIMIT $1',
+      [limit]
+    );
+    return r.rows;
+  } catch (e) {
+    console.error('[db] getAllMails error:', e.message);
+    return [];
+  }
+}
+
+export async function createMail({ title, body, date }) {
+  try {
+    const r = await pool.query(
+      `INSERT INTO mails (date, title, body, created_at)
+       VALUES (COALESCE($1::date, CURRENT_DATE), $2, $3, $4)
+       RETURNING id, date, title, body, created_at`,
+      [date || null, title, body, Date.now()]
+    );
+    return r.rows[0];
+  } catch (e) {
+    console.error('[db] createMail error:', e.message);
+    throw e;
+  }
+}
+
+export async function deleteMail(id) {
+  try {
+    await pool.query('DELETE FROM mails WHERE id = $1', [id]);
+  } catch (e) {
+    console.error('[db] deleteMail error:', e.message);
   }
 }
 

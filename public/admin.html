@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Админка — Документ</title>
+<link rel="icon" type="image/png" href="/logo.png">
 <link rel="stylesheet" href="/css/admin.css">
 </head>
 <body>
@@ -53,6 +54,39 @@
     </div>
   </section>
 
+  <!-- ============ ПОЧТА ============ -->
+  <section class="dash-section">
+    <div class="section-head">
+      <h2>📧 Почта игрокам</h2>
+      <button id="newMailBtn" class="dash-btn primary">+ Новое письмо</button>
+    </div>
+
+    <div id="mailForm" class="mail-form" hidden>
+      <div class="form-row">
+        <label>Заголовок</label>
+        <input id="mailTitle" type="text" placeholder="🎉 Новое обновление!" maxlength="200">
+      </div>
+      <div class="form-row">
+        <label>Дата (необязательно)</label>
+        <input id="mailDate" type="date">
+      </div>
+      <div class="form-row">
+        <label>Текст письма</label>
+        <textarea id="mailBody" rows="6" placeholder="Текст письма...&#10;&#10;Перенос строки — Enter."></textarea>
+      </div>
+      <div class="form-actions">
+        <button id="cancelMailBtn" class="dash-btn">Отмена</button>
+        <button id="saveMailBtn" class="dash-btn primary">📤 Опубликовать</button>
+      </div>
+      <div id="mailFormErr" class="form-err"></div>
+    </div>
+
+    <div class="mails-list" id="mailsList">
+      <div class="events-empty">Загрузка…</div>
+    </div>
+  </section>
+
+  <!-- ============ ИГРОКИ ============ -->
   <section class="dash-section">
     <div class="section-head">
       <h2>👥 Игроки</h2>
@@ -77,6 +111,7 @@
     </div>
   </section>
 
+  <!-- ============ СОБЫТИЯ ============ -->
   <section class="dash-section">
     <div class="section-head">
       <h2>📋 События</h2>

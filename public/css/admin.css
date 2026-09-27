@@ -255,3 +255,113 @@ body {
   .dash-table th:nth-child(4), .dash-table td:nth-child(4),
   .dash-table th:nth-child(5), .dash-table td:nth-child(5) { display: none; }
 }
+
+/* ==================== ФОРМА ПИСЬМА ==================== */
+.dash-btn.primary {
+  background: #f1c40f;
+  color: #000;
+  border-color: #f1c40f;
+}
+.dash-btn.primary:hover {
+  background: #e6b90a;
+}
+
+.mail-form {
+  padding: 16px;
+  background: rgba(241,196,15,.05);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.form-row { display: flex; flex-direction: column; gap: 4px; }
+.form-row label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: .65;
+  font-weight: 700;
+}
+.form-row input,
+.form-row textarea {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.15);
+  background: rgba(255,255,255,.05);
+  color: inherit;
+  font-family: inherit;
+  font-size: 14px;
+}
+.form-row textarea {
+  resize: vertical;
+  min-height: 100px;
+  line-height: 1.5;
+}
+.form-row input:focus,
+.form-row textarea:focus {
+  outline: none;
+  border-color: #f1c40f;
+}
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+.form-err {
+  font-size: 13px;
+  color: #e74c3c;
+  min-height: 18px;
+  text-align: right;
+}
+
+/* ==================== СПИСОК ПИСЕМ ==================== */
+.mails-list {
+  padding: 12px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mail-item {
+  padding: 12px 14px;
+  background: rgba(255,255,255,.04);
+  border-radius: 10px;
+  border-left: 3px solid #f1c40f;
+}
+.mail-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.mail-item-date {
+  font-size: 11px;
+  opacity: .55;
+  text-transform: capitalize;
+}
+.mail-del {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  opacity: .5;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: opacity .15s, background .15s;
+}
+.mail-del:hover {
+  opacity: 1;
+  background: rgba(231,76,60,.2);
+}
+.mail-item-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f1c40f;
+  margin-bottom: 6px;
+}
+.mail-item-body {
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255,255,255,.8);
+  word-break: break-word;
+}
