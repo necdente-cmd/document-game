@@ -39,13 +39,9 @@
   pointer-events: none;
   z-index: 8;
   box-shadow:
-    /* внешний тёмный кант */
     inset 0 0 0 6px rgba(20, 12, 6, 0.92),
-    /* золотая искра между деревом и сукном */
     inset 0 0 0 7px rgba(190, 145, 80, 0.55),
-    /* внутренний деревянный слой */
     inset 0 0 0 10px rgba(88, 56, 28, 0.85),
-    /* мягкая внутренняя тень на сукно */
     inset 0 0 28px 8px rgba(0,0,0,.55);
 }
 [data-theme="paper"] .table::after {
@@ -234,7 +230,8 @@
   transform: translate(-50%, -50%);
   display: flex;
   flex-wrap: wrap;
-  gap: calc(10px * var(--scale)) calc(14px * var(--scale));
+  /* Большой вертикальный gap — битые карты (со сдвигом вверх) не залезают в верхний ряд */
+  gap: calc(36px * var(--scale)) calc(14px * var(--scale));
   justify-content: center;
   align-content: center;
   align-items: center;
@@ -267,8 +264,8 @@
   to   { transform: scale(1);  opacity: 1; }
 }
 .slot .card.beaten {
-  top: calc(-11px * var(--scale));
-  left: calc(18px * var(--scale));
+  top: calc(-8px * var(--scale));
+  left: calc(16px * var(--scale));
   transform: rotate(6deg);
   z-index: 2;
   filter: drop-shadow(0 8px 16px rgba(0,0,0,.75))
