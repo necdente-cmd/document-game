@@ -4,9 +4,9 @@ import { beatsUI } from './card.js';
 import { toastErr } from './ui/toast.js';
 
 let drag = null;
-const MAGNET_RADIUS = 70;
-const DRAG_THRESHOLD = 6;
-const FINGER_OFFSET = 55;   // карта выше пальца на 55px (палец не закрывает карту)
+const MAGNET_RADIUS = 100;     // радиус примагничивания к карте врага
+const DRAG_THRESHOLD = 6;      // порог, после которого начинается драг (px)
+const FINGER_OFFSET = 40;      // на сколько поднять карту над пальцем (px)
 const RETURN_MS = 260;
 
 export function initDrag(onRender) {
@@ -171,12 +171,9 @@ function highlightAt(x, y) {
     return;
   }
   if (!canActOnField(s)) return;
-  const center = document.querySelector('.center');
-  if (!center) return;
-  const rect = center.getBoundingClientRect();
-  if (x >= rect.left - 80 && x <= rect.right + 80 &&
-      y >= rect.top - 120 && y <= rect.bottom + 80) {
-    center.classList.add('drag-over-field');
+  if (isInFieldDropZone(x, y)) {
+    const center = document.querySelector('.center');
+    if (center) center.classList.add('drag-over-field');
   }
 }
 
@@ -191,6 +188,17 @@ function canActOnField(s) {
   const isFirstAttack = !s.field && s.turnSeat === s.mySeat;
   const isPitchingIn = s.field && (s.mySeat === attackerSeat || s.mySeat === partnerSeat);
   return isFirstAttack || isPitchingIn;
+}
+
+// ====== ЩЕДРАЯ ЗОНА ДЛЯ АТАКУЮЩЕГО ======
+// При поднятии карты над рукой — почти сразу попадает в зону дропа.
+// 250px по бокам, 250px сверху, 500px снизу (к руке).
+function isInFieldDropZone(x, y) {
+  const center = document.querySelector('.center');
+  if (!center) return false;
+  const rect = center.getBoundingClientRect();
+  return x >= rect.left - 250 && x <= rect.right + 250 &&
+         y >= rect.top  - 250 && y <= rect.bottom + 500;
 }
 
 function nearestFieldSlot(x, y, s) {
@@ -229,17 +237,10 @@ function handleDrop(x, y, cardId) {
   }
 
   if (!canActOnField(s)) return false;
-  const center = document.querySelector('.center');
-  if (!center) return false;
-  const rect = center.getBoundingClientRect();
-  const inField = x >= rect.left - 80 && x <= rect.right + 80 &&
-                  y >= rect.top - 120 && y <= rect.bottom + 80;
-  if (inField) {
-    rememberFly(cardId);
-    socket.emit('attack', { cardIds: [cardId] });
-    return true;
-  }
-  return false;
+  if (!isInFieldDropZone(x, y)) return false;
+  rememberFly(cardId);
+  socket.emit('attack', { cardIds: [cardId] });
+  return true;
 }
 
 function rememberFly(cardId) {

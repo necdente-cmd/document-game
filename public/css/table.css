@@ -31,9 +31,9 @@
 }
 
 .lobby-logo {
-  width: 64px; height: 64px;
+  width: 48px; height: 48px;
   object-fit: contain;
-  margin: 0 auto 10px; display: block;
+  margin: 0 auto 6px; display: block;
   filter: drop-shadow(0 4px 12px rgba(241,196,15,.4));
 }
 
@@ -135,14 +135,14 @@
 .seat .name { order: 1; font-weight: 700; font-size: calc(12px * var(--scale)); }
 .seat .avatar {
   order: 2;
-  width: calc(44px * var(--scale));
-  height: calc(44px * var(--scale));
+  width: calc(36px * var(--scale));
+  height: calc(36px * var(--scale));
   border-radius: 50%;
   background: rgba(255,255,255,.15);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(26px * var(--scale));
+  font-size: calc(20px * var(--scale));
   border: 2px solid rgba(255,255,255,.3);
   margin: 2px 0;
   transition: border-color .2s, box-shadow .2s;
@@ -241,7 +241,12 @@
   outline: 3px dashed rgba(241,196,15,.8);
   outline-offset: -3px;
 }
-.slot.drag-over { outline: 4px solid #2ecc71; outline-offset: -4px; border-radius: 8px; }
+.slot.drag-over {
+  outline: 4px solid #2ecc71;
+  outline-offset: -4px;
+  border-radius: 8px;
+  box-shadow: 0 0 24px rgba(46,204,113,.7);
+}
 .slot.forced .card:first-child {
   outline: 3px solid #e74c3c;
   outline-offset: -3px;
@@ -249,6 +254,25 @@
 }
 .slot.selected-target {
   filter: drop-shadow(0 0 12px rgba(241,196,15,.9));
+}
+
+/* Подсветка всего поля при драге атакующего */
+.center.drag-over-field {
+  outline: 3px dashed rgba(241,196,15,.85);
+  outline-offset: 14px;
+  border-radius: 22px;
+  box-shadow: 0 0 42px rgba(241,196,15,.45);
+  transition: box-shadow .2s;
+}
+
+/* ==================== ПЕРЕТАСКИВАЕМАЯ КАРТА ==================== */
+.card.dragging {
+  z-index: 9999 !important;
+  filter: drop-shadow(0 18px 28px rgba(0,0,0,.75))
+          drop-shadow(0 4px 8px rgba(0,0,0,.55)) !important;
+  pointer-events: none !important;
+  transition: none !important;
+  cursor: grabbing;
 }
 
 /* ==================== НАСТРОЙКА ==================== */
@@ -354,7 +378,12 @@
   z-index: 35;
   pointer-events: none;
   box-shadow: 0 6px 20px rgba(0,0,0,.5);
-  white-space: nowrap;
+  white-space: normal;
+  text-align: center;
+  max-width: 88vw;
+  width: max-content;
+  line-height: 1.25;
+  word-break: break-word;
   animation: bannerIn .35s cubic-bezier(.22,.9,.35,1), bannerPulse 1.8s ease-in-out infinite .35s;
 }
 .turn-banner.attack {
@@ -369,11 +398,12 @@
 .turn-banner.attack-sub {
   background: rgba(241,196,15,.85);
   color: #000;
-  font-size: 12px;
-  letter-spacing: 1px;
-  padding: 6px 16px;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  padding: 5px 14px;
   font-weight: 700;
   top: 52px;
+  max-width: 92vw;
 }
 @keyframes bannerIn {
   from { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(.85); }
@@ -605,12 +635,16 @@
   background: rgba(0,0,0,.88);
   border: 2px solid var(--acc);
   border-radius: 18px;
-  padding: 22px 20px 20px;
+  padding: 16px 14px 14px;
   text-align: center;
-  width: 92vw; max-width: 380px;
+  width: 92vw;
+  max-width: 340px;
+  max-height: 88vh;
+  overflow-y: auto;
   z-index: 50;
   box-shadow: 0 12px 40px rgba(0,0,0,.7);
   animation: lobbyIn .35s cubic-bezier(.2,.8,.3,1);
+  box-sizing: border-box;
 }
 [data-theme="paper"] .waiting { background: rgba(255,255,255,.95); }
 @keyframes lobbyIn {
@@ -618,23 +652,23 @@
   100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 .waiting-label {
-  font-size: 11px; opacity: .65;
+  font-size: 10px; opacity: .65;
   text-transform: uppercase;
   letter-spacing: 1.5px;
   font-weight: 700;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 .waiting-code {
   background: none; border: none;
   font-family: 'Courier New', monospace;
-  font-size: 40px; font-weight: 900;
-  letter-spacing: 8px;
+  font-size: 32px; font-weight: 900;
+  letter-spacing: 6px;
   color: var(--acc);
   cursor: pointer;
-  padding: 4px 14px;
+  padding: 4px 12px;
   border-radius: 12px;
   transition: background .15s, transform .12s;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 .waiting-code:active { background: rgba(241,196,15,.18); transform: scale(.97); }
 [data-theme="paper"] .waiting-code { color: #b8860b; }
@@ -642,17 +676,17 @@
 .waiting-players-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 6px;
+  margin-bottom: 8px;
 }
 .wp-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 8px 4px;
+  gap: 2px;
+  padding: 6px 4px;
   background: rgba(255,255,255,.06);
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid rgba(255,255,255,.08);
   animation: wpIn .25s ease-out backwards;
 }
@@ -671,13 +705,14 @@
 .wp-card.wp-empty { opacity: .35; }
 [data-theme="paper"] .wp-card { background: rgba(0,0,0,.05); border-color: rgba(0,0,0,.08); }
 .wp-avatar {
-  font-size: 24px;
-  width: 40px; height: 40px;
+  font-size: 20px;
+  width: 32px; height: 32px;
   border-radius: 50%;
   background: rgba(255,255,255,.1);
   display: flex; align-items: center; justify-content: center;
   border: 2px solid rgba(255,255,255,.15);
   overflow: hidden;
+  flex-shrink: 0;
 }
 .wp-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 [data-theme="paper"] .wp-avatar { background: rgba(0,0,0,.06); border-color: rgba(0,0,0,.12); }
@@ -699,27 +734,27 @@
 
 /* ==================== РАССТАНОВКА ==================== */
 .seat-order-block {
-  margin: 10px 0 12px;
-  padding: 10px;
+  margin: 6px 0 8px;
+  padding: 8px;
   background: rgba(255,255,255,.03);
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid rgba(255,255,255,.08);
 }
 .so-title {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 1.2px;
+  letter-spacing: 1px;
   text-transform: uppercase;
   opacity: .7;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   text-align: center;
 }
 .so-grid { display: flex; flex-direction: column; gap: 6px; }
 .so-player {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 6px;
+  padding: 6px 8px;
   border-radius: 10px;
   border: 2px solid transparent;
   transition: transform .15s, border-color .15s, background .15s, box-shadow .15s;
@@ -759,9 +794,9 @@
 .team-a .so-pos { background: rgba(241,196,15,.2); color: #f1c40f; }
 .team-b .so-pos { background: rgba(231,76,60,.2); color: #ff6b6b; }
 .so-avatar {
-  width: 32px; height: 32px;
+  width: 28px; height: 28px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 20px;
+  font-size: 18px;
   background: rgba(255,255,255,.08);
   border-radius: 50%;
   border: 2px solid rgba(255,255,255,.12);
@@ -771,7 +806,7 @@
 .so-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .so-name {
   flex: 1;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
@@ -793,9 +828,9 @@
 [data-theme="paper"] .so-avatar { background: rgba(0,0,0,.06); border-color: rgba(0,0,0,.1); }
 
 .waiting-status {
-  font-size: 13px;
+  font-size: 12px;
   opacity: .8;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
   font-weight: 600;
 }
 .dots { display: inline-block; }
@@ -808,10 +843,10 @@
 }
 .waiting-hint { font-size: 12px; opacity: .7; margin-top: 6px; }
 .start-big {
-  padding: 14px 24px;
-  font-size: 16px;
+  padding: 12px 20px;
+  font-size: 15px;
   border-radius: 12px;
-  margin-top: 6px;
+  margin-top: 4px;
   width: 100%;
   background: var(--acc); color: #000;
   font-weight: 700;
@@ -819,6 +854,7 @@
   cursor: pointer;
   box-shadow: 0 4px 16px rgba(241,196,15,.4);
   transition: transform .12s;
+  flex-shrink: 0;
 }
 .start-big:active { transform: scale(.97); }
 
@@ -859,31 +895,4 @@
   content: ' 🎤';
   font-size: 0.9em;
   opacity: 0.9;
-}
-
-/* ==================== ПЕРЕТАСКИВАЕМАЯ КАРТА ==================== */
-.card.dragging {
-  z-index: 9999 !important;
-  filter: drop-shadow(0 18px 28px rgba(0,0,0,.75))
-          drop-shadow(0 4px 8px rgba(0,0,0,.55)) !important;
-  pointer-events: none !important;
-  transition: none !important;
-  cursor: grabbing;
-}
-
-/* Подсветка всего поля при драге атакующего */
-.center.drag-over-field {
-  outline: 3px dashed rgba(241,196,15,.85);
-  outline-offset: 14px;
-  border-radius: 22px;
-  box-shadow: 0 0 42px rgba(241,196,15,.45);
-  transition: box-shadow .2s;
-}
-
-/* Подсветка конкретного слота у защитника (уже была — но усилю) */
-.slot.drag-over {
-  outline: 4px solid #2ecc71;
-  outline-offset: -4px;
-  border-radius: 8px;
-  box-shadow: 0 0 24px rgba(46,204,113,.7);
 }
