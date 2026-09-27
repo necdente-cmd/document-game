@@ -1,10 +1,9 @@
-// 🎤 Голосовой чат (WebRTC mesh) — с TURN-сервером
+// 🎤 Голосовой чат (WebRTC mesh) — с TURN + подробные логи
 import { state } from './state.js';
 import { socket } from './socket.js';
 import { toastOk, toastErr } from './ui/toast.js';
 import { t } from './i18n.js';
 
-// Конфиг приходит с сервера (STUN + TURN с временными credentials)
 let ICE_CONFIG = null;
 
 function buildPeerConfig() {
@@ -14,6 +13,7 @@ function buildPeerConfig() {
 }
 
 const peers = new Map();
+window.__voicePeers = peers;
 const audioElements = new Map();
 const remoteAnalysers = new Map();
 let localStream = null;
@@ -23,16 +23,48 @@ let audioCtx = null;
 let speakingTimer = null;
 let bound = false;
 
-// ==================== Включение ====================
+// 🔓 Разблокировка аудио на мобильных (нужно ДО play)
+export function unlockAudio() {
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().then(() => {
+        console.log('[voice] 🔓 AudioContext resumed');
+      });
+    }
+    // Проигрываем тишину — это разблокирует <audio>
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    gain.gain.value = 0.0001;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.01);
+    console.log('[voice] 🔓 Audio unlocked');
+  } catch (e) {
+    console.warn('[voice] unlock failed', e);
+  }
+}
+
+// Авторазблокировка при первом клике
+['click', 'touchstart', 'keydown'].forEach(evt => {
+  document.addEventListener(evt, unlockAudio, { once: true, capture: true });
+});
+
+// ==================== ВКЛЮЧЕНИЕ ====================
 export async function enableVoice() {
   if (state.voiceActive && localStream) return true;
 
-  // 🔐 Запрашиваем свежие TURN credentials у сервера
+  unlockAudio();
+
+  // Получаем TURN credentials
   if (!ICE_CONFIG) {
     try {
       ICE_CONFIG = await new Promise((resolve) => {
         const timeout = setTimeout(() => {
-          console.warn('[voice] ICE servers timeout — STUN fallback');
+          console.warn('[voice] ⏱ ICE servers timeout — STUN only');
           resolve([{ urls: 'stun:stun.l.google.com:19302' }]);
         }, 3000);
         socket.once('ice-servers', (servers) => {
@@ -41,9 +73,10 @@ export async function enableVoice() {
         });
         socket.emit('get-ice-servers');
       });
-      console.log('[voice] ICE servers received:', ICE_CONFIG.length);
+      console.log('[voice] 📡 ICE servers received:', ICE_CONFIG.length);
+      console.log('[voice] 📡 ICE config:', JSON.stringify(ICE_CONFIG, null, 2));
     } catch (e) {
-      console.warn('[voice] failed to fetch ICE servers, STUN fallback');
+      console.warn('[voice] ❌ failed to fetch ICE servers');
       ICE_CONFIG = [{ urls: 'stun:stun.l.google.com:19302' }];
     }
   }
@@ -57,8 +90,10 @@ export async function enableVoice() {
       },
       video: false,
     });
+    console.log('[voice] 🎤 mic OK, tracks:', localStream.getAudioTracks().length);
   } catch (err) {
-    console.error('[voice] mic error:', err);
+    console.error('[voice] ❌ mic error:', err.name, err.message);
+    toastErr('Микрофон: ' + err.name);
     return false;
   }
 
@@ -66,7 +101,7 @@ export async function enableVoice() {
   state.voiceActive = true;
 
   try {
-    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') await audioCtx.resume();
     const src = audioCtx.createMediaStreamSource(localStream);
     localAnalyser = audioCtx.createAnalyser();
@@ -74,10 +109,11 @@ export async function enableVoice() {
     src.connect(localAnalyser);
     localData = new Uint8Array(localAnalyser.frequencyBinCount);
   } catch (e) {
-    console.warn('[voice] analyser setup failed', e);
+    console.warn('[voice] analyser failed', e);
   }
 
   socket.emit('voice-enabled');
+  console.log('[voice] 📤 voice-enabled sent');
   startSpeakingDetection();
   return true;
 }
@@ -102,12 +138,10 @@ export function disableVoice() {
     localStream.getTracks().forEach(track => track.stop());
     localStream = null;
   }
-
   if (speakingTimer) { clearInterval(speakingTimer); speakingTimer = null; }
 
   state.voiceSpeakingSeats = [];
   window.dispatchEvent(new CustomEvent('voice-speaking-change'));
-
   socket.emit('voice-disabled');
 }
 
@@ -118,20 +152,17 @@ export function setMicOn(on) {
   }
 }
 
-// ==================== Детект речи ====================
+// ==================== ДЕТЕКТ РЕЧИ ====================
 function startSpeakingDetection() {
   if (speakingTimer) clearInterval(speakingTimer);
-
   speakingTimer = setInterval(() => {
     const seats = new Set();
-
     if (state.micOn && localAnalyser && localData && state.server) {
       localAnalyser.getByteFrequencyData(localData);
       let sum = 0;
       for (let i = 0; i < localData.length; i++) sum += localData[i];
       if (sum / localData.length > 18) seats.add(state.server.mySeat);
     }
-
     for (const [playerId, { analyser, data }] of remoteAnalysers) {
       analyser.getByteFrequencyData(data);
       let sum = 0;
@@ -141,26 +172,23 @@ function startSpeakingDetection() {
         if (p) seats.add(p.seat);
       }
     }
-
     const newArr = Array.from(seats).sort();
     const oldArr = (state.voiceSpeakingSeats || []).slice().sort();
-    const changed = newArr.length !== oldArr.length ||
-                    newArr.some((v, i) => v !== oldArr[i]);
-
-    if (changed) {
+    if (newArr.length !== oldArr.length || newArr.some((v, i) => v !== oldArr[i])) {
       state.voiceSpeakingSeats = newArr;
       window.dispatchEvent(new CustomEvent('voice-speaking-change'));
     }
   }, 200);
 }
 
-// ==================== PeerConnection ====================
+// ==================== PEER ====================
 function createPeer(playerId) {
   if (peers.has(playerId)) return peers.get(playerId);
 
   const pc = new RTCPeerConnection(buildPeerConfig());
   const entry = { pc, pendingCandidates: [], makingOffer: false };
   peers.set(playerId, entry);
+  console.log(`[voice] 🆕 createPeer ${playerId}`);
 
   if (localStream) {
     for (const track of localStream.getTracks()) {
@@ -176,7 +204,8 @@ function createPeer(playerId) {
     if (!el) {
       el = document.createElement('audio');
       el.autoplay = true;
-      el.playsInline = true;
+      el.setAttribute('playsinline', '');
+      el.setAttribute('webkit-playsinline', '');
       el.muted = false;
       el.volume = 1.0;
       el.style.display = 'none';
@@ -184,9 +213,28 @@ function createPeer(playerId) {
       audioElements.set(playerId, el);
     }
     el.srcObject = stream;
-    el.play().then(() => {
-      console.log(`[voice] ✅ playing ${playerId}`);
-    }).catch((e) => console.warn('[voice] play error', e));
+
+    // Попытка громкого динамика (Android)
+    if (el.setSinkId) {
+      el.setSinkId('').catch(() => {});
+    }
+
+    const playPromise = el.play();
+    if (playPromise) {
+      playPromise.then(() => {
+        console.log(`[voice] ✅ playing ${playerId}`);
+      }).catch((e) => {
+        console.error(`[voice] ❌ play error ${playerId}:`, e.name, e.message);
+        // Повтор при клике
+        const tryPlay = () => {
+          el.play().then(() => {
+            console.log(`[voice] ✅ playing on retry ${playerId}`);
+            document.removeEventListener('click', tryPlay);
+          }).catch(() => {});
+        };
+        document.addEventListener('click', tryPlay);
+      });
+    }
 
     try {
       const ctx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
@@ -203,28 +251,38 @@ function createPeer(playerId) {
 
   pc.onicecandidate = (e) => {
     if (e.candidate) {
+      const c = e.candidate;
+      console.log(`[voice] ❄ ICE to ${playerId}: ${c.type || '?'} ${c.address || '?'}`);
       socket.emit('voice-signal', {
         to: playerId,
-        data: { type: 'ice', candidate: e.candidate },
+        data: { type: 'ice', candidate: c },
       });
     }
   };
 
+  pc.onicegatheringstatechange = () => {
+    console.log(`[voice] 🧊 gathering ${playerId}: ${pc.iceGatheringState}`);
+  };
+
+  pc.oniceconnectionstatechange = () => {
+    console.log(`[voice] ❄ ICE ${playerId}: ${pc.iceConnectionState}`);
+  };
+
+  pc.onsignalingstatechange = () => {
+    console.log(`[voice] 🔔 signal ${playerId}: ${pc.signalingState}`);
+  };
+
   pc.onconnectionstatechange = () => {
-    console.log(`[voice] ${playerId} state: ${pc.connectionState}`);
+    console.log(`[voice] 🔗 ${playerId} state: ${pc.connectionState}`);
     if (pc.connectionState === 'failed') {
-      console.warn(`[voice] ❌ failed with ${playerId}, retry`);
+      console.warn(`[voice] ❌ failed with ${playerId}, retry через 2s`);
       cleanupPeer(playerId);
       if (state.voiceActive) {
         setTimeout(() => {
           if (state.voiceActive) initiateOffer(playerId);
-        }, 1000);
+        }, 2000);
       }
     }
-  };
-
-  pc.oniceconnectionstatechange = () => {
-    console.log(`[voice] ${playerId} ICE: ${pc.iceConnectionState}`);
   };
 
   return entry;
@@ -245,7 +303,6 @@ function cleanupPeer(playerId) {
   }
 }
 
-// ==================== ICE queue ====================
 async function flushPendingCandidates(playerId) {
   const entry = peers.get(playerId);
   if (!entry) return;
@@ -254,15 +311,11 @@ async function flushPendingCandidates(playerId) {
   const pending = entry.pendingCandidates;
   entry.pendingCandidates = [];
   for (const c of pending) {
-    try {
-      await pc.addIceCandidate(new RTCIceCandidate(c));
-    } catch (e) {
-      console.warn('[voice] flush ICE error', e);
-    }
+    try { await pc.addIceCandidate(new RTCIceCandidate(c)); }
+    catch (e) { console.warn('[voice] flush ICE error', e); }
   }
 }
 
-// ==================== Perfect Negotiation ====================
 function isPolite(myId, otherId) {
   return String(myId) < String(otherId);
 }
@@ -274,8 +327,10 @@ async function initiateOffer(playerId) {
     entry = peers.get(playerId);
   }
   const pc = entry.pc;
-
-  if (pc.signalingState !== 'stable') return;
+  if (pc.signalingState !== 'stable') {
+    console.log(`[voice] ⏸ skip offer to ${playerId}, state: ${pc.signalingState}`);
+    return;
+  }
 
   try {
     entry.makingOffer = true;
@@ -285,7 +340,7 @@ async function initiateOffer(playerId) {
       to: playerId,
       data: { type: 'offer', sdp: pc.localDescription },
     });
-    console.log(`[voice] → offer to ${playerId}`);
+    console.log(`[voice] 📤 offer → ${playerId}`);
   } catch (e) {
     console.warn('[voice] offer error', e);
   } finally {
@@ -302,17 +357,15 @@ async function handleSignal(from, data) {
   const pc = entry.pc;
 
   if (data.type === 'offer') {
-    console.log(`[voice] ← offer from ${from}`);
-
+    console.log(`[voice] 📥 offer ← ${from}`);
     const myId = state.me?.id;
     const polite = isPolite(myId, from);
     const offerCollision = entry.makingOffer || pc.signalingState !== 'stable';
 
     if (offerCollision && !polite) {
-      console.log(`[voice] ignoring offer (impolite)`);
+      console.log(`[voice] ⏸ ignore offer (impolite)`);
       return;
     }
-
     if (offerCollision && polite) {
       try { await pc.setLocalDescription({ type: 'rollback' }); } catch (e) {}
     }
@@ -326,13 +379,13 @@ async function handleSignal(from, data) {
         to: from,
         data: { type: 'answer', sdp: pc.localDescription },
       });
-      console.log(`[voice] → answer to ${from}`);
+      console.log(`[voice] 📤 answer → ${from}`);
     } catch (e) {
       console.warn('[voice] handle offer error', e);
     }
 
   } else if (data.type === 'answer') {
-    console.log(`[voice] ← answer from ${from}`);
+    console.log(`[voice] 📥 answer ← ${from}`);
     if (pc.signalingState === 'have-local-offer') {
       try {
         await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
@@ -344,25 +397,22 @@ async function handleSignal(from, data) {
 
   } else if (data.type === 'ice') {
     if (pc.remoteDescription && pc.remoteDescription.type) {
-      try {
-        await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-      } catch (e) {
-        console.warn('[voice] ICE error', e);
-      }
+      try { await pc.addIceCandidate(new RTCIceCandidate(data.candidate)); }
+      catch (e) { console.warn('[voice] ICE error', e); }
     } else {
       entry.pendingCandidates.push(data.candidate);
     }
   }
 }
 
-// ==================== Socket events ====================
+// ==================== SOCKET ====================
 export function bindVoiceSocket() {
   if (bound) return;
   bound = true;
 
   socket.on('voice-peers', async ({ peers: peerIds }) => {
     if (!state.voiceActive) return;
-    console.log('[voice] peers list:', peerIds);
+    console.log('[voice] 👥 peers list:', peerIds);
     for (const id of peerIds) {
       const myId = state.me?.id;
       if (String(myId) < String(id)) {
@@ -372,16 +422,17 @@ export function bindVoiceSocket() {
   });
 
   socket.on('voice-peer-joined', ({ playerId }) => {
-    console.log('[voice] peer joined:', playerId);
+    console.log('[voice] 👋 peer joined:', playerId);
   });
 
   socket.on('voice-peer-left', ({ playerId }) => {
-    console.log('[voice] peer left:', playerId);
+    console.log('[voice] 👋 peer left:', playerId);
     cleanupPeer(playerId);
   });
 
   socket.on('voice-signal', async ({ from, data }) => {
     if (!state.voiceActive) return;
+    console.log(`[voice] 📨 signal from ${from}: ${data.type}`);
     try { await handleSignal(from, data); } catch (e) { console.warn(e); }
   });
 
@@ -402,7 +453,7 @@ export function bindVoiceSocket() {
 
   socket.on('connect', () => {
     if (state.voiceActive && localStream) {
-      console.log('[voice] reconnected — re-enabling');
+      console.log('[voice] ♻ reconnected — re-enabling');
       socket.emit('voice-enabled');
     }
   });

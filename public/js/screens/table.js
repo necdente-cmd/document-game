@@ -10,7 +10,7 @@ import { initDrag } from '../drag.js';
 import { EMOJIS } from '../emojis.js';
 import { playSound } from '../sound.js';
 import { toastErr, toastOk } from '../ui/toast.js';
-import { enableVoice, disableVoice, setMicOn } from '../voice.js';
+import { enableVoice, disableVoice, setMicOn, unlockAudio } from '../voice.js';
 import { rankDisplay } from '../rank-display.js';
 import { t } from '../i18n.js';
 
@@ -161,6 +161,7 @@ function ensureSwipeIcons() {
       <button class="icon-btn" id="emojiToggle" title="Emoji">😀</button>
       <button class="icon-btn" id="chatBtn" title="${t('chat.title')}">💬</button>
       <button class="icon-btn ${infoOpen?'active':''}" id="infoBtn" title="${t('info.title')}">📊</button>
+      <button class="icon-btn" id="debugBtn" title="Диагностика">🧪</button>
     `;
     document.body.appendChild(el);
   }
@@ -270,6 +271,110 @@ function showInfoModal() {
   document.getElementById('infoClose').onclick = close;
 }
 
+// 🧪 Диагностика голосового чата
+function showVoiceDebug() {
+  const el = document.createElement('div');
+  el.className = 'simple-modal';
+  el.style.zIndex = 99999;
+  el.innerHTML = `
+    <div class="simple-modal-inner" style="max-width:600px; font-family:monospace; font-size:12px;">
+      <h3 style="font-family:inherit;">🧪 Диагностика голосового чата</h3>
+      <div id="debugContent" style="max-height:70vh; overflow-y:auto; background:#000; color:#0f0; padding:12px; border-radius:8px; line-height:1.5; white-space:pre-wrap; word-break:break-all;"></div>
+      <div style="margin-top:12px; display:flex; gap:8px;">
+        <button class="simple-modal-close-btn" id="debugCopy" style="background:#3498db; color:#fff;">📋 Копировать</button>
+        <button class="simple-modal-close-btn" id="debugClose">Закрыть</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(el);
+  el.onclick = (e) => { if (e.target === el) el.remove(); };
+  document.getElementById('debugClose').onclick = () => el.remove();
+  document.getElementById('debugCopy').onclick = () => {
+    const text = document.getElementById('debugContent').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      document.getElementById('debugCopy').textContent = '✅ Скопировано';
+      setTimeout(() => document.getElementById('debugCopy').textContent = '📋 Копировать', 1500);
+    });
+  };
+
+  let info = '';
+  info += '=== ДИАГНОСТИКА VOICE ===\n';
+  info += 'Time: ' + new Date().toLocaleTimeString() + '\n\n';
+
+  info += '=== USER AGENT ===\n';
+  info += navigator.userAgent + '\n\n';
+
+  info += '=== MIC STATE ===\n';
+  info += 'state.micOn: ' + (state.micOn ? '✅' : '❌') + '\n';
+  info += 'state.voiceActive: ' + (state.voiceActive ? '✅' : '❌') + '\n\n';
+
+  info += '=== SOCKET ===\n';
+  info += 'Connected: ' + (window.socket?.connected ? '✅' : '❌') + '\n';
+  info += 'Socket ID: ' + (window.socket?.id || '—') + '\n';
+  info += 'Me ID: ' + (state.me?.id || '—') + '\n';
+  info += 'Room: ' + (state.me?.roomId || '—') + '\n\n';
+
+  info += '=== PLAYERS ===\n';
+  if (state.server?.players) {
+    state.server.players.forEach(p => {
+      info += `  ${p.name} (seat ${p.seat}) voiceEnabled: ${p.voiceEnabled || '?'}\n`;
+    });
+  } else {
+    info += '  — нет данных\n';
+  }
+  info += '\n';
+
+  info += '=== ACTIVE PEERS ===\n';
+  if (window.__voicePeers) {
+    let count = 0;
+    for (const [id, entry] of window.__voicePeers) {
+      count++;
+      info += `  ${id}:\n`;
+      info += `    ICE: ${entry.pc.iceConnectionState}\n`;
+      info += `    Conn: ${entry.pc.connectionState}\n`;
+      info += `    Signal: ${entry.pc.signalingState}\n`;
+    }
+    if (count === 0) info += '  — нет активных соединений\n';
+  } else {
+    info += '  window.__voicePeers не доступен\n';
+  }
+  info += '\n';
+
+  info += '=== TURN CREDENTIALS ===\n';
+  fetch('/api/turn-test')
+    .then(r => r.json())
+    .then(data => {
+      info += '✅ Ответ:\n' + JSON.stringify(data, null, 2) + '\n\n';
+      updateDebugContent(info);
+    })
+    .catch(e => {
+      info += '❌ ' + e.message + '\n\n';
+      updateDebugContent(info);
+    });
+
+  info += '=== MIC TEST ===\n';
+  navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(stream => {
+      const tracks = stream.getAudioTracks();
+      info += '✅ getUserMedia OK, tracks: ' + tracks.length + '\n';
+      tracks.forEach(t => {
+        const settings = t.getSettings();
+        info += `  ${t.label || 'audio'} enabled=${t.enabled} muted=${t.muted}\n`;
+      });
+      stream.getTracks().forEach(t => t.stop());
+      updateDebugContent(info);
+    })
+    .catch(e => {
+      info += '❌ getUserMedia FAIL: ' + e.name + ' — ' + e.message + '\n';
+      updateDebugContent(info);
+    });
+
+  function updateDebugContent(text) {
+    const content = document.getElementById('debugContent');
+    if (content) content.textContent = text;
+  }
+}
+
 function sortHand(hand, myDoc, trumpSuit) {
   const RV = { '6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14 };
   const SO = { '♠':0, '♥':1, '♦':2, '♣':3 };
@@ -342,7 +447,6 @@ export function renderTable(app, navigate) {
   const myTurnNow = isPlaying && isMyTurn && !iAmOut && !s.pendingPass && !s.pendingSwap;
   const iAmDefending = isPlaying && canDefend && !s.pendingPass && !s.pendingSwap;
 
-  // ==================== ЛОББИ ====================
   let lobbyBar = '';
   if (s.phase === 'lobby') {
     const playersCount = s.players.length;
@@ -421,7 +525,6 @@ export function renderTable(app, navigate) {
     passNotice = `<div class="pass-notice wait">${t('notice.waitingSeat', { name: wname })}</div>`;
   }
 
-  // ===== СИДЕНЬЯ =====
   const seats = s.players.filter(p => p.seat !== mySeat).map(p => {
     const isThisInPassed = passedSeats.includes(p.seat);
     const offlineBadge = !p.connected ? `<div class="badge-off">⚠ ${t('state.offline')}</div>` : '';
@@ -432,7 +535,6 @@ export function renderTable(app, navigate) {
                 : st === 'отошёл' ? 'out' : '';
     const isSpeaking = (state.voiceSpeakingSeats || []).includes(p.seat);
     const isPartner = p.team === myTeam;
-    // Перевод статуса
     let stText = st;
     if (st === 'бьёт')     stText = t('state.beat');
     if (st === 'думает')   stText = t('state.think');
@@ -445,12 +547,11 @@ export function renderTable(app, navigate) {
         <div class="name">${esc(p.name)} ${isPartner?'★':'✗'}</div>
         <div class="avatar">${avatarHtml(getAvatar(p.seat))}</div>
         ${st ? `<div class="state ${stCls}">${stText}</div>` : ''}
-        ${isThisInPassed ? '<div class="pass-badge">⛔ ' + t('btn.pass').replace(/<br>.*/, '').replace('✋','').trim() + '</div>' : ''}
+        ${isThisInPassed ? '<div class="pass-badge">⛔ Пас</div>' : ''}
         ${offlineBadge}
       </div>`;
   }).join('');
 
-  // ===== ДЕК =====
   let deckArea = '';
   if (isPlaying || s.phase === 'roundEnd' || s.phase === 'gameEnd') {
     if (s.deckEmpty && s.trumpReminder) {
@@ -655,7 +756,6 @@ export function renderTable(app, navigate) {
     };
   }
 
-  // 🎯 Tap-tap расстановка
   if (meP?.isHost && s.phase === 'lobby') {
     document.querySelectorAll('.so-player').forEach(el => {
       el.onclick = () => {
@@ -749,6 +849,7 @@ function bindSwipeIconHandlers(app, navigate) {
   const micBtn = document.getElementById('micBtn');
   if (micBtn) micBtn.onclick = async () => {
     playSound('button');
+    unlockAudio();
     if (!state.voiceActive) {
       const ok = await enableVoice();
       if (ok) {
@@ -775,5 +876,11 @@ function bindSwipeIconHandlers(app, navigate) {
     infoOpen = !infoOpen;
     if (infoOpen) showInfoModal();
     else { const m = document.getElementById('infoModal'); if (m) m.remove(); }
+  };
+  const debugBtn = document.getElementById('debugBtn');
+  if (debugBtn) debugBtn.onclick = () => {
+    playSound('button');
+    hideSwipeIcons();
+    showVoiceDebug();
   };
 }
