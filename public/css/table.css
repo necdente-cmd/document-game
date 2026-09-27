@@ -5,66 +5,43 @@
   overflow: hidden;
   border-radius: 14px;
   margin: 4px 4px 0;
-
-  /* Слой 1: SVG-шум для текстуры сукна */
-  background-image:
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.35 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
-    /* Слой 2: радиальный градиент сукна */
-    radial-gradient(ellipse 90% 75% at 50% 45%,
-      var(--felt-light) 0%,
-      var(--felt) 50%,
-      var(--felt-dark) 100%);
-  background-size: 200px 200px, cover;
-
-  /* Рама + виньетка */
+  background-color: var(--felt);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   box-shadow:
-    inset 0 0 0 1px var(--wood-dark),
-    inset 0 0 0 3px var(--wood-light),
-    inset 0 0 0 14px var(--wood),
-    inset 0 0 0 15px var(--wood-dark),
     inset 0 0 160px 20px rgba(0,0,0,.45),
     0 4px 20px rgba(0,0,0,.6);
 }
-
+[data-theme="classic"] .table { background-image: url('/textures/table_classic.jpg'); }
+[data-theme="dark"] .table {
+  background-image: url('/textures/table_dark.jpg');
+}
 [data-theme="neon"] .table {
+  background-image: url('/textures/table_neon.jpg');
   box-shadow:
-    inset 0 0 0 1px #ff0080,
-    inset 0 0 0 3px #00e5ff,
-    inset 0 0 0 14px var(--wood),
-    inset 0 0 0 15px #00e5ff,
-    inset 0 0 40px rgba(0,229,255,.35),
     inset 0 0 160px 20px rgba(0,0,0,.6),
+    inset 0 0 60px rgba(0,229,255,.25),
     0 4px 20px rgba(0,0,0,.7);
 }
-
 [data-theme="paper"] .table {
-  box-shadow:
-    inset 0 0 0 1px var(--wood-dark),
-    inset 0 0 0 3px var(--wood-light),
-    inset 0 0 0 14px var(--wood),
-    inset 0 0 0 15px var(--wood-dark),
-    inset 0 0 140px 20px rgba(139,106,61,.3),
-    0 4px 20px rgba(0,0,0,.5);
+  background-image: url('/textures/table_paper.jpg'),
+                    radial-gradient(ellipse 90% 75% at 50% 45%,
+                      var(--felt-light) 0%, var(--felt) 50%, var(--felt-dark) 100%);
 }
 
-/* ==================== ЛОГОТИП В ЛОББИ ==================== */
 .lobby-logo {
-  width: 64px;
-  height: 64px;
+  width: 64px; height: 64px;
   object-fit: contain;
-  margin: 0 auto 10px;
-  display: block;
+  margin: 0 auto 10px; display: block;
   filter: drop-shadow(0 4px 12px rgba(241,196,15,.4));
 }
 
-/* ==================== ВОДЯНОЙ ЗНАК НА СТОЛЕ ==================== */
 .field-watermark {
   position: absolute;
-  top: 50%;
-  left: 50%;
+  top: 50%; left: 50%;
   transform: translate(-50%, -50%);
-  width: 40%;
-  max-width: 240px;
+  width: 40%; max-width: 240px;
   opacity: 0.07;
   pointer-events: none;
   z-index: 0;
@@ -86,8 +63,7 @@
 }
 .deck-stack {
   position: absolute;
-  top: 0;
-  left: 0;
+  top: 0; left: 0;
   width: var(--card-w);
   height: var(--card-h);
   z-index: 3;
@@ -98,16 +74,12 @@
   position: absolute;
   top: calc(var(--card-h) * 0.55);
   left: calc(var(--card-w) * 0.55);
-  width: var(--card-h);
-  height: var(--card-w);
+  width: var(--card-h); height: var(--card-w);
   z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
 }
 .trump-under .card {
-  width: var(--card-w);
-  height: var(--card-h);
+  width: var(--card-w); height: var(--card-h);
   transform: rotate(90deg);
   flex-shrink: 0;
   filter: drop-shadow(0 2px 5px rgba(0,0,0,.6));
@@ -116,18 +88,14 @@
 .trump-reminder {
   width: calc(var(--card-w) * 1.05);
   height: calc(var(--card-h) * 1.05);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   font-size: calc(var(--card-h) * 0.72);
-  line-height: 1;
-  opacity: 0.7;
+  line-height: 1; opacity: 0.7;
   filter: drop-shadow(0 4px 12px rgba(0,0,0,.6));
-  user-select: none;
-  pointer-events: none;
+  user-select: none; pointer-events: none;
   font-weight: 900;
 }
-.trump-reminder.red   { color: #e74c3c; }
+.trump-reminder.red { color: #e74c3c; }
 .trump-reminder.black { color: #eee; }
 [data-theme="paper"] .trump-reminder.black { color: #222; }
 
@@ -178,16 +146,15 @@
   border: 2px solid rgba(255,255,255,.3);
   margin: 2px 0;
   transition: border-color .2s, box-shadow .2s;
+  overflow: hidden;
 }
 
-/* ⭐ Партнёр — золотая обводка */
 .seat.is-partner .avatar {
   border-color: #f1c40f;
   box-shadow: 0 0 10px rgba(241,196,15,.5);
 }
 .seat.is-partner .name { color: #f1c40f; }
 
-/* ✗ Противник — красная обводка */
 .seat.is-enemy .avatar {
   border-color: rgba(231,76,60,.6);
 }
@@ -208,8 +175,7 @@
 }
 
 .seat.top {
-  top: 0;
-  left: 50%;
+  top: 0; left: 50%;
   transform: translateX(-50%);
   border-top-left-radius: 0;
   border-top-right-radius: 0;
@@ -230,8 +196,7 @@
 /* ==================== ПОЛЕ БОЯ ==================== */
 .center {
   position: absolute;
-  top: 48%;
-  left: 50%;
+  top: 48%; left: 50%;
   transform: translate(-50%, -50%);
   display: flex;
   gap: 42px;
@@ -252,8 +217,7 @@
   width: calc(var(--card-w) * 1.15) !important;
   height: calc(var(--card-h) * 1.15) !important;
   position: absolute;
-  top: 0;
-  left: 0;
+  top: 0; left: 0;
   transition: top .25s ease-out, left .25s ease-out, transform .25s ease-out;
 }
 @keyframes fieldIn {
@@ -280,12 +244,14 @@
   outline-offset: -3px;
   box-shadow: 0 0 12px rgba(231, 76, 60, 0.6);
 }
+.slot.selected-target {
+  filter: drop-shadow(0 0 12px rgba(241,196,15,.9));
+}
 
 /* ==================== НАСТРОЙКА ==================== */
 .settings-btn {
   position: absolute;
-  top: 0;
-  right: 0;
+  top: 0; right: 0;
   width: calc(40px * var(--scale));
   height: calc(40px * var(--scale));
   border-radius: 0 0 0 calc(10px * var(--scale));
@@ -295,15 +261,12 @@
   font-size: calc(20px * var(--scale));
   cursor: pointer;
   z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
 }
 [data-theme="paper"] .settings-btn { background: rgba(0,0,0,.2); color: #333; }
 
 .actions {
-  display: flex;
-  gap: 6px;
+  display: flex; gap: 6px;
   padding: 2px 8px;
   justify-content: center;
   flex-wrap: wrap;
@@ -335,9 +298,7 @@
 }
 .hand {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: 0; left: 0; right: 0;
   height: 100%;
   background: transparent;
   overflow: visible;
@@ -423,8 +384,7 @@
 /* ==================== ИКОНКИ СВАЙПОМ ==================== */
 .swipe-icons {
   position: fixed;
-  left: 0;
-  top: 50%;
+  left: 0; top: 50%;
   transform: translate(-100%, -50%);
   transition: transform .25s ease-out;
   display: flex;
@@ -450,9 +410,7 @@
   color: #fff;
   font-size: calc(22px * var(--scale));
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   box-shadow: 0 2px 8px rgba(0,0,0,.5);
   padding: 0;
   transition: transform .12s, background .12s;
@@ -470,11 +428,9 @@
 
 .swipe-trigger {
   position: fixed;
-  left: 0;
-  top: 50%;
+  left: 0; top: 50%;
   transform: translateY(-50%);
-  width: 22px;
-  height: 64px;
+  width: 22px; height: 64px;
   background: rgba(0,0,0,.7);
   border-top-right-radius: 12px;
   border-bottom-right-radius: 12px;
@@ -485,16 +441,14 @@
   cursor: pointer;
   z-index: 299;
   padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   box-shadow: 2px 0 10px rgba(0,0,0,.5);
   transition: background .15s;
 }
 .swipe-trigger:active { background: rgba(0,0,0,.9); }
 .swipe-trigger.hidden { display: none; }
 
-/* ==================== КНОПКА ДЕЙСТВИЯ ==================== */
+/* ==================== КНОПКА ДЕЙСТВИЯ (основная, справа) ==================== */
 .action-center {
   position: absolute;
   bottom: calc(100px * var(--scale));
@@ -525,33 +479,48 @@
 .action-center.b4 { background: radial-gradient(circle at 40% 40%, #bb6bd9 0%, #8e44ad 100%); }
 .action-center.b5 { background: radial-gradient(circle at 40% 40%, #5dade2 0%, #2874a6 100%); }
 
+/* ==================== ДОП. КНОПКИ (слева, зеркально) ==================== */
 .extra-actions {
   position: absolute;
-  bottom: calc(200px * var(--scale));
-  right: calc(8px * var(--scale));
+  bottom: calc(100px * var(--scale));
+  left: calc(8px * var(--scale));
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  align-items: flex-end;
-  z-index: 25;
+  gap: 8px;
+  align-items: flex-start;
+  z-index: 30;
 }
 .extra-actions button {
-  min-width: calc(100px * var(--scale));
-  padding: calc(8px * var(--scale)) calc(12px * var(--scale));
-  border-radius: calc(8px * var(--scale));
-  border: 2px solid rgba(255,255,255,.4);
-  font-weight: 800;
+  width: calc(100px * var(--scale));
+  height: calc(100px * var(--scale));
+  border-radius: calc(100px * var(--scale));
+  border: none;
+  font-weight: 900;
   font-size: calc(11px * var(--scale));
   cursor: pointer;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(0,0,0,.6);
+  text-align: center;
   line-height: 1.1;
+  padding: 6px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.5), inset 0 -4px 8px rgba(0,0,0,.2);
+  text-shadow: 0 1px 2px rgba(0,0,0,.3);
+  transition: transform .12s;
 }
 .extra-actions button:active { transform: scale(.95); }
-.extra-actions .b1 { background: #f39c12; color: #000; }
-.extra-actions .b4 { background: #8e44ad; color: #fff; }
+
+/* БИТО — зелёный */
+.extra-actions .b1 {
+  background: radial-gradient(circle at 40% 40%, #7be495 0%, #2ecc71 100%);
+  color: #000;
+  text-shadow: none;
+}
+/* ВДОГОНКУ? — фиолетовый */
+.extra-actions .b4 {
+  background: radial-gradient(circle at 40% 40%, #bb6bd9 0%, #8e44ad 100%);
+  color: #fff;
+}
 
 /* ==================== ПАНЕЛЬ СМАЙЛОВ ==================== */
 .emoji-bar {
@@ -578,27 +547,20 @@
   border: none;
   font-size: 22px;
   cursor: pointer;
-  padding: 0;
-  margin: 0;
+  padding: 0; margin: 0;
   border-radius: 4px;
   line-height: 1;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
 }
 .emoji-bar button:active { background: rgba(255,255,255,.2); }
 
 /* ==================== МОДАЛКА СВЕДЕНИЙ ==================== */
 .info-modal {
-  position: fixed;
-  inset: 0;
+  position: fixed; inset: 0;
   background: rgba(0,0,0,.7);
   z-index: 500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   padding: 20px;
 }
 .info-modal-inner {
@@ -607,15 +569,13 @@
   border: 2px solid var(--acc);
   border-radius: 16px;
   padding: 24px 28px;
-  max-width: 400px;
-  width: 100%;
+  max-width: 400px; width: 100%;
   text-align: center;
   box-shadow: 0 10px 40px rgba(0,0,0,.8);
 }
 .info-modal-inner h3 { margin: 0 0 16px; font-size: 20px; color: var(--acc); }
 .info-row {
-  display: flex;
-  justify-content: space-between;
+  display: flex; justify-content: space-between;
   padding: 8px 0;
   border-bottom: 1px solid rgba(255,255,255,.1);
   font-size: 15px;
@@ -644,8 +604,7 @@
   border-radius: 18px;
   padding: 22px 20px 20px;
   text-align: center;
-  width: 92vw;
-  max-width: 380px;
+  width: 92vw; max-width: 380px;
   z-index: 50;
   box-shadow: 0 12px 40px rgba(0,0,0,.7);
   animation: lobbyIn .35s cubic-bezier(.2,.8,.3,1);
@@ -656,19 +615,16 @@
   100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 .waiting-label {
-  font-size: 11px;
-  opacity: .65;
+  font-size: 11px; opacity: .65;
   text-transform: uppercase;
   letter-spacing: 1.5px;
   font-weight: 700;
   margin-bottom: 4px;
 }
 .waiting-code {
-  background: none;
-  border: none;
+  background: none; border: none;
   font-family: 'Courier New', monospace;
-  font-size: 40px;
-  font-weight: 900;
+  font-size: 40px; font-weight: 900;
   letter-spacing: 8px;
   color: var(--acc);
   cursor: pointer;
@@ -713,29 +669,24 @@
 [data-theme="paper"] .wp-card { background: rgba(0,0,0,.05); border-color: rgba(0,0,0,.08); }
 .wp-avatar {
   font-size: 24px;
-  width: 40px;
-  height: 40px;
+  width: 40px; height: 40px;
   border-radius: 50%;
   background: rgba(255,255,255,.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   border: 2px solid rgba(255,255,255,.15);
+  overflow: hidden;
 }
+.wp-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 [data-theme="paper"] .wp-avatar { background: rgba(0,0,0,.06); border-color: rgba(0,0,0,.12); }
 .wp-name {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 12px; font-weight: 600;
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   padding: 0 4px;
 }
 .wp-host {
   font-size: 9px;
-  background: var(--acc);
-  color: #000;
+  background: var(--acc); color: #000;
   padding: 1px 6px;
   border-radius: 6px;
   font-weight: 800;
@@ -743,7 +694,7 @@
   letter-spacing: .5px;
 }
 
-/* ==================== РАССТАНОВКА ИГРОКОВ ==================== */
+/* ==================== РАССТАНОВКА ==================== */
 .seat-order-block {
   margin: 10px 0 12px;
   padding: 10px;
@@ -760,11 +711,7 @@
   margin-bottom: 10px;
   text-align: center;
 }
-.so-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
+.so-grid { display: flex; flex-direction: column; gap: 6px; }
 .so-player {
   display: flex;
   align-items: center;
@@ -799,9 +746,7 @@
   min-width: 32px;
   height: 26px;
   padding: 0 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   font-weight: 900;
   font-size: 11px;
   border-radius: 6px;
@@ -810,32 +755,24 @@
 }
 .team-a .so-pos { background: rgba(241,196,15,.2); color: #f1c40f; }
 .team-b .so-pos { background: rgba(231,76,60,.2); color: #ff6b6b; }
-
 .so-avatar {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
   font-size: 20px;
   background: rgba(255,255,255,.08);
   border-radius: 50%;
   border: 2px solid rgba(255,255,255,.12);
   flex-shrink: 0;
+  overflow: hidden;
 }
+.so-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .so-name {
   flex: 1;
   font-size: 13px;
   font-weight: 700;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.so-name small {
-  font-weight: 400;
-  opacity: .6;
-  font-size: 11px;
-}
+.so-name small { font-weight: 400; opacity: .6; font-size: 11px; }
 .so-team {
   font-size: 14px;
   font-weight: 900;
@@ -859,10 +796,7 @@
   font-weight: 600;
 }
 .dots { display: inline-block; }
-.dots span {
-  animation: dotBlink 1.2s infinite;
-  display: inline-block;
-}
+.dots span { animation: dotBlink 1.2s infinite; display: inline-block; }
 .dots span:nth-child(2) { animation-delay: .2s; }
 .dots span:nth-child(3) { animation-delay: .4s; }
 @keyframes dotBlink {
@@ -876,8 +810,7 @@
   border-radius: 12px;
   margin-top: 6px;
   width: 100%;
-  background: var(--acc);
-  color: #000;
+  background: var(--acc); color: #000;
   font-weight: 700;
   border: none;
   cursor: pointer;
@@ -885,6 +818,21 @@
   transition: transform .12s;
 }
 .start-big:active { transform: scale(.97); }
+
+/* ==================== IMG-АВАТАРЫ ==================== */
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+.seat .avatar .avatar-img,
+.wp-avatar .avatar-img,
+.so-avatar .avatar-img {
+  width: 100%;
+  height: 100%;
+}
 
 /* ==================== ГОЛОСОВОЙ ЧАТ ==================== */
 .icon-btn.voice-on {
@@ -908,38 +856,4 @@
   content: ' 🎤';
   font-size: 0.9em;
   opacity: 0.9;
-}
-
-/* ==================== 🌐 ЯЗЫКОВОЙ ПЕРЕКЛЮЧАТЕЛЬ В НАСТРОЙКАХ ==================== */
-.lang-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 4px;
-}
-.lang-btn {
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 2px solid rgba(255,255,255,.15);
-  background: rgba(255,255,255,.06);
-  color: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-  transition: all .15s;
-}
-.lang-btn:active { transform: scale(.97); }
-.lang-btn.sel {
-  border-color: var(--acc);
-  background: rgba(241,196,15,.18);
-  color: var(--acc);
-}
-[data-theme="paper"] .lang-btn {
-  border-color: rgba(0,0,0,.15);
-  background: rgba(0,0,0,.04);
-}
-[data-theme="paper"] .lang-btn.sel {
-  background: rgba(184,134,11,.15);
-  color: #b8860b;
 }

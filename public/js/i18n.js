@@ -17,6 +17,8 @@ const RU = {
   'common.confirm': '✅ Подтвердить',
   'common.reject': '✖ Отклонить',
   'common.player': 'Игрок',
+  'common.and': ' и ',
+  'common.dash': '—',
   'common.min': 'мин',
 
   // ===== welcome =====
@@ -113,7 +115,12 @@ const RU = {
   'btn.return': '🔄<br>ВЕРНУТЬСЯ',
   'btn.passDocs': '📤<br>ПЕРЕДАТЬ',
   'btn.pass': '✋<br>ПАС',
-  'btn.bito': '✔ БИТО',
+  'btn.bito': '✔<br>БИТО',
+  'btn.askMore': '➕<br>ВДОГОНКУ?',
+
+  // ===== sides =====
+  'side.partner': '★',
+  'side.enemy': '✗',
 
   // ===== info =====
   'info.title': '📊 Сведения',
@@ -145,6 +152,7 @@ const RU = {
   'chat.title': '💬 Чат',
   'chat.placeholder': 'Сообщение...',
   'chat.noMessages': 'Сообщений пока нет…',
+  'chat.send': '→',
 
   // ===== history =====
   'history.title': '📜 История конов',
@@ -234,6 +242,7 @@ const RU = {
   'toast.refreshed': '🔄 Обновлено',
   'toast.micOn': '🎤 Микрофон включён',
   'toast.micError': 'Не удалось получить доступ к микрофону',
+  'toast.askMore': '➕ Вдогонку?',
 
   // ===== errors =====
   'err.roomNotFound': 'Комната не найдена',
@@ -336,13 +345,13 @@ const KY = {
   'join.enterCode': 'Кодду киргизиңиз',
 
   'lobby.roomCode': 'Бөлмөнүн коду',
-  'lobby.copyCode': 'Көчүрүү үчүн басыңыз',
+  'lobby.copyCode': 'Көчүрүү үчүн таптаңыз',
   'lobby.players': 'оюнчу',
   'lobby.waitingPlayers': 'Оюнчуларды күтүп жатабыз…',
   'lobby.waitingHost': 'Хостту күтүп жатабыз…',
   'lobby.startGame': '▶ Оюнду баштоо',
-  'lobby.seating': '🎯 Орунчуларды жайгаштыруу',
-  'lobby.seatingHint': '(эки оюнчуну тандап алмаштырыңыз)',
+  'lobby.seating': '🎯 Орундарды жайгаштыруу',
+  'lobby.seatingHint': '(эки оюнчуну таптап алмаштырыңыз)',
   'lobby.you': '(сиз)',
   'lobby.host': 'Хост',
   'lobby.waitingSlot': 'Күтүп жатабыз…',
@@ -361,7 +370,7 @@ const KY = {
   'banner.beatSelected': '🎯 ТАНДАЛГАН КАРТАНЫ ЧАБЫҢЫЗ',
   'banner.canPass': '👆 Карта кошуңуз же ЖОК айтыңыз',
 
-  'notice.bothPassed': '⛔ Эки чабуучутең жок деди',
+  'notice.bothPassed': '⛔ Эки чабуучу тең жок деди',
   'notice.attackerPassed': '⏳ Чабуучу жок деди — өнөктү күтүп жатабыз',
   'notice.partnerPassed': '⏳ Өнөктөш жок деди — чабуучуну күтүп жатабыз',
   'notice.waitingSeat': '⏳ {name} күтүп жатабыз — убактылуу жок',
@@ -380,7 +389,8 @@ const KY = {
   'btn.return': '🔄<br>КАЙТУУ',
   'btn.passDocs': '📤<br>ӨТКӨРҮҮ',
   'btn.pass': '✋<br>ЖОК',
-  'btn.bito': '✔ КЕТИРҮҮ',
+  'btn.bito': '✔<br>КЕТИРҮҮ',
+  'btn.askMore': '➕<br>КОШОСУНАРБЫ?',
 
   'info.title': '📊 Маалымат',
   'info.trump': 'Козыр',
@@ -457,11 +467,11 @@ const KY = {
   'tut.s3.emoji': '👆',
   'tut.s3.title': 'Кантип жүрүү керек',
   'tut.s3.subtitle': 'Карта менен чабуу',
-  'tut.s3.text': 'Өз кезегиңизде колуңуздагы картаны столдун ортосуна тартыңыз. Же аны басып, анан талааны басыңыз.\n\nЭсиңизде болсун: өз документиңиз менен кирүү болбойт! Документти чабууга гана болот (жана козыр менен гана).',
+  'tut.s3.text': 'Өз кезегиңизде колуңуздагы картаны столдун ортосуна тартыңыз. Же аны таптап, анан талааны таптаңыз.\n\nЭсиңизде болсун: өз документиңиз менен кирүү болбойт! Документти чабууга гана болот (жана козыр менен гана).',
   'tut.s4.emoji': '🛡️',
   'tut.s4.title': 'Кантип коргонуу керек',
   'tut.s4.subtitle': 'Баары же эч нерсе',
-  'tut.s4.text': 'Сизге чабуул кылганда, же бардык карталарды чабасыз, же баарын көтөрөсүз.\n\nКантип чабуу керек: душмандын картасын басыңыз, анан колуңуздагы өз картаңызды басыңыз. Ылайыктуу карталар жашыл түстө белгиленет.',
+  'tut.s4.text': 'Сизге чабуул кылганда, же бардык карталарды чабасыз, же баарын көтөрөсүз.\n\nКантип чабуу керек: душмандын картасын таптаңыз, анан колуңуздагы өз картаңызды таптаңыз. Ылайыктуу карталар жашыл түстө белгиленет.',
   'tut.s5.emoji': '✨',
   'tut.s5.title': 'Өзгөчө эрежелер',
   'tut.s5.subtitle': 'Алмашуу · Өткөрүү',
@@ -490,6 +500,7 @@ const KY = {
   'toast.refreshed': '🔄 Жаңыртылды',
   'toast.micOn': '🎤 Микрофон күйүк',
   'toast.micError': 'Микрофонго кирүү мүмкүн болбоду',
+  'toast.askMore': '➕ Кошосунарбы?',
 
   'err.roomNotFound': 'Бөлмө табылган жок',
   'err.roomFull': 'Бөлмө толук',
@@ -557,8 +568,7 @@ export function initI18n() {
 }
 
 function applyLangFont() {
-  const lang = currentLang;
-  if (lang === 'ky') {
+  if (currentLang === 'ky') {
     document.documentElement.dataset.lang = 'ky';
   } else {
     document.documentElement.dataset.lang = 'ru';
@@ -592,10 +602,7 @@ export function toggleLang() {
   return currentLang;
 }
 
-// ==================== ОБРАТНЫЙ ПЕРЕВОД СЕРВЕРНЫХ СООБЩЕНИЙ ====================
-// Сервер шлёт сообщения на русском. Переводим их через regexp-маппинг.
-
-// Ключи err.* и их русские шаблоны с {var}
+// ==================== ПЕРЕВОД СЕРВЕРНЫХ ОШИБОК ====================
 const ERR_KEYS = [
   'err.roomNotFound', 'err.roomFull', 'err.gameStarted', 'err.onlyHost',
   'err.needPlayers', 'err.notYourTurn', 'err.noCardsSelected', 'err.cardNotInHand',
@@ -612,7 +619,6 @@ const ERR_KEYS = [
   'err.notYourTeamChooses', 'err.wrongPlayer', 'err.gameNotOver', 'err.sameRankFirstAttack',
 ];
 
-// Кэш скомпилированных регэкспов
 let _errPatterns = null;
 
 function buildErrPatterns() {
@@ -620,9 +626,7 @@ function buildErrPatterns() {
   _errPatterns = ERR_KEYS.map(key => {
     const ruTemplate = RU[key];
     if (!ruTemplate) return null;
-    // Экранируем всё, потом заменяем экранированные {var} на группы захвата
     let escaped = ruTemplate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    // Заменяем \{var\} на (.+?)
     escaped = escaped.replace(/\\\{(\w+)\\\}/g, '(.+?)');
     return {
       key,
@@ -633,14 +637,11 @@ function buildErrPatterns() {
   return _errPatterns;
 }
 
-// Перевести серверное сообщение. Если не нашли — вернуть как есть.
 export function translateServerMsg(msg) {
   if (!msg || typeof msg !== 'string') return msg;
   if (currentLang === 'ru') return msg;
-
   const trimmed = msg.trim();
   const patterns = buildErrPatterns();
-
   for (const { key, re, vars } of patterns) {
     const m = trimmed.match(re);
     if (m) {
