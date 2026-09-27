@@ -445,8 +445,9 @@ export function renderTable(app, navigate) {
   const iAmDefending = isPlaying && canDefend && !s.pendingPass && !s.pendingSwap;
 
   // 🎯 Вдогонку? — защитник не может побить ни одну непобитую
+  //     НЕ показываем, если защитник уже сдался (нажал ПОДНЯТЬ)
   let canAskMore = false;
-  if (canDefend && s.field && !s.field.askMore) {
+  if (canDefend && s.field && !s.field.askMore && !s.field.defenderGaveUp) {
     const unbeaten = s.field.cards.filter(x => !x.beatenBy && !x.isForced && x.card.r !== myDoc);
     if (unbeaten.length > 0) {
       let canBeatAny = false;
@@ -606,12 +607,13 @@ export function renderTable(app, navigate) {
 
   const onlyDocsNow = s.myHand.length > 0 && s.myHand.every(c => c.r === myDoc);
   const allBeaten = s.field && s.field.cards.length > 0 && s.field.cards.every(x => x.beatenBy);
+  const defenderGaveUp = !!s.field?.defenderGaveUp;
 
   let centerActionBtn = '';
   let centerActionCls = 'b2';
   let centerActionId = '';
 
-  if (canDefend && s.field && s.field.cards.length > 0) {
+  if (canDefend && s.field && s.field.cards.length > 0 && !defenderGaveUp) {
     centerActionBtn = t('btn.pickUp'); centerActionCls = 'b3'; centerActionId = 'pickUpBtn';
   }
   else if (isMyTurn && !iAmOut && !s.field && partnerIsOut && onlyDocsNow) {
@@ -631,7 +633,7 @@ export function renderTable(app, navigate) {
   }
 
   const extraActions = [];
-  if (canDefend && allBeaten && bothPassed && !s.pendingPass && !s.pendingSwap) {
+  if (canDefend && allBeaten && bothPassed && !defenderGaveUp && !s.pendingPass && !s.pendingSwap) {
     extraActions.push(`<button class="b1" id="bitoBtn">${t('btn.bito')}</button>`);
   }
   if (canAskMore && !s.pendingPass && !s.pendingSwap) {
@@ -656,6 +658,8 @@ export function renderTable(app, navigate) {
   let hintHtml = '';
   if (waitingForSeat !== undefined) {
     hintHtml = `<div class="hint">${t('hint.waitingSeat')}</div>`;
+  } else if (canDefend && defenderGaveUp && !bothPassed) {
+    hintHtml = `<div class="hint">⏳ Ждём пас атакующих…</div>`;
   } else if (canDefend && !bothPassed && !s.pendingPass && !s.pendingSwap) {
     const hasMyDoc = s.field.cards.some(x => !x.beatenBy && x.card.r === myDoc && !x.isForced);
     if (hasMyDoc) hintHtml = `<div class="hint">${t('hint.hasYourDoc')}</div>`;

@@ -128,6 +128,15 @@ export function bindSocket(onStateChange) {
       }
     }
 
+    // ✨ Toast атакующим о «Поднимаю» (защитник сдался, но ждём пас)
+    if (prev && !prev.field?.defenderGaveUp && s.field?.defenderGaveUp) {
+      const attacker = s.field.attacker;
+      const partner = (attacker + 2) % 4;
+      if (s.mySeat === attacker || s.mySeat === partner) {
+        toastInfo('📥 Защитник поднимает — добавьте карт или ПАС');
+      }
+    }
+
     state.server = s;
     if (s.opts) {
       applyTheme(s.opts.theme);
