@@ -1,6 +1,6 @@
 import { state, saveMe, applyTheme, applyScale, beep, vibrate, getPlayerId } from './state.js';
 import { playSound } from './sound.js';
-import { toastErr, toastOk } from './ui/toast.js';
+import { toastErr, toastOk, toastInfo } from './ui/toast.js';
 import { bindVoiceSocket } from './voice.js';
 import { t, translateServerMsg } from './i18n.js';
 
@@ -13,7 +13,10 @@ export const socket = io({
   transports: ['websocket', 'polling'],
 });
 
-// ==================== 🔄 ЖЁСТКИЙ РЕКОННЕКТ ====================
+if (typeof window !== 'undefined') {
+  window.socket = socket;
+}
+
 let reconnecting = false;
 
 export function forceRefresh() {
@@ -39,13 +42,13 @@ export function forceRefresh() {
           avatar: state.me.avatar,
         }, (r) => {
           reconnecting = false;
-                    if (r && r.ok) {
+          if (r && r.ok) {
             state.me.id = r.playerId;
             console.log('[refresh] ✅ rejoined, id:', r.playerId);
             setTimeout(() => socket.emit('syncState'), 200);
             toastOk(t('toast.synced'));
 
-            // 🔊 Восстанавливаем голос если был активен
+            // 🔊 Восстанавливаем голос
             if (state.voiceActive || state.micOn) {
               import('./voice.js').then(m => {
                 m.restartVoice().catch(e => console.warn('[refresh] voice restart', e));
@@ -76,7 +79,6 @@ export function forceRefresh() {
   }, 200);
 }
 
-// ==================== BIND ====================
 export function bindSocket(onStateChange) {
   socket.on('state', (s) => {
     const prev = state.server;
@@ -115,6 +117,15 @@ export function bindSocket(onStateChange) {
       const oppTeam = 1 - myTeam;
       if ((s.roundWins[myTeam]  || 0) > (prev.roundWins[myTeam]  || 0)) playSound('win');
       if ((s.roundWins[oppTeam] || 0) > (prev.roundWins[oppTeam] || 0)) playSound('lose');
+    }
+
+    // ✨ Toast атакующим о «Вдогонку?»
+    if (prev && !prev.field?.askMore && s.field?.askMore) {
+      const attacker = s.field.attacker;
+      const partner = (attacker + 2) % 4;
+      if (s.mySeat === attacker || s.mySeat === partner) {
+        toastInfo(t('toast.askMore'));
+      }
     }
 
     state.server = s;
@@ -163,7 +174,6 @@ export function bindSocket(onStateChange) {
   socket.on('disconnect', (reason) => console.log('[socket] ❌ disconnected:', reason));
   socket.on('reconnect', (attempt) => console.log('[socket] 🔄 reconnected after', attempt));
 
-  // ==================== 🔄 ВОЗВРАТ ИЗ ФОНА ====================
   let hiddenSince = 0;
 
   document.addEventListener('visibilitychange', () => {

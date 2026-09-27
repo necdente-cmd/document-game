@@ -1,6 +1,6 @@
 import { state, saveMe, applyTheme, playerState, getAvatar, avatarHtml, savePrefs } from '../state.js';
 import { socket, forceRefresh } from '../socket.js';
-import { cardHtml, backPath, esc, renderHandFan } from '../card.js';
+import { cardHtml, backPath, esc, renderHandFan, beatsUI } from '../card.js';
 import { buildOverlays, bindOverlays } from '../ui/overlays.js';
 import { maybeShowChampion } from '../ui/champion.js';
 import { showHistory } from '../ui/history.js';
@@ -301,7 +301,7 @@ function showVoiceDebug() {
     });
   };
   document.getElementById('debugRestart').onclick = async () => {
-    if (!confirm('Перезапустить голосовой чат? Микрофон будет пересоздан.')) return;
+    if (!confirm('Перезапустить голосовой чат?')) return;
     const btn = document.getElementById('debugRestart');
     btn.textContent = '⏳ Перезапуск…';
     try {
@@ -310,38 +310,29 @@ function showVoiceDebug() {
       setTimeout(() => { el.remove(); }, 1000);
     } catch (e) {
       btn.textContent = '❌ Ошибка';
-      console.error(e);
     }
   };
 
   let info = '';
   info += '=== ДИАГНОСТИКА VOICE ===\n';
   info += 'Time: ' + new Date().toLocaleTimeString() + '\n\n';
-  info += '=== USER AGENT ===\n';
-  info += navigator.userAgent + '\n\n';
-
+  info += '=== USER AGENT ===\n' + navigator.userAgent + '\n\n';
   info += '=== MIC STATE ===\n';
   info += 'state.micOn: ' + (state.micOn ? '✅' : '❌') + '\n';
   info += 'state.voiceActive: ' + (state.voiceActive ? '✅' : '❌') + '\n';
   info += 'streamIsLive: ' + (streamIsLivePublic() ? '✅' : '❌') + '\n\n';
-
   info += '=== SOCKET ===\n';
   info += 'Connected: ' + (window.socket?.connected ? '✅' : '❌') + '\n';
   info += 'Socket ID: ' + (window.socket?.id || '—') + '\n';
   info += 'Me ID: ' + (state.me?.id || '—') + '\n';
   info += 'Room: ' + (state.me?.roomId || '—') + '\n\n';
-
   info += '=== PLAYERS ===\n';
   if (state.server?.players) {
     state.server.players.forEach(p => {
-      info += `  ${p.name} (seat ${p.seat}) voiceEnabled: ${p.voiceEnabled || '?'}\n`;
+      info += `  ${p.name} (seat ${p.seat}) voiceEnabled: ${p.voiceEnabled ? '✅' : '❌'}\n`;
     });
-  } else {
-    info += '  — нет данных\n';
-  }
-  info += '\n';
-
-  info += '=== ACTIVE PEERS ===\n';
+  } else { info += '  — нет данных\n'; }
+  info += '\n=== ACTIVE PEERS ===\n';
   const peersDebug = getVoiceDebugInfo();
   if (peersDebug.length === 0) {
     info += '  — нет активных соединений\n';
@@ -350,49 +341,28 @@ function showVoiceDebug() {
       info += `  ${p.id}: ICE=${p.ice}, Conn=${p.conn}, Signal=${p.signal}\n`;
     });
   }
-  info += '\n';
-
-  info += '=== AUDIO ELEMENTS ===\n';
+  info += '\n=== AUDIO ELEMENTS ===\n';
   const audios = getAudioElements();
-  if (audios.length === 0) {
-    info += '  — нет audio элементов\n';
-  } else {
-    audios.forEach(a => {
-      info += `  ${a.id}: paused=${a.paused} muted=${a.muted} vol=${a.volume} hasSrc=${a.hasSrc} tracks=${a.srcTracks}\n`;
-    });
-  }
-  info += '\n';
-
-  info += '=== TURN CREDENTIALS ===\n';
+  if (audios.length === 0) info += '  — нет audio элементов\n';
+  else audios.forEach(a => {
+    info += `  ${a.id}: paused=${a.paused} muted=${a.muted} vol=${a.volume} hasSrc=${a.hasSrc} tracks=${a.srcTracks}\n`;
+  });
+  info += '\n=== TURN CREDENTIALS ===\n';
   fetch('/api/turn-test')
-    .then(r => {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(data => {
-      info += '✅ Ответ:\n' + JSON.stringify(data, null, 2) + '\n\n';
-      updateDebugContent(info);
-    })
-    .catch(e => {
-      info += '❌ ' + e.message + '\n\n';
-      updateDebugContent(info);
-    });
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(data => { info += '✅ Ответ:\n' + JSON.stringify(data, null, 2) + '\n\n'; updateDebugContent(info); })
+    .catch(e => { info += '❌ ' + e.message + '\n\n'; updateDebugContent(info); });
 
   info += '=== MIC TEST ===\n';
   navigator.mediaDevices.getUserMedia({ audio: true })
     .then(stream => {
       const tracks = stream.getAudioTracks();
       info += '✅ getUserMedia OK, tracks: ' + tracks.length + '\n';
-      tracks.forEach(t => {
-        info += `  ${t.label || 'audio'} enabled=${t.enabled} muted=${t.muted}\n`;
-      });
+      tracks.forEach(t => { info += `  ${t.label || 'audio'} enabled=${t.enabled}\n`; });
       stream.getTracks().forEach(t => t.stop());
       updateDebugContent(info);
     })
-    .catch(e => {
-      info += '❌ getUserMedia FAIL: ' + e.name + ' — ' + e.message + '\n';
-      updateDebugContent(info);
-    });
+    .catch(e => { info += '❌ ' + e.name + ' — ' + e.message + '\n'; updateDebugContent(info); });
 
   updateDebugContent(info);
 
@@ -473,6 +443,23 @@ export function renderTable(app, navigate) {
 
   const myTurnNow = isPlaying && isMyTurn && !iAmOut && !s.pendingPass && !s.pendingSwap;
   const iAmDefending = isPlaying && canDefend && !s.pendingPass && !s.pendingSwap;
+
+  // 🎯 Вдогонку? — защитник не может побить ни одну непобитую
+  let canAskMore = false;
+  if (canDefend && s.field && !s.field.askMore) {
+    const unbeaten = s.field.cards.filter(x => !x.beatenBy && !x.isForced && x.card.r !== myDoc);
+    if (unbeaten.length > 0) {
+      let canBeatAny = false;
+      for (const entry of unbeaten) {
+        for (const c of s.myHand) {
+          if (c.r === myDoc && c.s !== s.trumpSuit) continue;
+          if (beatsUI(c, entry.card, s.trumpSuit)) { canBeatAny = true; break; }
+        }
+        if (canBeatAny) break;
+      }
+      if (!canBeatAny) canAskMore = true;
+    }
+  }
 
   // ==================== ЛОББИ ====================
   let lobbyBar = '';
@@ -646,6 +633,9 @@ export function renderTable(app, navigate) {
   const extraActions = [];
   if (canDefend && allBeaten && bothPassed && !s.pendingPass && !s.pendingSwap) {
     extraActions.push(`<button class="b1" id="bitoBtn">${t('btn.bito')}</button>`);
+  }
+  if (canAskMore && !s.pendingPass && !s.pendingSwap) {
+    extraActions.push(`<button class="b4" id="askMoreBtn">${t('btn.askMore')}</button>`);
   }
 
   let beatsTarget = null;
@@ -826,6 +816,7 @@ export function renderTable(app, navigate) {
   const ps = g('passBtn');     if (ps) ps.onclick = () => { playSound('button'); socket.emit('passDocsRequest'); };
   const pas = g('pasBtn');     if (pas) pas.onclick = () => { playSound('button'); socket.emit('endAttack'); };
   const bi = g('bitoBtn');     if (bi) bi.onclick = () => { playSound('button'); socket.emit('bito'); };
+  const am = g('askMoreBtn');  if (am) am.onclick = () => { playSound('button'); socket.emit('askMore'); };
 
   const eb = g('emojiBar');
   if (eb) eb.onclick = e => {
