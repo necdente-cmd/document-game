@@ -1,3 +1,4 @@
+import { state, loadName, saveName, saveMe, loadAvatar, saveAvatar, AVATARS, getPlayerId } from '../state.js';
 import { state, loadName, saveName, saveMe, loadAvatar, saveAvatar, AVATARS } from '../state.js';
 import { socket } from '../socket.js';
 import { t } from '../i18n.js';
@@ -37,9 +38,10 @@ export function renderJoin(app, navigate) {
     saveName(name);
     saveAvatar(pickedAvatar);
 
-    socket.emit('joinRoom', {
+        socket.emit('joinRoom', {
       roomId: rid, name,
       playerId: state.me?.id,
+      persistentId: getPlayerId(),
       avatar: pickedAvatar,
     }, (r) => {
       if (!r.ok) return document.getElementById('err').textContent = r.err;

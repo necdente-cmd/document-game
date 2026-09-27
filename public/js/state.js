@@ -101,3 +101,13 @@ export function saveAvatar(a) {
   if (a) localStorage.setItem('myAvatar', a);
   else localStorage.removeItem('myAvatar');
 }
+
+// 🆔 Постоянный ID игрока
+export function getPlayerId() {
+  let id = localStorage.getItem('playerId');
+  if (!id) {
+    id = 'p_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    localStorage.setItem('playerId', id);
+  }
+  return id;
+}

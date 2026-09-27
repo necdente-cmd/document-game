@@ -1,4 +1,4 @@
-import { state, saveMe, applyTheme, applyScale, beep, vibrate } from './state.js';
+import { state, saveMe, applyTheme, applyScale, beep, vibrate, getPlayerId } from './state.js';
 import { playSound } from './sound.js';
 import { toastErr, toastOk } from './ui/toast.js';
 import { bindVoiceSocket } from './voice.js';
@@ -35,6 +35,7 @@ export function forceRefresh() {
           roomId: state.me.roomId,
           name: state.me.name,
           playerId: state.me.id,
+          persistentId: getPlayerId(),
           avatar: state.me.avatar,
         }, (r) => {
           reconnecting = false;
@@ -178,7 +179,6 @@ export function bindSocket(onStateChange) {
     if (!socket.connected) forceRefresh();
   });
 
-  // 📱 Capacitor App State
   function setupCapacitorAppState() {
     const Cap = window.Capacitor;
     if (!Cap || !Cap.isNativePlatform || !Cap.isNativePlatform()) return false;
@@ -207,6 +207,7 @@ export function reconnectIfNeeded() {
       roomId: state.me.roomId,
       name: state.me.name,
       playerId: state.me.id,
+      persistentId: getPlayerId(),
       avatar: state.me.avatar,
     }, (r) => {
       if (!r.ok) saveMe(null);

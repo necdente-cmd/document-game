@@ -4,6 +4,7 @@ import { startRound } from './game/round.js';
 import { registerGameHandlers } from './game/actions.js';
 import { DISCONNECT_TIMEOUT_MS } from './constants.js';
 import { getIceServers } from './turn.js';
+import { logPlayerSeen, logEvent, incrementStat } from './db.js';
 
 export function setupHandlers(io, broadcast) {
   io.on('connection', (socket) => {
@@ -29,25 +30,32 @@ export function setupHandlers(io, broadcast) {
     });
 
     // СОЗДАНИЕ КОМНАТЫ
-    socket.on('createRoom', ({ name, opts }, cb) => {
+    socket.on('createRoom', ({ name, opts, persistentId }, cb) => {
       const r = newRoom(opts);
       pid = uid();
       rid = r.id;
       r.hostId = pid;
       r.players.push({
         id: pid, name: name || 'Игрок', seat: 0, team: 0,
+        persistentId: persistentId || null,
         hand: [], connected: true, out: false,
         avatar: (opts && opts.avatar) || '',
         voiceEnabled: false,
       });
       socket.join(pid);
       socket.join(r.id);
+
+      if (persistentId) {
+        logPlayerSeen(persistentId, name, (opts && opts.avatar) || '');
+        logEvent('join', persistentId, r.id, { name, type: 'create' });
+      }
+
       cb({ ok: true, roomId: r.id, playerId: pid });
       broadcast(r);
     });
 
     // ВХОД / ПЕРЕПОДКЛЮЧЕНИЕ
-    socket.on('joinRoom', ({ roomId, name, playerId, avatar }, cb) => {
+    socket.on('joinRoom', ({ roomId, name, playerId, persistentId, avatar }, cb) => {
       const r = rooms.get((roomId || '').toUpperCase());
       if (!r) return cb({ ok: false, err: 'Комната не найдена' });
 
@@ -60,10 +68,17 @@ export function setupHandlers(io, broadcast) {
           existing.connected = true;
           if (name) existing.name = name;
           if (avatar) existing.avatar = avatar;
+          if (persistentId) existing.persistentId = persistentId;
           if (existing.voiceEnabled === undefined) existing.voiceEnabled = false;
           socket.join(pid);
           socket.join(r.id);
           log(r, `${existing.name} вернулся`);
+
+          if (existing.persistentId) {
+            logPlayerSeen(existing.persistentId, existing.name, existing.avatar);
+            logEvent('reconnect', existing.persistentId, r.id, { name: existing.name });
+          }
+
           cb({ ok: true, roomId: r.id, playerId: pid, reconnected: true });
           broadcast(r);
           return;
@@ -79,11 +94,18 @@ export function setupHandlers(io, broadcast) {
       r.players.push({
         id: pid, name: name || `Игрок ${seat + 1}`, seat,
         team: seat % 2, hand: [], connected: true, out: false,
+        persistentId: persistentId || null,
         avatar: avatar || '',
         voiceEnabled: false,
       });
       socket.join(pid);
       socket.join(r.id);
+
+      if (persistentId) {
+        logPlayerSeen(persistentId, name, avatar);
+        logEvent('join', persistentId, r.id, { name, type: 'join' });
+      }
+
       cb({ ok: true, roomId: r.id, playerId: pid });
       broadcast(r);
     });
@@ -95,7 +117,7 @@ export function setupHandlers(io, broadcast) {
       socket.emit('state', pub(r, p.id));
     });
 
-    // 🎯 ХОСТ ВЫБИРАЕТ РАССТАНОВКУ (только в лобби)
+    // 🎯 ХОСТ ВЫБИРАЕТ РАССТАНОВКУ
     socket.on('setSeatOrder', ({ order }) => {
       const r = rooms.get(rid); if (!r) return;
       if (r.hostId !== pid) return err('Только хост может менять расстановку');
@@ -113,7 +135,6 @@ export function setupHandlers(io, broadcast) {
         newPlayers.push(p);
       }
 
-      // Меняем места и команды (0,2 = A; 1,3 = B)
       newPlayers.forEach((p, idx) => {
         p.seat = idx;
         p.team = idx % 2;
@@ -135,6 +156,15 @@ export function setupHandlers(io, broadcast) {
       r.playerStats = [0, 0, 0, 0];
       r.gameStartTime = Date.now();
       r.winnerTeam = null;
+
+      // 📊 Логирование старта игры
+      for (const p of r.players) {
+        if (p.persistentId) {
+          incrementStat(p.persistentId, 'games_played');
+          logEvent('gameStart', p.persistentId, r.id, { name: p.name });
+        }
+      }
+
       startRound(r, 0);
       broadcast(r);
     });
@@ -174,6 +204,10 @@ export function setupHandlers(io, broadcast) {
       if (p.voiceEnabled) {
         p.voiceEnabled = false;
         io.to(r.id).emit('voice-peer-left', { playerId: p.id });
+      }
+
+      if (p.persistentId) {
+        logEvent('leave', p.persistentId, r.id, { name: p.name });
       }
 
       if (r.phase === 'lobby') {

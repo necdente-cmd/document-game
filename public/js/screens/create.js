@@ -1,3 +1,4 @@
+import { loadName, saveName, saveMe, loadOpts, saveOpts, applyTheme, loadAvatar, saveAvatar, AVATARS, getPlayerId } from '../state.js';
 import { loadName, saveName, saveMe, loadOpts, saveOpts, applyTheme, loadAvatar, saveAvatar, AVATARS } from '../state.js';
 import { socket } from '../socket.js';
 import { rankDisplay } from '../rank-display.js';
@@ -144,7 +145,7 @@ export function renderCreate(app, navigate) {
     saveOpts(opts);
     applyTheme(opts.theme);
 
-    socket.emit('createRoom', { name, opts }, async (r) => {
+        socket.emit('createRoom', { name, opts, persistentId: getPlayerId() }, async (r) => {
       if (!r.ok) return document.getElementById('err').textContent = r.err;
       saveMe({ name, id: r.playerId, roomId: r.roomId, avatar: pickedAvatar });
       try { await navigator.clipboard.writeText(r.roomId); } catch {}

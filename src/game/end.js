@@ -1,5 +1,6 @@
 import { LADDERS } from '../constants.js';
 import { docsOf, log } from '../rooms.js';
+import { incrementStat, logEvent } from '../db.js';
 
 export function winByThrow(r, team, winnerSeat) {
   r.roundWins[team]++;
@@ -11,12 +12,30 @@ export function winByThrow(r, team, winnerSeat) {
     r.phase = 'gameEnd';
     r.winnerTeam = team;
     log(r, `🏆 Команда ${team ? 'B' : 'A'} — ЧЕМПИОН!`);
+
+    // 📊 Логирование статистики
+    for (const p of r.players.filter(p => p.team === team)) {
+      if (p.persistentId) {
+        incrementStat(p.persistentId, 'rounds_won');
+        incrementStat(p.persistentId, 'games_won');
+      }
+    }
+    logEvent('roundWin', null, r.id, { team });
+    logEvent('gameWin', null, r.id, { team });
     return;
   }
   r.teamStep[team]++;
   r.phase = 'roundEnd';
   r.pendingStart = { winningTeam: team };
   log(r, `Команда ${team ? 'B' : 'A'} выиграла кон. Счёт ${r.roundWins[0]}:${r.roundWins[1]}`);
+
+  // 📊 Логирование статистики
+  for (const p of r.players.filter(p => p.team === team)) {
+    if (p.persistentId) {
+      incrementStat(p.persistentId, 'rounds_won');
+    }
+  }
+  logEvent('roundWin', null, r.id, { team });
 }
 
 export function winByExit(r, team) {
@@ -25,6 +44,14 @@ export function winByExit(r, team) {
   r.phase = 'roundEnd';
   r.pendingStart = { winningTeam: team };
   log(r, `Команда ${team ? 'B' : 'A'} выиграла кон (все вышли). Счёт ${r.roundWins[0]}:${r.roundWins[1]}`);
+
+  // 📊 Логирование статистики
+  for (const p of r.players.filter(p => p.team === team)) {
+    if (p.persistentId) {
+      incrementStat(p.persistentId, 'rounds_won');
+    }
+  }
+  logEvent('roundWin', null, r.id, { team, byExit: true });
 }
 
 export function checkTeamExitWin(r) {
