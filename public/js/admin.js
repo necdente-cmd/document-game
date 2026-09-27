@@ -54,6 +54,69 @@ function shortId(id) {
   return String(id).slice(0, 10);
 }
 
+// ==================== КОРОТКИЙ АВАТАР ДЛЯ ТАБЛИЦЫ ====================
+// IMG:data:...  → миниатюра с золотой рамкой (клик = открыть большое фото)
+// avatar-N      → миниатюра готовая + подпись
+// пусто         → прочерк
+function shortAvatarHtml(avatar, size = 36) {
+  if (!avatar) return '<span style="opacity:.3">—</span>';
+
+  // Своё фото (base64)
+  if (typeof avatar === 'string' && avatar.startsWith('IMG:')) {
+    const src = avatar.slice(4);
+    const id = 'av_' + Math.random().toString(36).slice(2, 8);
+    // Сохраняем base64 в data-атрибут — не в DOM через inline
+    // Используем короткий placeholder, реальный src выставляем через JS чтобы не раздувать HTML
+    return `<img id="${id}"
+                 data-avatar="${id}"
+                 alt="фото"
+                 title="Своё фото (клик — увеличить)"
+                 style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;
+                        vertical-align:middle;border:2px solid #f1c40f;cursor:zoom-in;
+                        background:#222;"
+                 class="avatar-thumb">`;
+  }
+
+  // Готовая аватарка "avatar-N" или "default"
+  const name = String(avatar).replace(/[^a-z0-9_-]/gi, '');
+  return `<img src="/avatars/${name}.png"
+               alt="${name}"
+               title="${name}"
+               style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;
+                      vertical-align:middle;border:2px solid rgba(255,255,255,.15);">
+          <span style="opacity:.55;margin-left:6px;font-size:11px;vertical-align:middle;">${esc(name)}</span>`;
+}
+
+// Отрисовка base64-аватаров отдельным проходом (чтобы HTML таблицы не пух)
+function paintAvatarThumbs() {
+  document.querySelectorAll('.avatar-thumb[data-avatar]').forEach(img => {
+    if (img.dataset.painted === '1') return;
+    const p = playersData.find(x => x.name && img.closest('tr')?.innerText.includes(x.name));
+    // Простой способ — берём из map по id ячейки, но у нас нет прямой связи.
+    // Используем другой приём: аватар подставлен ниже, при рендере строки.
+  });
+}
+
+// Модалка для просмотра большого фото
+function openAvatarPreview(src, name) {
+  const existing = document.getElementById('avatarPreviewModal');
+  if (existing) existing.remove();
+  const el = document.createElement('div');
+  el.id = 'avatarPreviewModal';
+  el.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;
+                      display:flex;align-items:center;justify-content:center;cursor:zoom-out;padding:20px;`;
+  el.innerHTML = `
+    <div style="text-align:center;max-width:90vw;max-height:90vh;">
+      <img src="${src}" style="max-width:100%;max-height:80vh;border-radius:12px;
+                                box-shadow:0 10px 40px rgba(0,0,0,.8);border:3px solid #f1c40f;">
+      <div style="color:#fff;margin-top:12px;font-size:14px;opacity:.8;">${esc(name || '')}</div>
+      <div style="color:#aaa;margin-top:6px;font-size:12px;">Клик в любом месте — закрыть</div>
+    </div>
+  `;
+  el.onclick = () => el.remove();
+  document.body.appendChild(el);
+}
+
 // ==================== ЛОГИН ====================
 function showLogin() {
   document.getElementById('loginScreen').hidden = false;
@@ -207,18 +270,72 @@ function renderPlayers() {
     return;
   }
 
-  tbody.innerHTML = filtered.map(p => `
-    <tr>
-      <td style="text-align:center;font-size:20px;">${esc(p.avatar || '👤')}</td>
-      <td><b>${esc(p.name || '—')}</b></td>
-      <td><code title="${esc(p.persistent_id)}">${esc(shortId(p.persistent_id))}</code></td>
-      <td>${fmtTime(p.first_seen)}</td>
-      <td>${fmtTime(p.last_seen)}</td>
-      <td class="num"><b>${p.games_played || 0}</b></td>
-      <td class="num" style="color:#2ecc71;"><b>${p.games_won || 0}</b></td>
-      <td class="num" style="color:#f1c40f;"><b>${p.rounds_won || 0}</b></td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = filtered.map((p, i) => {
+    const av = p.avatar || '';
+    const rowId = 'av_' + i;
+
+    if (typeof av === 'string' && av.startsWith('IMG:')) {
+      // Своё фото — короткая ячейка с миниатюрой
+      // base64 передаём через data-src, реальную ссылку ставим после рендера
+      return `
+        <tr>
+          <td style="text-align:center;">
+            <img data-preview="1"
+                 data-avatar-src="${rowId}"
+                 data-name="${esc(p.name || '')}"
+                 alt="фото" title="Своё фото (клик — увеличить)"
+                 class="avatar-thumb"
+                 style="width:36px;height:36px;border-radius:50%;object-fit:cover;
+                        vertical-align:middle;border:2px solid #f1c40f;cursor:zoom-in;
+                        background:#222;">
+          </td>
+          <td><b>${esc(p.name || '—')}</b></td>
+          <td><code title="${esc(p.persistent_id)}">${esc(shortId(p.persistent_id))}</code></td>
+          <td>${fmtTime(p.first_seen)}</td>
+          <td>${fmtTime(p.last_seen)}</td>
+          <td class="num"><b>${p.games_played || 0}</b></td>
+          <td class="num" style="color:#2ecc71;"><b>${p.games_won || 0}</b></td>
+          <td class="num" style="color:#f1c40f;"><b>${p.rounds_won || 0}</b></td>
+        </tr>`;
+    }
+
+    // Готовая аватарка
+    const name = String(av || 'default').replace(/[^a-z0-9_-]/gi, '');
+    return `
+      <tr>
+        <td style="text-align:center;">
+          <img src="/avatars/${name}.png" alt="${name}" title="${name}"
+               style="width:36px;height:36px;border-radius:50%;object-fit:cover;
+                      vertical-align:middle;border:2px solid rgba(255,255,255,.15);">
+          <span style="opacity:.55;margin-left:6px;font-size:11px;vertical-align:middle;">${esc(name)}</span>
+        </td>
+        <td><b>${esc(p.name || '—')}</b></td>
+        <td><code title="${esc(p.persistent_id)}">${esc(shortId(p.persistent_id))}</code></td>
+        <td>${fmtTime(p.first_seen)}</td>
+        <td>${fmtTime(p.last_seen)}</td>
+        <td class="num"><b>${p.games_played || 0}</b></td>
+        <td class="num" style="color:#2ecc71;"><b>${p.games_won || 0}</b></td>
+        <td class="num" style="color:#f1c40f;"><b>${p.rounds_won || 0}</b></td>
+      </tr>`;
+  }).join('');
+
+  // Второй проход: подставляем base64 в миниатюры (чтобы HTML таблицы не пух)
+  // Используем замыкание — у нас есть filtered массив.
+  let idx = 0;
+  const thumbCells = tbody.querySelectorAll('img.avatar-thumb[data-avatar-src]');
+  thumbCells.forEach(img => {
+    // Находим соответствующую запись игрока по порядку
+    // (все строки с IMG: идут подряд, и мы их считаем)
+    // Проще: перебрать filtered и найти по имени
+    const name = img.dataset.name;
+    const player = filtered.find(p =>
+      (p.name || '') === name && typeof p.avatar === 'string' && p.avatar.startsWith('IMG:')
+    );
+    if (!player) return;
+    const src = player.avatar.slice(4);
+    img.src = src;
+    img.onclick = () => openAvatarPreview(src, player.name);
+  });
 }
 
 // ==================== РЕНДЕР: СОБЫТИЯ ====================
