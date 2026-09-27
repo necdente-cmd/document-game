@@ -4,10 +4,10 @@ import { beatsUI } from './card.js';
 import { toastErr } from './ui/toast.js';
 
 let drag = null;
-const MAGNET_RADIUS = 70;      // радиус примагничивания к карте врага
-const DRAG_THRESHOLD = 6;      // порог, после которого начинается драг (px)
-const FINGER_OFFSET = 55;      // на сколько поднять карту над пальцем (px)
-const RETURN_MS = 280;
+const MAGNET_RADIUS = 70;
+const DRAG_THRESHOLD = 6;
+const FINGER_OFFSET = 55;   // карта выше пальца на 55px (палец не закрывает карту)
+const RETURN_MS = 260;
 
 export function initDrag(onRender) {
   const hand = document.getElementById('hand');
@@ -32,8 +32,8 @@ export function initDrag(onRender) {
       isDragging: false,
       pointerId: e.pointerId,
       raf: 0,
-      lastX: 0,
-      lastY: 0,
+      lastX: e.clientX,
+      lastY: e.clientY,
     };
     try { el.setPointerCapture(e.pointerId); } catch {}
   });
@@ -42,16 +42,8 @@ export function initDrag(onRender) {
     if (!drag || drag.pointerId !== e.pointerId) return;
     const dx = e.clientX - drag.startX;
     const dy = e.clientY - drag.startY;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-
-    if (!drag.isDragging && dist > DRAG_THRESHOLD) {
-      drag.isDragging = true;
-      drag.el.style.position = 'fixed';
-      drag.el.style.left = drag.startLeft + 'px';
-      drag.el.style.top  = drag.startTop + 'px';
-      drag.el.style.pointerEvents = 'none';
-      drag.el.classList.add('dragging');
-      vibrate(15);
+    if (!drag.isDragging && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
+      startVisualDrag();
     }
     if (!drag.isDragging) return;
 
@@ -61,10 +53,10 @@ export function initDrag(onRender) {
     drag.raf = requestAnimationFrame(() => {
       if (!drag) return;
       drag.raf = 0;
-      const x = drag.lastX - drag.offsetX;
-      const y = drag.lastY - drag.offsetY - FINGER_OFFSET;
-      drag.el.style.left = x + 'px';
-      drag.el.style.top  = y + 'px';
+      const ddx = drag.lastX - drag.startX;
+      const ddy = drag.lastY - drag.startY;
+      drag.el.style.transform =
+        `translate(${ddx}px, ${ddy - FINGER_OFFSET}px) rotate(-3deg) scale(1.08)`;
       highlightAt(drag.lastX, drag.lastY);
     });
   });
@@ -72,11 +64,12 @@ export function initDrag(onRender) {
   document.addEventListener('pointerup', e => {
     if (!drag || drag.pointerId !== e.pointerId) return;
     if (drag.raf) { cancelAnimationFrame(drag.raf); drag.raf = 0; }
+
     const wasDragging = drag.isDragging;
     const cardId = drag.cardId;
     const el = drag.el;
-    const targetLeft = drag.startLeft;
-    const targetTop  = drag.startTop;
+    const startLeft = drag.startLeft;
+    const startTop = drag.startTop;
     const dropX = e.clientX;
     const dropY = e.clientY;
 
@@ -84,19 +77,24 @@ export function initDrag(onRender) {
 
     if (wasDragging) {
       const handled = handleDrop(dropX, dropY, cardId);
-      if (!handled) {
-        animateReturn(el, targetLeft, targetTop);
+      if (handled) {
+        // Скрываем — сервер пришлёт новый state, renderTable перерисует руку,
+        // playPendingFly проиграет полёт от точки дропа
+        el.style.opacity = '0';
+        const snapshot = state.server;
+        setTimeout(() => {
+          if (state.server === snapshot) {
+            // state не обновился (ошибка сервера) — откатываем
+            resetCard(el);
+            if (onRender) onRender();
+          }
+        }, 500);
       } else {
-        el.classList.remove('dragging');
-        el.style.position = '';
-        el.style.left = '';
-        el.style.top = '';
-        el.style.pointerEvents = '';
+        animateReturn(el, startLeft, startTop, onRender);
       }
       vibrate(30);
     } else {
-      // короткий тап — без вибрации
-      el.classList.remove('dragging');
+      resetCard(el);
       handleTap(cardId, onRender);
     }
     drag = null;
@@ -105,49 +103,73 @@ export function initDrag(onRender) {
   document.addEventListener('pointercancel', () => {
     if (!drag) return;
     if (drag.raf) { cancelAnimationFrame(drag.raf); drag.raf = 0; }
-    animateReturn(drag.el, drag.startLeft, drag.startTop);
+    animateReturn(drag.el, drag.startLeft, drag.startTop, onRender);
     clearHighlight();
     drag = null;
   });
+
+  function startVisualDrag() {
+    drag.isDragging = true;
+    const el = drag.el;
+    // Прибиваем к viewport в исходной точке — transform НЕ трогаем сразу
+    el.style.position = 'fixed';
+    el.style.left = drag.startLeft + 'px';
+    el.style.top = drag.startTop + 'px';
+    el.style.right = 'auto';
+    el.style.bottom = 'auto';
+    el.style.margin = '0';                    // ← убиваем margin-left: -card/2
+    el.style.width = el.getBoundingClientRect().width + 'px';
+    el.style.height = el.getBoundingClientRect().height + 'px';
+    el.style.transformOrigin = 'center center';
+    el.style.transition = 'none';
+    el.style.pointerEvents = 'none';
+    el.style.zIndex = '9999';
+    el.classList.add('dragging');
+    vibrate(15);
+  }
 }
 
-// ====== ПЛАВНЫЙ ВОЗВРАТ КАРТЫ В РУКУ ======
-function animateReturn(el, left, top) {
+function resetCard(el) {
   if (!el) return;
-  el.style.transition = `left ${RETURN_MS}ms cubic-bezier(.2,.8,.3,1),
-                         top ${RETURN_MS}ms cubic-bezier(.2,.8,.3,1),
-                         transform ${RETURN_MS}ms,
-                         opacity ${RETURN_MS}ms`;
-  el.style.left = left + 'px';
-  el.style.top  = top + 'px';
-  el.style.transform = 'scale(.4)';
+  el.classList.remove('dragging');
+  el.style.position = '';
+  el.style.left = '';
+  el.style.top = '';
+  el.style.right = '';
+  el.style.bottom = '';
+  el.style.margin = '';
+  el.style.width = '';
+  el.style.height = '';
+  el.style.transform = '';
+  el.style.transformOrigin = '';
+  el.style.transition = '';
+  el.style.pointerEvents = '';
+  el.style.zIndex = '';
+  el.style.opacity = '';
+}
+
+function animateReturn(el, left, top, onRender) {
+  if (!el) return;
+  el.style.transition = `transform ${RETURN_MS}ms cubic-bezier(.2,.8,.3,1), opacity ${RETURN_MS}ms`;
+  el.style.transform = 'translate(0, 0) scale(.35)';
   el.style.opacity = '0';
   setTimeout(() => {
-    el.classList.remove('dragging');
-    el.style.transition = '';
-    el.style.position = '';
-    el.style.left = '';
-    el.style.top = '';
-    el.style.transform = '';
-    el.style.opacity = '';
-    el.style.pointerEvents = '';
+    resetCard(el);
+    if (onRender) onRender();
   }, RETURN_MS + 20);
 }
 
-// ====== ПОДСВЕТКА ЦЕЛИ ======
+// ====== ПОДСВЕТКА ======
 function highlightAt(x, y) {
   clearHighlight();
   const s = state.server;
   if (!s) return;
 
-  // Защитник — ищем ближайшую непобитую карту врага
   if (s.field && s.field.defender === s.mySeat) {
     const nearest = nearestFieldSlot(x, y, s);
     if (nearest && nearest.dist < MAGNET_RADIUS) nearest.slot.classList.add('drag-over');
     return;
   }
-
-  // Атакующий / партнёр — подсветка поля
   if (!canActOnField(s)) return;
   const center = document.querySelector('.center');
   if (!center) return;
@@ -193,7 +215,6 @@ function handleDrop(x, y, cardId) {
   const card = s.myHand.find(c => c.id === cardId);
   if (!card) return false;
 
-  // --- Защитник ---
   if (s.field && s.field.defender === s.mySeat) {
     const nearest = nearestFieldSlot(x, y, s);
     if (!nearest || nearest.dist >= MAGNET_RADIUS) return false;
@@ -207,7 +228,6 @@ function handleDrop(x, y, cardId) {
     return true;
   }
 
-  // --- Атакующий / партнёр ---
   if (!canActOnField(s)) return false;
   const center = document.querySelector('.center');
   if (!center) return false;
@@ -229,7 +249,7 @@ function rememberFly(cardId) {
   state.pendingFly = { cardId, from: { left: r.left, top: r.top, w: r.width, h: r.height } };
 }
 
-// ====== ТАП-ТАП ======
+// ====== ТАП ======
 function handleTap(cardId, onRender) {
   const s = state.server;
   if (!s) return;
