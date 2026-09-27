@@ -1,9 +1,8 @@
-import { t, translateServerMsg } from './i18n.js';
 import { state, saveMe, applyTheme, applyScale, beep, vibrate } from './state.js';
 import { playSound } from './sound.js';
 import { toastErr, toastOk } from './ui/toast.js';
 import { bindVoiceSocket } from './voice.js';
-import { t } from './i18n.js';
+import { t, translateServerMsg } from './i18n.js';
 
 export const socket = io({
   reconnection: true,
@@ -143,7 +142,7 @@ export function bindSocket(onStateChange) {
     window.dispatchEvent(new CustomEvent('chat', { detail: { seat, name, text, time } }));
   });
 
-    socket.on('err', (m) => {
+  socket.on('err', (m) => {
     toastErr(translateServerMsg(m));
     vibrate(100);
     document.body.classList.remove('shake');
