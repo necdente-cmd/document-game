@@ -83,7 +83,7 @@ export function registerGameHandlers(io, socket, ctx) {
     }
 
     if (!r.field) {
-            r.field = {
+      r.field = {
         attacker: p.seat,
         defender: defenderSeat,
         cards: [],
@@ -135,6 +135,18 @@ export function registerGameHandlers(io, socket, ctx) {
     if (!r.field.cards.some(x => !x.beatenBy)) return err('Все карты уже побиты');
     r.field.askMore = true;
     log(r, `${p.name}: «Вдогонку?»`);
+
+    // ✅ Если оба атакующих УЖЕ пасанули — сразу поднимаем
+    if (bothPartnersPassed(r)) {
+      const defender = r.players[r.field.defender];
+      const attackerSeat = r.field.attacker;
+      const defenderSeat = r.field.defender;
+      log(r, `✅ Авто-поднятие после «Вдогонку?» (атакующие уже пасанули)`);
+      performPickup(r, defender, attackerSeat, defenderSeat);
+      if (checkTeamExitWin(r)) return broadcast(r);
+      return broadcast(r);
+    }
+
     broadcast(r);
   });
 
@@ -161,13 +173,24 @@ export function registerGameHandlers(io, socket, ctx) {
   }
 
   // ==================== ПОДНЯТЬ ВСЁ ====================
-    socket.on('pickUp', () => {
+  socket.on('pickUp', () => {
     const r = rooms.get(getRid()); if (!r || !r.field) return;
     const p = getMe(); if (!p || r.field.defender !== p.seat) return err('Не вы защищаетесь');
     if (r.field.defenderGaveUp) return;
-    // Защитник сдался, но ждём паса атакующих перед авто-поднятием
+
     r.field.defenderGaveUp = true;
     log(r, `${p.name}: «Поднимаю» — ждём пас атакующих`);
+
+    // ✅ Если оба атакующих УЖЕ пасанули — сразу поднимаем
+    if (bothPartnersPassed(r)) {
+      const attackerSeat = r.field.attacker;
+      const defenderSeat = r.field.defender;
+      log(r, `✅ Авто-поднятие: атакующие уже пасанули`);
+      performPickup(r, p, attackerSeat, defenderSeat);
+      if (checkTeamExitWin(r)) return broadcast(r);
+      return broadcast(r);
+    }
+
     broadcast(r);
   });
 
@@ -182,12 +205,12 @@ export function registerGameHandlers(io, socket, ctx) {
     r.field.passedSeats.push(p.seat);
     log(r, `${p.name}: «Пас»`);
 
-        // ✨ Авто-поднятие после «Вдогонку?» ИЛИ «Поднимаю», когда оба пасанули
+    // ✨ Авто-поднятие после «Вдогонку?» ИЛИ «Поднимаю», когда оба пасанули
     if ((r.field.askMore || r.field.defenderGaveUp) && bothPartnersPassed(r)) {
       const defender = r.players[r.field.defender];
       const attackerSeat = r.field.attacker;
       const defenderSeat = r.field.defender;
-      log(r, `Авто-поднятие после сдачи защитника`);
+      log(r, `✅ Авто-поднятие после сдачи защитника`);
       performPickup(r, defender, attackerSeat, defenderSeat);
       if (checkTeamExitWin(r)) return broadcast(r);
       return broadcast(r);
