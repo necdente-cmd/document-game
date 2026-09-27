@@ -1,4 +1,4 @@
-import { state, saveMe, applyTheme, playerState, getAvatar, savePrefs } from '../state.js';
+import { state, saveMe, applyTheme, playerState, getAvatar, avatarHtml, savePrefs } from '../state.js';
 import { socket, forceRefresh } from '../socket.js';
 import { cardHtml, backPath, esc, renderHandFan } from '../card.js';
 import { buildOverlays, bindOverlays } from '../ui/overlays.js';
@@ -352,7 +352,7 @@ export function renderTable(app, navigate) {
 
     const playerCards = s.players.map(p => `
       <div class="wp-card ${p.isHost?'host':''}">
-        <div class="wp-avatar">${getAvatar(p.seat)}</div>
+        <div class="wp-avatar">${avatarHtml(getAvatar(p.seat))}</div>
         <div class="wp-name">${esc(p.name)}</div>
         ${p.isHost ? `<div class="wp-host">${t('lobby.host')}</div>` : ''}
       </div>
@@ -382,7 +382,7 @@ export function renderTable(app, navigate) {
                 const teamCls = slot % 2 === 0 ? 'team-a' : 'team-b';
                 const playerAtSlot = s.players.find(p => p.seat === slot);
                 if (!playerAtSlot) return '';
-                const avatar = getAvatar(playerAtSlot.seat);
+                const avatar = avatarHtml(getAvatar(playerAtSlot.seat));
                 const isMe = playerAtSlot.id === meP?.id;
                 const isPicked = state.swapPick === playerAtSlot.id;
                 const teamIcon = slot % 2 === 0 ? '★' : '✗';
@@ -443,7 +443,7 @@ export function renderTable(app, navigate) {
     return `
       <div class="seat ${pos} ${p.seat===s.turnSeat?'active':''} ${p.out?'out':''} ${!p.connected?'offline':''} ${isSpeaking?'speaking':''} ${isPartner?'is-partner':'is-enemy'}" data-seat="${p.seat}">
         <div class="name">${esc(p.name)} ${isPartner?'★':'✗'}</div>
-        <div class="avatar">${getAvatar(p.seat)}</div>
+        <div class="avatar">${avatarHtml(getAvatar(p.seat))}</div>
         ${st ? `<div class="state ${stCls}">${stText}</div>` : ''}
         ${isThisInPassed ? '<div class="pass-badge">⛔ ' + t('btn.pass').replace(/<br>.*/, '').replace('✋','').trim() + '</div>' : ''}
         ${offlineBadge}

@@ -65,30 +65,6 @@
   100% { opacity: 0; transform: translate(0, -160px) scale(.85); }
 }
 
-/* ==================== БАННЕР ФАЛЬШ ==================== */
-.falsh-banner {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(.5);
-  background: linear-gradient(135deg, #e74c3c, #c0392b);
-  color: #fff;
-  font-weight: 900;
-  padding: 24px 40px;
-  border-radius: 20px;
-  font-size: 26px;
-  text-align: center;
-  z-index: 500;
-  pointer-events: none;
-  animation: falshPop 2s ease-out forwards;
-}
-@keyframes falshPop {
-  0%   { transform: translate(-50%,-50%) scale(.3);  opacity: 0; }
-  15%  { transform: translate(-50%,-50%) scale(1.15); opacity: 1; }
-  80%  { transform: translate(-50%,-50%) scale(1);   opacity: 1; }
-  100% { transform: translate(-50%,-50%) scale(.9);  opacity: 0; }
-}
-
 /* ==================== ЧЕМПИОН ==================== */
 .champ-overlay {
   position: fixed;
@@ -111,11 +87,33 @@
 .champ-buttons { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 .champ-buttons button { padding: 14px 28px; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; }
 
+/* ==================== ФЕЙЕРВЕРК ==================== */
+.fireworks-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+.champ-overlay { position: relative; }
+.champ-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  pointer-events: auto;
+}
+
+/* ==================== ИСТОРИЯ ==================== */
 .history-list { max-height: 50vh; overflow-y: auto; text-align: left; margin-bottom: 14px; }
 .history-row { padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,.15); font-size: 14px; }
 [data-theme="paper"] .history-row { border-color: rgba(0,0,0,.15); }
 
-/* ==================== МЕНЮ ⚙️ (боковая панель) ==================== */
+/* ==================== МЕНЮ ⚙️ ==================== */
 .settings-panel {
   position: fixed;
   top: 0;
@@ -137,13 +135,34 @@
 [data-theme="paper"] .settings-panel { background: rgba(255,255,255,.98); color: #333; }
 .settings-panel.open { transform: translateX(0); }
 .settings-panel h3 { margin: 0 0 12px; font-size: 20px; }
-.settings-panel .close-btn { position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 22px; color: inherit; cursor: pointer; }
+.settings-panel .close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: inherit;
+  cursor: pointer;
+}
 .settings-section { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.1); }
 [data-theme="paper"] .settings-section { border-color: rgba(0,0,0,.1); }
-.settings-section h4 { margin: 0 0 8px; font-size: 13px; opacity: .7; text-transform: uppercase; letter-spacing: 1px; }
+.settings-section h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  opacity: .7;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
 
 /* Тумблер */
-.toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 14px; }
+.toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 14px;
+}
 .toggle {
   position: relative;
   width: 46px;
@@ -167,6 +186,7 @@
 }
 .toggle.on::after { left: 23px; }
 
+/* Масштаб */
 .scale-row { display: flex; gap: 6px; }
 .scale-row button {
   flex: 1;
@@ -181,6 +201,7 @@
 }
 .scale-row button.sel { border-color: var(--acc); background: rgba(241,196,15,.2); }
 
+/* Кнопки меню */
 .menu-btn {
   padding: 12px;
   border-radius: 10px;
@@ -194,6 +215,40 @@
 }
 .menu-btn:active { background: rgba(255,255,255,.2); }
 .menu-btn.danger { background: rgba(231,76,60,.85); color: #fff; }
+
+/* 🌐 Переключатель языка */
+.lang-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+.lang-btn {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 2px solid rgba(255,255,255,.15);
+  background: rgba(255,255,255,.06);
+  color: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .15s;
+}
+.lang-btn:active { transform: scale(.97); }
+.lang-btn.sel {
+  border-color: var(--acc);
+  background: rgba(241,196,15,.18);
+  color: var(--acc);
+}
+[data-theme="paper"] .lang-btn {
+  border-color: rgba(0,0,0,.15);
+  background: rgba(0,0,0,.04);
+}
+[data-theme="paper"] .lang-btn.sel {
+  background: rgba(184,134,11,.15);
+  color: #b8860b;
+}
 
 /* ==================== ЧАТ ==================== */
 .chat-panel {
@@ -224,8 +279,21 @@
   align-items: center;
   font-weight: 700;
 }
-.chat-head button { background: none; border: none; color: inherit; font-size: 20px; cursor: pointer; }
-.chat-messages { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; }
+.chat-head button {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 20px;
+  cursor: pointer;
+}
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 .chat-msg { font-size: 13px; line-height: 1.4; }
 .chat-msg .author { font-weight: 700; color: var(--acc); }
 .chat-msg .time { font-size: 10px; opacity: .5; margin-left: 6px; }
@@ -254,7 +322,7 @@
   cursor: pointer;
 }
 
-/* ==================== БЕЙДЖ НЕПРОЧИТАННЫХ ==================== */
+/* ==================== БЕЙДЖ ==================== */
 .icon-btn { position: relative; }
 .chat-badge {
   position: absolute;
@@ -280,7 +348,7 @@
   100% { transform: scale(1); }
 }
 
-/* ==================== ПРАВИЛА / ПОЧТА / ПРОФИЛЬ (простые) ==================== */
+/* ==================== ПРОСТЫЕ МОДАЛКИ ==================== */
 .simple-modal {
   position: fixed;
   inset: 0;
@@ -314,20 +382,129 @@
   font-weight: 700;
   cursor: pointer;
 }
+.simple-modal-close-btn {
+  margin-top: 16px;
+  padding: 10px 24px;
+  border-radius: 10px;
+  border: none;
+  background: var(--acc);
+  color: #000;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+.about-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+  font-size: 14px;
+}
+[data-theme="paper"] .about-row { border-color: rgba(0,0,0,.1); }
+.about-row b { color: var(--acc); }
+
+/* ==================== 📧 ПОЧТА ==================== */
+.mail-list {
+  max-height: 60vh;
+  overflow-y: auto;
+  margin: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 4px;
+}
+.mail-loading,
+.mail-empty {
+  text-align: center;
+  padding: 30px 20px;
+  opacity: .5;
+  font-size: 14px;
+}
+.mail-item {
+  padding: 14px 16px;
+  background: rgba(255,255,255,.04);
+  border-radius: 12px;
+  border-left: 3px solid rgba(255,255,255,.15);
+  transition: background .15s, border-color .15s;
+}
+.mail-item.unread {
+  background: rgba(241,196,15,.08);
+  border-left-color: #f1c40f;
+}
+.mail-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.mail-date {
+  font-size: 11px;
+  opacity: .55;
+  letter-spacing: .5px;
+  text-transform: capitalize;
+}
+.mail-new {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  background: #f1c40f;
+  color: #000;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.mail-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f1c40f;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+.mail-body {
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255,255,255,.85);
+  word-break: break-word;
+}
+[data-theme="paper"] .mail-item {
+  background: rgba(0,0,0,.03);
+  border-left-color: rgba(0,0,0,.15);
+}
+[data-theme="paper"] .mail-item.unread {
+  background: rgba(184,134,11,.08);
+  border-left-color: #b8860b;
+}
+[data-theme="paper"] .mail-title { color: #b8860b; }
+[data-theme="paper"] .mail-body { color: rgba(0,0,0,.75); }
+[data-theme="paper"] .mail-new { background: #b8860b; color: #fff; }
 
 /* ==================== TOAST ==================== */
 .toast-container {
-  position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
-  z-index: 20000; display: flex; flex-direction: column; gap: 8px;
-  pointer-events: none; max-width: 90vw; align-items: center;
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+  max-width: 90vw;
+  align-items: center;
 }
 .toast {
-  padding: 10px 18px; border-radius: 12px; background: rgba(0,0,0,.92);
-  color: #fff; font-size: 14px; font-weight: 600;
+  padding: 10px 18px;
+  border-radius: 12px;
+  background: rgba(0,0,0,.92);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
   box-shadow: 0 6px 24px rgba(0,0,0,.5);
-  transform: translateY(-20px); opacity: 0;
+  transform: translateY(-20px);
+  opacity: 0;
   transition: transform .25s ease-out, opacity .25s;
-  pointer-events: none; text-align: center; max-width: 90vw;
+  pointer-events: none;
+  text-align: center;
+  max-width: 90vw;
   white-space: pre-wrap;
 }
 .toast.show { transform: translateY(0); opacity: 1; }
@@ -338,15 +515,23 @@
 
 /* ==================== СЧЁТ В УГЛУ ==================== */
 .score-corner {
-  position: absolute; top: 14px; right: 56px;
-  background: rgba(0,0,0,.55); color: #f1c40f;
-  padding: 4px 12px; border-radius: 12px;
-  font-weight: 700; font-size: 15px; z-index: 25;
-  pointer-events: none; letter-spacing: 1px;
+  position: absolute;
+  top: 14px;
+  right: 56px;
+  background: rgba(0,0,0,.55);
+  color: #f1c40f;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 15px;
+  z-index: 25;
+  pointer-events: none;
+  letter-spacing: 1px;
   box-shadow: 0 2px 8px rgba(0,0,0,.35);
 }
 [data-theme="paper"] .score-corner {
-  background: rgba(255,255,255,.85); color: #b8860b;
+  background: rgba(255,255,255,.85);
+  color: #b8860b;
 }
 
 /* ==================== ПУЛЬС «ТВОЙ ХОД» ==================== */
@@ -358,12 +543,23 @@
   0%, 100% { box-shadow: 0 0 0 0 rgba(241,196,15,0); }
   50%      { box-shadow: 0 0 24px 4px rgba(241,196,15,.45); }
 }
+.table.my-defend .bottom-bar .hand {
+  animation: myDefendPulse 1.6s ease-in-out infinite;
+  border-radius: 16px;
+}
+@keyframes myDefendPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(46,204,113,0); }
+  50%      { box-shadow: 0 0 30px 8px rgba(46,204,113,.6); }
+}
 
-/* ==================== ПОДСВЕТКА КАРТ, КОТОРЫЕ БЬЮТ ==================== */
+/* ==================== ПОДСВЕТКА КАРТ ==================== */
 .card.can-beat { position: relative; }
 .card.can-beat::after {
-  content: ''; position: absolute; inset: -3px;
-  border-radius: 10px; border: 2px solid #2ecc71;
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 10px;
+  border: 2px solid #2ecc71;
   box-shadow: 0 0 12px rgba(46,204,113,.7);
   pointer-events: none;
   animation: canBeatPulse 1.5s ease-in-out infinite;
@@ -374,9 +570,166 @@
 }
 
 /* ==================== МАГНИТ И ЦЕЛЬ ==================== */
-.slot.drag-over { filter: drop-shadow(0 0 12px rgba(46,204,113,.9)); transition: filter .12s; }
-.slot.selected-target { filter: drop-shadow(0 0 12px rgba(241,196,15,.9)); }
-.center.drag-over-field { box-shadow: inset 0 0 40px rgba(241,196,15,.25); border-radius: 16px; transition: box-shadow .15s; }
+.slot.drag-over {
+  filter: drop-shadow(0 0 12px rgba(46,204,113,.9));
+  transition: filter .12s;
+}
+.slot.selected-target {
+  filter: drop-shadow(0 0 12px rgba(241,196,15,.9));
+}
+.center.drag-over-field {
+  box-shadow: inset 0 0 40px rgba(241,196,15,.25);
+  border-radius: 16px;
+  transition: box-shadow .15s;
+}
+
+/* ==================== 🎤 ГОЛОСОВОЙ ЧАТ ==================== */
+.icon-btn.voice-on {
+  background: #2ecc71 !important;
+  color: #000 !important;
+  box-shadow: 0 0 12px rgba(46, 204, 113, 0.6);
+}
+.icon-btn.voice-muted {
+  background: #e74c3c !important;
+  color: #fff !important;
+}
+.seat.speaking .avatar {
+  animation: speakPulse 0.9s ease-in-out infinite;
+}
+@keyframes speakPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.85); }
+  70%  { box-shadow: 0 0 0 16px rgba(46, 204, 113, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+}
+.seat.speaking .name::after {
+  content: ' 🎤';
+  font-size: 0.9em;
+  opacity: 0.9;
+}
+
+/* ==================== 🎨 ВЫБОР АВАТАРКИ ==================== */
+.avatar-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(255,255,255,.04);
+  border-radius: 12px;
+}
+.avatar-preview-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  background: rgba(0,0,0,.25);
+  border-radius: 12px;
+  position: relative;
+}
+.avatar-preview {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2px solid var(--acc);
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 0 16px rgba(241,196,15,.4);
+  background: #1a1a1a;
+}
+.avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.avatar-upload-btn {
+  flex: 1;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 2px solid rgba(255,255,255,.15);
+  background: rgba(255,255,255,.06);
+  color: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.avatar-upload-btn:active { transform: scale(.97); }
+.avatar-upload-btn:hover {
+  background: rgba(255,255,255,.12);
+  border-color: var(--acc);
+}
+.avatar-remove-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: #e74c3c;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,.5);
+}
+.avatar-remove-btn:active { transform: scale(.9); }
+.avatar-emojis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.avatar-choice {
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform .12s, border-color .15s, box-shadow .15s;
+  background: #1a1a1a;
+  padding: 0;
+}
+.avatar-choice img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.avatar-choice:active { transform: scale(.93); }
+.avatar-choice.sel {
+  border-color: var(--acc);
+  box-shadow: 0 0 16px rgba(241,196,15,.7);
+}
+@media (max-width: 360px) {
+  .avatar-preview { width: 60px; height: 60px; }
+  .avatar-upload-btn { font-size: 12px; padding: 10px; }
+  .avatar-emojis { gap: 6px; }
+}
+
+/* IMG-аватары (фото) в сиденьях */
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+.seat .avatar .avatar-img,
+.wp-avatar .avatar-img,
+.so-avatar .avatar-img {
+  width: 100%;
+  height: 100%;
+}
+[data-theme="paper"] .avatar-picker { background: rgba(0,0,0,.03); }
+[data-theme="paper"] .avatar-preview-wrap { background: rgba(0,0,0,.06); }
+[data-theme="paper"] .avatar-upload-btn {
+  background: rgba(0,0,0,.04);
+  border-color: rgba(0,0,0,.15);
+}
 
 /* ==================== 📚 ТУТОРИАЛ ==================== */
 .tutorial-overlay {
@@ -403,7 +756,6 @@
   from { opacity: 1; }
   to   { opacity: 0; }
 }
-
 .tut-modal {
   position: relative;
   width: 100%;
@@ -426,7 +778,6 @@
   from { opacity: 0; transform: translateY(30px) scale(.92); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
-
 .tut-modal::before {
   content: '';
   position: absolute;
@@ -443,7 +794,6 @@
   0%, 100% { opacity: 0.04; }
   50%      { opacity: 0.10; }
 }
-
 .tut-skip {
   position: absolute;
   top: 10px;
@@ -463,7 +813,6 @@
   justify-content: center;
 }
 .tut-skip:active { transform: scale(.9); background: rgba(255,255,255,.2); }
-
 .tut-progress {
   display: flex;
   justify-content: center;
@@ -487,7 +836,6 @@
   background: var(--tut-accent, #f1c40f);
   opacity: 0.5;
 }
-
 .tut-content {
   text-align: center;
   z-index: 2;
@@ -496,7 +844,6 @@
   flex-direction: column;
   gap: 8px;
 }
-
 .tut-emoji {
   font-size: 68px;
   line-height: 1;
@@ -509,7 +856,6 @@
   60%  { opacity: 1; transform: scale(1.15) rotate(5deg); }
   100% { transform: scale(1) rotate(0); }
 }
-
 .tut-step {
   font-size: 10px;
   font-weight: 700;
@@ -518,7 +864,6 @@
   color: var(--tut-accent, #f1c40f);
   opacity: 0.8;
 }
-
 .tut-title {
   margin: 0;
   font-family: 'Playfair', Georgia, serif;
@@ -528,7 +873,6 @@
   letter-spacing: 1px;
   text-shadow: 0 0 20px rgba(255,255,255,.15);
 }
-
 .tut-subtitle {
   font-size: 12px;
   letter-spacing: 1.5px;
@@ -538,7 +882,6 @@
   opacity: 0.9;
   margin-bottom: 4px;
 }
-
 .tut-text {
   margin: 6px 0 0;
   font-size: 14px;
@@ -547,7 +890,6 @@
   text-align: left;
   padding: 0 4px;
 }
-
 .tut-buttons {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -555,7 +897,6 @@
   z-index: 2;
   margin-top: 4px;
 }
-
 .tut-btn {
   padding: 12px 16px;
   border-radius: 12px;
@@ -568,30 +909,24 @@
   letter-spacing: 0.5px;
 }
 .tut-btn:active { transform: scale(.96); }
-
 .tut-btn-back {
   background: rgba(255,255,255,.1);
   color: #fff;
   border: 1px solid rgba(255,255,255,.15);
 }
 .tut-btn-back:active { background: rgba(255,255,255,.2); }
-
 .tut-btn-next {
   background: var(--tut-accent, #f1c40f);
   color: #000;
   box-shadow: 0 4px 20px rgba(241,196,15,.4);
 }
 .tut-btn-next:active { box-shadow: 0 2px 10px rgba(241,196,15,.3); }
-
-/* Адаптив: узкие экраны */
 @media (max-width: 360px) {
   .tut-emoji { font-size: 54px; }
   .tut-title { font-size: 22px; }
   .tut-text { font-size: 13px; }
   .tut-btn { padding: 10px 12px; font-size: 13px; }
 }
-
-/* Paper тема */
 [data-theme="paper"] .tut-modal {
   background: linear-gradient(160deg, #fff 0%, #f4ecd8 100%);
   border-color: var(--tut-accent, #b8860b);
@@ -604,5 +939,9 @@
 [data-theme="paper"] .tut-skip { background: rgba(0,0,0,.06); color: #333; }
 [data-theme="paper"] .tut-skip:active { background: rgba(0,0,0,.15); }
 [data-theme="paper"] .tut-dot { background: rgba(0,0,0,.15); }
-[data-theme="paper"] .tut-btn-back { background: rgba(0,0,0,.05); color: #333; border-color: rgba(0,0,0,.15); }
+[data-theme="paper"] .tut-btn-back {
+  background: rgba(0,0,0,.05);
+  color: #333;
+  border-color: rgba(0,0,0,.15);
+}
 [data-theme="paper"] .tut-btn-back:active { background: rgba(0,0,0,.12); }

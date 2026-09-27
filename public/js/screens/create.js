@@ -1,7 +1,8 @@
-import { loadName, saveName, saveMe, loadOpts, saveOpts, applyTheme, loadAvatar, saveAvatar, AVATARS, getPlayerId } from '../state.js';
+import { loadName, saveName, saveMe, loadOpts, saveOpts, applyTheme, getPlayerId, getFinalAvatar } from '../state.js';
 import { socket } from '../socket.js';
 import { rankDisplay } from '../rank-display.js';
 import { t } from '../i18n.js';
+import { renderAvatarPicker, bindAvatarPicker } from '../ui/avatar-picker.js';
 
 export function renderCreate(app, navigate) {
   const savedName = loadName();
@@ -10,7 +11,6 @@ export function renderCreate(app, navigate) {
   const backColor = savedOpts.backColor || 'blue';
   const docSet    = savedOpts.docSet    || 'classic';
   const theme     = savedOpts.theme     || 'classic';
-  let pickedAvatar = loadAvatar() || AVATARS[0];
   let pickedTheme  = theme;
   let pickedDocSet = docSet;
 
@@ -27,10 +27,6 @@ export function renderCreate(app, navigate) {
     <div class="choice preview-card ${deckStyle==='simple'?'sel':''}" data-deck="simple">
       <img src="/cards/simplecard_heart_12.png" alt="simple">
     </div>`;
-
-  const avatarsHtml = AVATARS.map(a => `
-    <div class="avatar-choice ${a===pickedAvatar?'sel':''}" data-avatar="${a}">${a}</div>
-  `).join('');
 
   const classicSteps = ['6','10','J','Q','K','A'];
   const shortSteps   = ['6','10','Q','A'];
@@ -67,7 +63,7 @@ export function renderCreate(app, navigate) {
       <label>${t('create.yourName')}</label>
       <input id="name" placeholder="${t('create.namePlaceholder')}" value="${savedName}">
       <label>${t('create.avatar')}</label>
-      <div class="avatar-picker" id="avatarPick">${avatarsHtml}</div>
+      ${renderAvatarPicker()}
       <label>${t('create.deckStyle')}</label>
       <div class="choice-row" id="deckPick">${styles}</div>
       <label>${t('create.backColor')}</label>
@@ -96,11 +92,8 @@ export function renderCreate(app, navigate) {
 
   let pickedDeck = deckStyle, pickedBack = backColor;
 
-  document.getElementById('avatarPick').onclick = e => {
-    const el = e.target.closest('[data-avatar]'); if (!el) return;
-    pickedAvatar = el.dataset.avatar;
-    [...document.querySelectorAll('#avatarPick .avatar-choice')].forEach(x => x.classList.toggle('sel', x === el));
-  };
+  bindAvatarPicker();
+
   document.getElementById('deckPick').onclick = e => {
     const el = e.target.closest('[data-deck]'); if (!el) return;
     pickedDeck = el.dataset.deck;
@@ -111,25 +104,23 @@ export function renderCreate(app, navigate) {
     pickedBack = el.dataset.back;
     [...document.querySelectorAll('#backPick .choice')].forEach(x => x.classList.toggle('sel', x === el));
   };
-
   document.getElementById('docsetPick').onclick = e => {
     const el = e.target.closest('[data-docset]'); if (!el) return;
     pickedDocSet = el.dataset.docset;
     [...document.querySelectorAll('#docsetPick .docset-card')].forEach(x => x.classList.toggle('sel', x === el));
   };
-
   document.getElementById('themePick').onclick = e => {
     const el = e.target.closest('[data-theme-val]'); if (!el) return;
     pickedTheme = el.dataset.themeVal;
     [...document.querySelectorAll('#themePick .theme-preview')].forEach(x => x.classList.toggle('sel', x === el));
     applyTheme(pickedTheme);
   };
-
   document.getElementById('backBtn').onclick = () => navigate('welcome');
 
   document.getElementById('createBtn').onclick = () => {
     const name = document.getElementById('name').value.trim() || t('common.player');
-    saveAvatar(pickedAvatar);
+    const finalAvatar = getFinalAvatar();
+
     const opts = {
       maxPlayers: 4,
       docSet: pickedDocSet,
@@ -138,7 +129,7 @@ export function renderCreate(app, navigate) {
       backColor: pickedBack,
       handSize: 6,
       scale: 'medium',
-      avatar: pickedAvatar,
+      avatar: finalAvatar,
     };
     saveName(name);
     saveOpts(opts);
@@ -146,7 +137,7 @@ export function renderCreate(app, navigate) {
 
     socket.emit('createRoom', { name, opts, persistentId: getPlayerId() }, async (r) => {
       if (!r.ok) return document.getElementById('err').textContent = r.err;
-      saveMe({ name, id: r.playerId, roomId: r.roomId, avatar: pickedAvatar });
+      saveMe({ name, id: r.playerId, roomId: r.roomId, avatar: finalAvatar });
       try { await navigator.clipboard.writeText(r.roomId); } catch {}
       navigate('table');
     });

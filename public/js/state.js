@@ -14,8 +14,18 @@ export const state = {
   voiceActive: false,
   voiceSpeakingSeats: [],
   lastState: {},
-  swapPick: null,   // 🎯 для tap-tap расстановки
+  swapPick: null,
 };
+
+// 🎨 Список ID готовых аватарок (файлы в /avatars/)
+export const AVATARS = [
+  'default',
+  'avatar-2',
+  'avatar-3',
+  'avatar-4',
+  'avatar-5',
+  'avatar-6',
+];
 
 export function loadMe() {
   try { state.me = JSON.parse(localStorage.getItem('me') || 'null'); }
@@ -80,26 +90,63 @@ export function playerState(s, seat) {
   return '';
 }
 
-export const AVATARS = [
-  '😎','🦊','🐻','🐼','🦁','🐯','🐸','🐙','🦄','🐲','👽','🤖',
-  '😺','🐨','🐷','🐔','🐵','🦉','🐺','🐗','🦝','🐹','🐰','🦅',
-  '🍕','🍔','🌮','🍣','🍩','🎮','🎧','🏆',
-];
+// ==================== АВАТАРКИ ====================
 
+// Нормализовать значение аватара к допустимому
+// Возвращает: "default" | "avatar-X" | "IMG:..."
+export function normalizeAvatar(value) {
+  if (!value) return 'default';
+  if (typeof value !== 'string') return 'default';
+  if (value.startsWith('IMG:')) return value;
+  if (AVATARS.includes(value)) return value;
+  // Старое эмодзи или неизвестное → default
+  return 'default';
+}
+
+// Получить avatar для игрока по seat
 export function getAvatar(seat) {
   if (state.server && state.server.players) {
     const p = state.server.players.find(x => x.seat === seat);
-    if (p && p.avatar) return p.avatar;
+    if (p && p.avatar) return normalizeAvatar(p.avatar);
   }
-  return AVATARS[seat % AVATARS.length];
+  return 'default';
 }
 
-export function loadAvatar() {
-  return localStorage.getItem('myAvatar') || '';
+// HTML для отображения аватара
+export function avatarHtml(value) {
+  const v = normalizeAvatar(value);
+  if (v.startsWith('IMG:')) {
+    return `<img src="${v.slice(4)}" class="avatar-img" alt="">`;
+  }
+  return `<img src="/avatars/${v}.png" class="avatar-img" alt="">`;
 }
-export function saveAvatar(a) {
-  if (a) localStorage.setItem('myAvatar', a);
+
+// ==================== СВОЁ ФОТО ====================
+export function loadAvatarImage() {
+  try { return localStorage.getItem('myAvatarImage') || null; }
+  catch { return null; }
+}
+export function saveAvatarImage(base64) {
+  try {
+    if (base64) localStorage.setItem('myAvatarImage', base64);
+    else localStorage.removeItem('myAvatarImage');
+  } catch {}
+}
+
+// Хранить выбранный ID готовой аватарки
+export function loadAvatar() {
+  return localStorage.getItem('myAvatar') || 'default';
+}
+export function saveAvatar(id) {
+  if (id) localStorage.setItem('myAvatar', id);
   else localStorage.removeItem('myAvatar');
+}
+
+// Итоговое значение для отправки на сервер
+export function getFinalAvatar() {
+  const img = loadAvatarImage();
+  if (img) return 'IMG:' + img;
+  return normalizeAvatar(loadAvatar());
 }
 
 // 🆔 Постоянный ID игрока
