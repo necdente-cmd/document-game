@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Админка — Документ</title>
+<link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+
+<!-- ============ ВХОД ============ -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-card">
+    <div class="login-logo">🎴</div>
+    <h1>Админ-панель</h1>
+    <p class="login-sub">Игра «Документ»</p>
+    <input id="passInput" type="password" placeholder="Пароль" autocomplete="off">
+    <button id="loginBtn">Войти</button>
+    <div id="loginErr" class="login-err"></div>
+  </div>
+</div>
+
+<!-- ============ ДАШБОРД ============ -->
+<div id="dashboard" class="dashboard" hidden>
+
+  <header class="dash-header">
+    <div class="dash-title">
+      <span class="dash-icon">📊</span>
+      <span>Документ — Админка</span>
+    </div>
+    <div class="dash-actions">
+      <button id="refreshBtn" class="dash-btn" title="Обновить">🔃</button>
+      <button id="csvBtn" class="dash-btn" title="Скачать CSV игроков">📥 CSV</button>
+      <button id="logoutBtn" class="dash-btn danger" title="Выйти">🚪</button>
+    </div>
+  </header>
+
+  <section class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-icon">👥</div>
+      <div class="summary-value" id="statPlayers">—</div>
+      <div class="summary-label">Всего игроков</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-icon">🎮</div>
+      <div class="summary-value" id="statGames">—</div>
+      <div class="summary-label">Партий сыграно</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-icon">🔥</div>
+      <div class="summary-value" id="statActive">—</div>
+      <div class="summary-label">Активных за 24ч</div>
+    </div>
+  </section>
+
+  <section class="dash-section">
+    <div class="section-head">
+      <h2>👥 Игроки</h2>
+      <input id="playerSearch" class="search-input" placeholder="Поиск по имени…" autocomplete="off">
+    </div>
+    <div class="table-wrap">
+      <table class="dash-table" id="playersTable">
+        <thead>
+          <tr>
+            <th style="width:40px"></th>
+            <th>Имя</th>
+            <th>ID</th>
+            <th>Первый раз</th>
+            <th>Последний раз</th>
+            <th class="num">Партий</th>
+            <th class="num">Побед</th>
+            <th class="num">Конов</th>
+          </tr>
+        </thead>
+        <tbody id="playersBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="dash-section">
+    <div class="section-head">
+      <h2>📋 События</h2>
+      <div class="event-filter">
+        <select id="eventFilter">
+          <option value="">Все</option>
+          <option value="join">Входы</option>
+          <option value="reconnect">Переподключения</option>
+          <option value="gameStart">Старт игры</option>
+          <option value="roundWin">Победа в кону</option>
+          <option value="gameWin">Победа в партии</option>
+          <option value="leave">Выходы</option>
+        </select>
+      </div>
+    </div>
+    <div class="events-list" id="eventsList"></div>
+  </section>
+
+  <div class="dash-footer">
+    <span id="updated"></span>
+    <span id="autoRefresh"></span>
+  </div>
+
+</div>
+
+<script src="/js/admin.js"></script>
+</body>
+</html>

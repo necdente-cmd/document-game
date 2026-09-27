@@ -1,0 +1,232 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #0a0e13;
+  color: #e6e6e6;
+  min-height: 100dvh;
+}
+
+/* ==================== ЭКРАН ВХОДА ==================== */
+.login-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at 50% 40%, #0f4d3a 0%, #061d14 100%);
+  padding: 20px;
+}
+.login-card {
+  background: rgba(0,0,0,.6);
+  border: 2px solid #f1c40f;
+  border-radius: 20px;
+  padding: 32px 28px;
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,.7);
+}
+.login-logo { font-size: 60px; line-height: 1; margin-bottom: 12px; }
+.login-card h1 { margin: 0 0 4px; font-size: 24px; color: #f1c40f; }
+.login-sub { font-size: 12px; opacity: .6; margin: 0 0 24px; letter-spacing: 1px; }
+.login-card input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 2px solid rgba(255,255,255,.15);
+  background: rgba(255,255,255,.05);
+  color: inherit;
+  font-size: 15px;
+  font-family: inherit;
+  margin-bottom: 12px;
+}
+.login-card input:focus { outline: none; border-color: #f1c40f; }
+.login-card button {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  background: #f1c40f;
+  color: #000;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.login-card button:active { transform: scale(.98); }
+.login-err { color: #e74c3c; font-size: 13px; margin-top: 12px; min-height: 18px; }
+
+/* ==================== ДАШБОРД ==================== */
+.dashboard { padding: 16px; max-width: 1200px; margin: 0 auto; }
+
+.dash-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(255,255,255,.04);
+  border-radius: 14px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255,255,255,.06);
+}
+.dash-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #f1c40f;
+}
+.dash-icon { font-size: 22px; }
+.dash-actions { display: flex; gap: 8px; }
+.dash-btn {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06);
+  color: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  transition: transform .12s, background .12s;
+}
+.dash-btn:active { transform: scale(.95); }
+.dash-btn:hover { background: rgba(255,255,255,.12); }
+.dash-btn.danger { background: rgba(231,76,60,.2); border-color: rgba(231,76,60,.4); }
+
+/* ==================== СВОДКА ==================== */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.summary-card {
+  padding: 16px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  text-align: center;
+}
+.summary-icon { font-size: 28px; margin-bottom: 8px; }
+.summary-value { font-size: 32px; font-weight: 900; color: #f1c40f; line-height: 1; }
+.summary-label { font-size: 11px; opacity: .6; text-transform: uppercase; letter-spacing: 1px; margin-top: 6px; }
+
+/* ==================== СЕКЦИИ ==================== */
+.dash-section {
+  margin-bottom: 24px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(255,255,255,.03);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.section-head h2 { margin: 0; font-size: 15px; }
+
+.search-input, .event-filter select {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06);
+  color: inherit;
+  font-size: 13px;
+  font-family: inherit;
+  min-width: 200px;
+}
+.search-input:focus, .event-filter select:focus { outline: none; border-color: #f1c40f; }
+
+/* ==================== ТАБЛИЦА ==================== */
+.table-wrap { overflow-x: auto; }
+.dash-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.dash-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  opacity: .6;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.dash-table th.num { text-align: right; }
+.dash-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.dash-table td.num { text-align: right; }
+.dash-table tr:hover td { background: rgba(255,255,255,.02); }
+.dash-table code {
+  font-size: 11px;
+  padding: 2px 6px;
+  background: rgba(255,255,255,.06);
+  border-radius: 4px;
+  color: #3498db;
+}
+
+/* ==================== СОБЫТИЯ ==================== */
+.events-list {
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+.events-empty { text-align: center; padding: 30px; opacity: .4; font-size: 13px; }
+.event-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(255,255,255,.03);
+}
+.event-row:last-child { border-bottom: none; }
+.ev-icon { font-size: 16px; width: 20px; text-align: center; }
+.ev-time {
+  min-width: 80px;
+  font-size: 11px;
+  opacity: .5;
+}
+.ev-text { flex: 1; }
+.ev-text b { color: #f1c40f; }
+.ev-team {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: rgba(52,152,219,.15);
+  color: #5dade2;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+/* ==================== ФУТЕР ==================== */
+.dash-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 4px;
+  font-size: 11px;
+  opacity: .5;
+}
+
+/* ==================== АДАПТИВ ==================== */
+@media (max-width: 700px) {
+  .summary-grid { grid-template-columns: 1fr; }
+  .dash-header { flex-wrap: wrap; gap: 10px; }
+  .section-head { flex-wrap: wrap; gap: 8px; }
+  .search-input { min-width: auto; width: 100%; }
+  .dash-table { font-size: 12px; }
+  .dash-table th, .dash-table td { padding: 8px 6px; }
+  .dash-table th:nth-child(4), .dash-table td:nth-child(4),
+  .dash-table th:nth-child(5), .dash-table td:nth-child(5) { display: none; }
+}
