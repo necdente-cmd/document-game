@@ -1,6 +1,6 @@
 import { RV } from '../../constants.js';
 import { partnerOf, isKozir } from '../../utils.js';
-import { cardValue, getDocs, isDoc } from '../cards.js';
+import { cardValue, getDocs } from '../cards.js';
 import { pDefenderBeats } from './probabilities.js';
 import { pickExactWinner, isEndgame } from './endgame.js';
 import { shouldPlayAggressive } from './evaluate.js';
@@ -28,10 +28,18 @@ export function pickLeadCards(room, botSeat, memory, profile) {
   if (endgameChoice) return endgameChoice;
 
   const bot = room.players[botSeat];
-  const myDoc = getDocs(room)[bot.team];
+  if (!bot) return [];
+
+  const myTeam = botSeat % 2;
+  const docs = getDocs(room);
+  const myDoc = docs[myTeam];
+  if (!myDoc) {
+    console.error(`[pickLeadCards] ${bot.name}: myDoc undefined (team=${myTeam})`);
+    return [];
+  }
+
   const aggressive = shouldPlayAggressive(room, botSeat);
 
-  // Док нельзя заходить (правило игры). Козыри не трогаем.
   const allCand = bot.hand.filter(c => c.r !== myDoc);
   if (!allCand.length) return [];
 
@@ -68,10 +76,19 @@ export function pickLeadCards(room, botSeat, memory, profile) {
 export function pickExtraCards(room, botSeat, memory, profile) {
   if (!room.field) return [];
   const bot = room.players[botSeat];
+  if (!bot) return [];
+
+  // 🔒 Считаем команду и доки через botSeat (не через bot.team, чтобы избежать рассинхрона)
+  const myTeam = botSeat % 2;
   const docs = getDocs(room);
-  const myDoc = docs[bot.team];
+  const myDoc = docs[myTeam];
+  if (!myDoc) {
+    console.error(`[pickExtraCards] ${bot.name}: myDoc undefined (team=${myTeam})`);
+    return [];
+  }
+
   const defender = room.players[room.field.defender];
-  const defDoc = docs[defender.team];
+  if (!defender) return [];
 
   const space = room.field.limit - room.field.cards.length;
   if (space <= 0) return [];
@@ -84,24 +101,34 @@ export function pickExtraCards(room, botSeat, memory, profile) {
 
   const dumpMode = room.field.defenderGaveUp || room.field.askMore;
 
-  // 🚫 Свой док и козыри не подкидываем НИКОГДА
+  // 🔒 ТОЛЬКО карты того же ранга, что на столе.
+  // 🚫 Никогда: свой док, любой козырь.
+  // 🚫 Убрано правило "форс-док защитника" — оно давало фальш (6♠ при 7 на столе, если 6 = док).
   const cand = bot.hand.filter(c => {
-    if (c.r === myDoc) return false;
-    if (isKozir(c, room)) return false;
-    if (c.r === defDoc && defDoc !== myDoc) return true;
-    return ranksOnTable.has(c.r);
+    if (c.r === myDoc) return false;      // свой док
+    if (isKozir(c, room)) return false;   // козырь
+    return ranksOnTable.has(c.r);         // только ранг со стола
   });
 
-  if (!cand.length) return [];
+  // 🛡 Двойная страховка: если вдруг что-то просочилось
+  const safeCand = cand.filter(c => {
+    if (c.r === myDoc) {
+      console.error(`[pickExtraCards] BUG: own doc ${c.r}${c.s} slipped for ${bot.name} (team=${myTeam} myDoc=${myDoc})`);
+      return false;
+    }
+    return true;
+  });
 
-  cand.sort((a, b) => cardValue(a, room, botSeat) - cardValue(b, room, botSeat));
+  if (!safeCand.length) return [];
+
+  safeCand.sort((a, b) => cardValue(a, room, botSeat) - cardValue(b, room, botSeat));
 
   const defHand = defender.hand.length;
   const aggressive = dumpMode || defHand <= 3 || shouldPlayAggressive(room, botSeat);
   const threshold = aggressive ? 80 : 40 + profile.attackThreshold * 30;
 
   const chosen = [];
-  for (const c of cand) {
+  for (const c of safeCand) {
     if (chosen.length >= space) break;
     const val = cardValue(c, room, botSeat);
     if (!aggressive && val > threshold) continue;
