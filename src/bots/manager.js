@@ -3,12 +3,12 @@ import { partnerOf, bothPartnersPassed, uid } from '../utils.js';
 import { registerGameHandlers } from '../game/actions.js';
 import { getRandomProfile } from './profiles.js';
 import { getMemory } from './memory.js';
+import { getDocs } from './cards.js';
 import { botDecideGenius } from './genius/index.js';
 
 const BOT_DELAY = 1500;
 const FORCE_PASS_DELAY = 4000;
 
-// Имена ботов (по кругу, если ботов больше чем имён)
 const BOT_NAMES = [
   'Муке', 'Даке', 'Шүкү', 'Доке',
   'Соке', 'Куке', 'Ули',  'Токо',
@@ -69,8 +69,13 @@ export function registerBotSocket(io, room, bot, broadcast) {
   bot._socket = fakeSocket;
 }
 
-function decide(room, bot) {
-  return botDecideGenius(room, bot.seat, getMemory(room), bot.botProfile) || [];
+function safeDecide(room, bot) {
+  try {
+    return botDecideGenius(room, bot.seat, getMemory(room), bot.botProfile) || [];
+  } catch (e) {
+    console.error(`[${bot.name}] decide error:`, e);
+    return [];
+  }
 }
 
 function applyDecisions(room, bot, decisions) {
@@ -119,13 +124,28 @@ function peekPendingBot(room) {
     const f = room.field;
     const def = room.players[f.defender];
     const unbeaten = f.cards.some(e => !e.beatenBy);
+
     if (unbeaten && def && def.isBot && !def.out && !f.defenderGaveUp) return def;
+
     for (const seat of [f.attacker, (f.attacker + 2) % 4]) {
       const b = room.players[seat];
       if (b && b.isBot && !b.out && !f.passedSeats.includes(seat)) return b;
     }
+
     if (!unbeaten && bothPartnersPassed(room) && def && def.isBot && !def.out && !f.defenderGaveUp) {
       return def;
+    }
+
+    if (!unbeaten && !f.defenderGaveUp && !f.askMore) {
+      const waiters = [];
+      for (const seat of [f.attacker, (f.attacker + 2) % 4]) {
+        const b = room.players[seat];
+        if (!b || b.out) continue;
+        if (f.passedSeats.includes(seat)) continue;
+        if (!b.isBot) return null;
+        waiters.push(b);
+      }
+      if (waiters.length > 0) return waiters[0];
     }
     return null;
   }
@@ -154,6 +174,7 @@ function findActingBot(room) {
     if (b) return { bot: b, decisions: [{ action: 'passDocsConfirm' }] };
     return null;
   }
+
   if (room.field) {
     const f = room.field;
     const def = room.players[f.defender];
@@ -161,19 +182,36 @@ function findActingBot(room) {
     const par = (atk + 2) % 4;
     const unbeaten = f.cards.filter(e => !e.beatenBy);
 
+    // === 1. Защитник с неотбитыми ===
     if (unbeaten.length > 0 && def && def.isBot && !def.out && !f.defenderGaveUp) {
-      const d = decide(room, def);
+      const d = safeDecide(room, def);
       if (d.length) return { bot: def, decisions: d };
     }
 
+    // === 2. Атакующий / партнёр ===
     for (const seat of [atk, par]) {
       const b = room.players[seat];
       if (!b || !b.isBot || b.out) continue;
       if (f.passedSeats.includes(seat)) continue;
-      const d = decide(room, b);
+      const d = safeDecide(room, b);
       if (d.length) return { bot: b, decisions: d };
     }
 
+    // === 3. Всё отбито + оба пасанули → защитник решает bito/pickup ===
+    if (unbeaten.length === 0 && bothPartnersPassed(room)
+        && def && def.isBot && !def.out && !f.defenderGaveUp) {
+      const d = safeDecide(room, def);
+      if (d.length) return { bot: def, decisions: d };
+      // 🔧 Fallback: если decide ничего не вернул — принудительно bito/pickUp
+      const docs = getDocs(room);
+      const defDoc = docs[def.team];
+      const hasDocOnTable = f.cards.some(e => e.card.r === defDoc);
+      const action = hasDocOnTable ? 'pickUp' : 'bito';
+      console.log(`[${def.name}] Fallback → ${action}`);
+      return { bot: def, decisions: [{ action }] };
+    }
+
+    // === 4. Стоп-блок: всё отбито, но не все пасанули ===
     if (unbeaten.length === 0 && !f.defenderGaveUp && !f.askMore) {
       const waiters = [];
       for (const seat of [atk, par]) {
@@ -183,30 +221,22 @@ function findActingBot(room) {
         if (!b.isBot) return null;
         waiters.push(b);
       }
-      if (waiters.length > 0 && room._stuckSince === undefined) {
-        room._stuckSince = Date.now();
-      } else if (waiters.length > 0
-                 && Date.now() - room._stuckSince > FORCE_PASS_DELAY) {
-        room._stuckSince = undefined;
-        return { bot: waiters[0], decisions: [{ action: 'pass' }] };
-      } else if (waiters.length === 0) {
-        room._stuckSince = undefined;
+      if (waiters.length > 0) {
+        if (room._stuckSince === undefined) {
+          room._stuckSince = Date.now();
+        } else if (Date.now() - room._stuckSince > FORCE_PASS_DELAY) {
+          room._stuckSince = undefined;
+          return { bot: waiters[0], decisions: [{ action: 'pass' }] };
+        }
+        return null;
       }
-      return null;
     }
-
-    if (unbeaten.length === 0 && bothPartnersPassed(room)
-        && def && def.isBot && !def.out && !f.defenderGaveUp) {
-      const d = decide(room, def);
-      if (d.length) return { bot: def, decisions: d };
-    }
-
-    room._stuckSince = undefined;
     return null;
   }
+
   const t = room.players[room.turnSeat];
   if (t && t.isBot && !t.out) {
-    const d = decide(room, t);
+    const d = safeDecide(room, t);
     if (d.length) return { bot: t, decisions: d };
   }
   return null;
