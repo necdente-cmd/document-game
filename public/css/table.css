@@ -555,7 +555,7 @@
 /* ==================== ПАНЕЛЬ СМАЙЛОВ ==================== */
 .emoji-bar {
   position: fixed !important;
-  left: calc(62px + 8px * var(--scale)) !important;
+  left: calc(30px * var(--scale)) !important;   /* ← было 62+, стало 30 */
   top: 55% !important;
   transform: translateY(-50%) !important;
   display: grid !important;
