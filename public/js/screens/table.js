@@ -22,7 +22,6 @@ let infoOpen = false;
 let iconsVisible = false;
 let iconsTimer = null;
 
-// 🎴 Preload карт
 function preloadDeck(style) {
   const key = '__preload_' + (style || 'figures');
   if (window[key]) return;
@@ -432,8 +431,8 @@ export function renderTable(app, navigate) {
   const myPartner = s.players.find(p => p.seat === myPartnerSeat);
   const partnerIsOut = myPartner ? myPartner.out : true;
 
-  const waitingForSeat = s.players.find(p => !p.connected && !p.out && (
-    (s.phase === 'playing') &&
+  const waitingForSeat = s.players.find(p => !p.connected && !p.out && ((
+    s.phase === 'playing') &&
     ((s.field && s.field.defender === p.seat) || (!s.field && s.turnSeat === p.seat))
   ))?.seat;
 
@@ -464,13 +463,16 @@ export function renderTable(app, navigate) {
     const isHost = meP?.isHost;
     const emptySlots = Math.max(0, maxP - playersCount);
 
-    const playerCards = s.players.map(p => `
-      <div class="wp-card ${p.isHost?'host':''}">
+    const playerCards = s.players.map(p => {
+      const botBadge = p.isBot ? `<div class="wp-bot">🤖 BOT</div>` : '';
+      return `
+      <div class="wp-card ${p.isHost?'host':''} ${p.isBot?'bot':''}">
         <div class="wp-avatar">${avatarHtml(getAvatar(p.seat))}</div>
         <div class="wp-name">${esc(p.name)}</div>
         ${p.isHost ? `<div class="wp-host">${t('lobby.host')}</div>` : ''}
-      </div>
-    `).join('');
+        ${botBadge}
+      </div>`;
+    }).join('');
 
     const emptyCards = Array.from({ length: emptySlots }).map(() => `
       <div class="wp-card wp-empty">
@@ -519,6 +521,12 @@ export function renderTable(app, navigate) {
           ? `<button class="start-big" id="startBtn">${t('lobby.startGame')}</button>`
           : isHost ? `<div class="waiting-hint">${t('lobby.waitingPlayers')}</div>`
           : `<div class="waiting-hint">${t('lobby.waitingHost')}</div>`}
+        ${isHost && playersCount < maxP ? `
+          <div class="lobby-bot-buttons">
+            <button class="bot-btn" id="addSmartBtn">🤖 + Smart</button>
+            <button class="bot-btn" id="addGeniusBtn">🧠 + Genius</button>
+            <button class="bot-btn bot-btn-fill" id="fillBotsBtn">4 бота, старт</button>
+          </div>` : ''}
       </div>`;
   }
 
@@ -538,6 +546,7 @@ export function renderTable(app, navigate) {
   const seats = s.players.filter(p => p.seat !== mySeat).map(p => {
     const isThisInPassed = passedSeats.includes(p.seat);
     const offlineBadge = !p.connected ? `<div class="badge-off">⚠ ${t('state.offline')}</div>` : '';
+    const botBadge = p.isBot ? `<div class="badge-bot">🤖</div>` : '';
     const posArr = ['bottom','left','top','right'];
     const pos = posArr[((p.seat - mySeat + 4) % 4)] || 'top';
     const st = playerState(s, p.seat);
@@ -553,12 +562,13 @@ export function renderTable(app, navigate) {
     if (st === 'вышел')    stText = t('state.out');
     if (st === 'отошёл')   stText = t('state.offline');
     return `
-      <div class="seat ${pos} ${p.seat===s.turnSeat?'active':''} ${p.out?'out':''} ${!p.connected?'offline':''} ${isSpeaking?'speaking':''} ${isPartner?'is-partner':'is-enemy'}" data-seat="${p.seat}">
+      <div class="seat ${pos} ${p.seat===s.turnSeat?'active':''} ${p.out?'out':''} ${!p.connected?'offline':''} ${isSpeaking?'speaking':''} ${isPartner?'is-partner':'is-enemy'} ${p.isBot?'is-bot':''}" data-seat="${p.seat}">
         <div class="name">${esc(p.name)} ${isPartner?'★':'✗'}</div>
         <div class="avatar">${avatarHtml(getAvatar(p.seat))}</div>
         ${st ? `<div class="state ${stCls}">${stText}</div>` : ''}
         ${isThisInPassed ? '<div class="pass-badge">⛔ Пас</div>' : ''}
         ${offlineBadge}
+        ${botBadge}
       </div>`;
   }).join('');
 
@@ -649,7 +659,6 @@ export function renderTable(app, navigate) {
     trumpSuit: s.trumpSuit,
   });
 
-  // ==================== ПОДСКАЗКА + ТАЙМЕР 3 СЕК ====================
   let hintText = '';
   if (waitingForSeat !== undefined) {
     hintText = t(veteran ? 'hint.waitingSeatShort' : 'hint.waitingSeat');
@@ -717,7 +726,6 @@ export function renderTable(app, navigate) {
     <div class="actions">${hintHtml}</div>
   `;
 
-  // ⏱ Таймер скрытия подсказки
   if (showHint) {
     clearTimeout(window.__hintTimer);
     const remaining = state.__hintUntil - Date.now();
@@ -816,6 +824,14 @@ export function renderTable(app, navigate) {
 
   const st = g('startBtn'); if (st) st.onclick = () => { playSound('button'); socket.emit('startGame'); };
 
+  // 🤖 Кнопки ботов
+  const asb = g('addSmartBtn');
+  if (asb) asb.onclick = () => { playSound('button'); socket.emit('addBot', { type: 'smart' }); };
+  const agb = g('addGeniusBtn');
+  if (agb) agb.onclick = () => { playSound('button'); socket.emit('addBot', { type: 'genius' }); };
+  const fbb = g('fillBotsBtn');
+  if (fbb) fbb.onclick = () => { playSound('button'); socket.emit('fillBots', { type: 'smart', start: true }); };
+
   const pu = g('pickUpBtn');   if (pu) pu.onclick = () => { playSound('button'); socket.emit('pickUp'); state.defendTarget = null; };
   const th = g('throwBtn');    if (th) th.onclick = () => { playSound('button'); socket.emit('throwDocs'); };
   const si = g('swapInitBtn'); if (si) si.onclick = () => { playSound('button'); socket.emit('swapInitiate'); };
@@ -825,7 +841,6 @@ export function renderTable(app, navigate) {
   const bi = g('bitoBtn');     if (bi) bi.onclick = () => { playSound('button'); socket.emit('bito'); };
   const am = g('askMoreBtn');  if (am) am.onclick = () => { playSound('button'); socket.emit('askMore'); };
 
-  // ==================== EMOJI BAR + АВТОСКРЫТИЕ 5 СЕК ====================
   const eb = g('emojiBar');
   if (eb) {
     clearTimeout(window.__emojiTimer);

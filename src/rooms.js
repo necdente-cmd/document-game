@@ -3,6 +3,18 @@ import { code } from './utils.js';
 
 export const rooms = new Map();
 
+// Ленивая загрузка manager.js (чтобы избежать циклического импорта)
+let _managerPromise = null;
+function getManager() {
+  if (!_managerPromise) {
+    _managerPromise = import('./bots/manager.js').catch(e => {
+      console.error('[rooms->bot] import failed:', e);
+      return null;
+    });
+  }
+  return _managerPromise;
+}
+
 export function newRoom(opts = {}) {
   const r = {
     id: code(),
@@ -33,8 +45,8 @@ export function newRoom(opts = {}) {
     log: [],
     lastAttacker: null,
     lastTarget: null,
-    forcedTarget: null,              // слот цели (0-3)
-    forcedAttackerSlot: null,        // слот атаки (для передачи доков/свопа)
+    forcedTarget: null,
+    forcedAttackerSlot: null,
     teamPairLastSlot: [null, null],
     teamLastTargetSlot: [null, null],
     roundHistory: [],
@@ -43,6 +55,7 @@ export function newRoom(opts = {}) {
     winnerTeam: null,
     swapUsedByTeam: [false, false],
     disconnectTimers: {},
+    _botTimer: null,
   };
   rooms.set(r.id, r);
   return r;
@@ -79,6 +92,9 @@ export function pub(r, forId) {
         isHost: p.id === r.hostId,
         avatar: p.avatar || '',
         voiceEnabled: !!p.voiceEnabled,
+        isBot: !!p.isBot,
+        botType: p.botType || null,
+        botProfile: p.botProfile ? p.botProfile.key : null,
       };
     }),
     myHand: me ? me.hand : [],
@@ -108,7 +124,13 @@ export function pub(r, forId) {
 
 export function makeBroadcast(io) {
   return function broadcast(r) {
-    for (const p of r.players) io.to(p.id).emit('state', pub(r, p.id));
+    for (const p of r.players) {
+      if (p.isBot) continue;
+      io.to(p.id).emit('state', pub(r, p.id));
+    }
+    getManager().then(m => {
+      if (m && m.onRoomChange) m.onRoomChange(io, r, broadcast);
+    }).catch(() => {});
   };
 }
 

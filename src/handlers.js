@@ -5,6 +5,7 @@ import { registerGameHandlers } from './game/actions.js';
 import { DISCONNECT_TIMEOUT_MS } from './constants.js';
 import { getIceServers } from './turn.js';
 import { logPlayerSeen, logEvent, incrementStat } from './db.js';
+import { addBotToRoom } from './bots/manager.js';
 
 export function setupHandlers(io, broadcast) {
   io.on('connection', (socket) => {
@@ -110,14 +111,14 @@ export function setupHandlers(io, broadcast) {
       broadcast(r);
     });
 
-    // 🎯 СИНХРОНИЗАЦИЯ ПРИ ВОЗВРАТЕ ИЗ ФОНА
+    // 🎯 СИНХРОНИЗАЦИЯ
     socket.on('syncState', () => {
       const r = rooms.get(rid); if (!r) return;
       const p = getMe(); if (!p) return;
       socket.emit('state', pub(r, p.id));
     });
 
-    // 🎯 ХОСТ ВЫБИРАЕТ РАССТАНОВКУ
+    // 🎯 РАССТАНОВКА
     socket.on('setSeatOrder', ({ order }) => {
       const r = rooms.get(rid); if (!r) return;
       if (r.hostId !== pid) return err('Только хост может менять расстановку');
@@ -157,7 +158,6 @@ export function setupHandlers(io, broadcast) {
       r.gameStartTime = Date.now();
       r.winnerTeam = null;
 
-      // 📊 Логирование старта игры
       for (const p of r.players) {
         if (p.persistentId) {
           incrementStat(p.persistentId, 'games_played');
@@ -196,7 +196,7 @@ export function setupHandlers(io, broadcast) {
       broadcast(r);
     });
 
-    // ВЫХОД ИЗ КОМНАТЫ
+    // ВЫХОД
     socket.on('leaveRoom', () => {
       const r = rooms.get(rid); if (!r) return;
       const p = getMe(); if (!p) return;
@@ -266,14 +266,14 @@ export function setupHandlers(io, broadcast) {
       broadcast(r);
     });
 
-    // ==================== 🎤 ГОЛОСОВОЙ ЧАТ ====================
+    // ==================== 🎤 ГОЛОС ====================
     socket.on('voice-enabled', () => {
       const r = rooms.get(rid); if (!r) return;
       const p = getMe(); if (!p) return;
       p.voiceEnabled = true;
 
       const peers = r.players
-        .filter(x => x.voiceEnabled && x.id !== pid)
+        .filter(x => x.voiceEnabled && x.id !== pid && !x.isBot)
         .map(x => x.id);
 
       socket.emit('voice-peers', { peers });
@@ -290,8 +290,43 @@ export function setupHandlers(io, broadcast) {
     socket.on('voice-signal', ({ to, data }) => {
       const r = rooms.get(rid); if (!r) return;
       const target = r.players.find(x => x.id === to);
-      if (!target) return;
+      if (!target || target.isBot) return;
       io.to(to).emit('voice-signal', { from: pid, data });
+    });
+
+    // ==================== 🤖 БОТЫ ====================
+    socket.on('addBot', ({ type } = {}) => {
+      const r = rooms.get(rid); if (!r) return;
+      if (r.hostId !== pid) return err('Только хост');
+      if (r.phase !== 'lobby') return err('Только в лобби');
+      if (r.players.length >= r.opts.maxPlayers) return err('Комната заполнена');
+      const t = (type === 'genius') ? 'genius' : 'smart';
+      const bot = addBotToRoom(io, r, t, broadcast);
+      if (!bot) return;
+      log(r, `Добавлен ${bot.name}`);
+      broadcast(r);
+    });
+
+    socket.on('fillBots', ({ type, start } = {}) => {
+      const r = rooms.get(rid); if (!r) return;
+      if (r.hostId !== pid) return err('Только хост');
+      if (r.phase !== 'lobby') return err('Только в лобби');
+      const t = (type === 'genius') ? 'genius' : 'smart';
+      while (r.players.length < r.opts.maxPlayers) {
+        const bot = addBotToRoom(io, r, t, broadcast);
+        if (!bot) break;
+        log(r, `Добавлен ${bot.name}`);
+      }
+      if (start && r.players.length === r.opts.maxPlayers) {
+        r.teamStep = [0, 0];
+        r.roundWins = [0, 0];
+        r.roundHistory = [];
+        r.playerStats = [0, 0, 0, 0];
+        r.gameStartTime = Date.now();
+        r.winnerTeam = null;
+        startRound(r, 0);
+      }
+      broadcast(r);
     });
 
     registerGameHandlers(io, socket, ctx);

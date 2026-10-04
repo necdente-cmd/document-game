@@ -1011,3 +1011,31 @@
 [data-theme="paper"] .mode-card.sel {
   background: rgba(241,196,15,.18);
 }
+
+/* ==================== 🤖 БОТЫ ==================== */
+.lobby-bot-buttons {
+  display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; justify-content: center;
+}
+.bot-btn {
+  padding: 10px 16px; border-radius: 8px; border: 1px solid #555;
+  background: #2a2a35; color: #eee; font-size: 14px; cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  font-weight: 600;
+}
+.bot-btn:hover { background: #3a3a48; }
+.bot-btn:active { transform: scale(0.97); }
+.bot-btn-fill { background: #1e5a8c; border-color: #2a7dc4; }
+.bot-btn-fill:hover { background: #2a7dc4; }
+
+.wp-card.bot { border: 1px solid #4a6a8a; }
+.wp-bot {
+  position: absolute; top: 4px; right: 4px;
+  font-size: 9px; padding: 2px 4px; border-radius: 4px;
+  background: #1e5a8c; color: #fff; font-weight: 700;
+}
+.seat.is-bot .name { color: #8ab6e0; }
+.badge-bot {
+  position: absolute; top: -6px; right: -6px;
+  font-size: 14px;
+  background: #1e5a8c; border-radius: 50%; padding: 2px 4px;
+}
