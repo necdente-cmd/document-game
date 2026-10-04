@@ -34,74 +34,57 @@ export function partnerOut(r, seat) {
   return partner ? partner.out : true;
 }
 
-// ✅ Противники по часовой от seat (без партнёра, без вышедших)
+// ✅ Кто реально играет за слот (учитывает партнёра вышедшего)
+export function playerAtSlot(r, slot) {
+  const p = r.players[slot];
+  if (!p) return null;
+  if (!p.out) return p;
+  const partner = r.players[partnerOf(slot)];
+  if (partner && !partner.out) return partner;
+  return null;
+}
+
+export function isSlotActive(r, slot) {
+  return playerAtSlot(r, slot) !== null;
+}
+
+// ✅ Следующий активный слот по часовой от fromSlot (не считая партнёрского)
+export function nextActiveSlot(r, fromSlot) {
+  const partnerSlot = partnerOf(fromSlot);
+  for (let i = 1; i <= 3; i++) {
+    const s = (fromSlot + i) % 4;
+    if (s === partnerSlot) continue;
+    if (!isSlotActive(r, s)) continue;
+    return s;
+  }
+  return null;
+}
+
+// ✅ Слоты, которыми играет игрок (если партнёр вышел — два слота)
+export function slotsOf(r, playerSeat) {
+  const partner = r.players[partnerOf(playerSeat)];
+  const result = [playerSeat];
+  if (partner && partner.out) result.push(partnerOf(playerSeat));
+  return result;
+}
+
+// ✅ Противники по seat (совместимо со старым кодом)
 export function opponentsOf(r, attackerSeat) {
   const partner = partnerOf(attackerSeat);
   const list = [];
   for (let i = 1; i <= 3; i++) {
     const s = (attackerSeat + i) % 4;
     if (s === partner) continue;
-    if (r.players[s].out) continue;
+    if (!isSlotActive(r, s)) continue;
     list.push(s);
   }
   return list;
 }
 
-// ✅ Выбор цели с чередованием по команде
-// teamLastTarget[team] — последний защитник, которого атаковала команда
+// ✅ Первый противник (для совместимости)
 export function pickTarget(r, attackerSeat) {
-  const opps = opponentsOf(r, attackerSeat);
-  if (opps.length === 0) return null;
-  if (opps.length === 1) return opps[0];
-
-  const team = teamOf(attackerSeat);
-  const last = r.teamLastTarget?.[team] ?? null;
-
-  if (last != null && opps.includes(last)) {
-    const idx = opps.indexOf(last);
-    return opps[(idx + 1) % opps.length];
-  }
-  return opps[0];
-}
-
-// ✅ Определяет, из какого слота игрок атакует
-// - Если партнёр в игре → свой слот
-// - Если партнёр вышел → чередует между двумя слотами команды
-// - forcedSlot (после подотбоя) имеет приоритет
-export function getAttackSlot(r, playerSeat, targetSeat) {
-  const partnerSeat = partnerOf(playerSeat);
-  const partner = r.players[partnerSeat];
-
-  // Партнёр в игре — играет только своим слотом
-  if (partner && !partner.out) {
-    return playerSeat;
-  }
-
-  // Партнёр вышел — играет за двоих
-  if (r.forcedSlot != null) return r.forcedSlot;
-
-  const team = teamOf(playerSeat);
-  const pair = team === 0 ? [0, 2] : [1, 3];
-  const last = r.teamPairLastSlot?.[team] ?? null;
-
-  if (last == null) {
-    // Первая атака за двоих — слот, откуда цель достигается первой по часовой
-    const wanted = (targetSeat - 1 + 4) % 4;
-    if (pair.includes(wanted)) return wanted;
-    return pair[0];
-  }
-
-  // Чередование между двумя слотами пары
-  return pair[0] === last ? pair[1] : pair[0];
-}
-
-// ✅ Слот для подотбоя (после БИТО защитник атакует того, кто его атаковал)
-export function getPodotboySlot(r, defenderSeat, targetSeat) {
-  const wanted = (targetSeat - 1 + 4) % 4;
-  const partnerSeat = partnerOf(defenderSeat);
-  const pair = [defenderSeat, partnerSeat];
-  if (pair.includes(wanted)) return wanted;
-  return defenderSeat;
+  const list = opponentsOf(r, attackerSeat);
+  return list.length > 0 ? list[0] : null;
 }
 
 export function bothPartnersPassed(r) {
