@@ -15,16 +15,13 @@ export const state = {
   voiceSpeakingSeats: [],
   lastState: {},
   swapPick: null,
+  mode: 'beginner',       // 'beginner' | 'veteran'
+  __lastHintText: null,
+  __hintUntil: 0,
 };
 
-// 🎨 Список ID готовых аватарок (файлы в /avatars/)
 export const AVATARS = [
-  'default',
-  'avatar-2',
-  'avatar-3',
-  'avatar-4',
-  'avatar-5',
-  'avatar-6',
+  'default', 'avatar-2', 'avatar-3', 'avatar-4', 'avatar-5', 'avatar-6',
 ];
 
 export function loadMe() {
@@ -46,10 +43,25 @@ export function saveOpts(opts) { localStorage.setItem('opts', JSON.stringify(opt
 export function loadName() { return localStorage.getItem('lastName') || ''; }
 export function saveName(name) { localStorage.setItem('lastName', name); }
 
+// ==================== РЕЖИМ ИГРЫ ====================
+export function loadMode() {
+  const m = localStorage.getItem('mode');
+  state.mode = (m === 'veteran' || m === 'beginner') ? m : 'beginner';
+  return state.mode;
+}
+export function saveMode(mode) {
+  if (mode !== 'beginner' && mode !== 'veteran') return;
+  state.mode = mode;
+  try { localStorage.setItem('mode', mode); } catch {}
+}
+export function isVeteran() { return state.mode === 'veteran'; }
+
+// ==================== ПРЕДПОЧТЕНИЯ ====================
 export function loadPrefs() {
   state.soundOn = localStorage.getItem('soundOn') !== '0';
   state.vibrationOn = localStorage.getItem('vibrationOn') !== '0';
   state.micOn = localStorage.getItem('micOn') === '1';
+  loadMode();
 }
 export function savePrefs() {
   localStorage.setItem('soundOn', state.soundOn ? '1' : '0');
@@ -91,19 +103,13 @@ export function playerState(s, seat) {
 }
 
 // ==================== АВАТАРКИ ====================
-
-// Нормализовать значение аватара к допустимому
-// Возвращает: "default" | "avatar-X" | "IMG:..."
 export function normalizeAvatar(value) {
   if (!value) return 'default';
   if (typeof value !== 'string') return 'default';
   if (value.startsWith('IMG:')) return value;
   if (AVATARS.includes(value)) return value;
-  // Старое эмодзи или неизвестное → default
   return 'default';
 }
-
-// Получить avatar для игрока по seat
 export function getAvatar(seat) {
   if (state.server && state.server.players) {
     const p = state.server.players.find(x => x.seat === seat);
@@ -111,8 +117,6 @@ export function getAvatar(seat) {
   }
   return 'default';
 }
-
-// HTML для отображения аватара
 export function avatarHtml(value) {
   const v = normalizeAvatar(value);
   if (v.startsWith('IMG:')) {
@@ -121,7 +125,6 @@ export function avatarHtml(value) {
   return `<img src="/avatars/${v}.png" class="avatar-img" alt="">`;
 }
 
-// ==================== СВОЁ ФОТО ====================
 export function loadAvatarImage() {
   try { return localStorage.getItem('myAvatarImage') || null; }
   catch { return null; }
@@ -132,24 +135,17 @@ export function saveAvatarImage(base64) {
     else localStorage.removeItem('myAvatarImage');
   } catch {}
 }
-
-// Хранить выбранный ID готовой аватарки
-export function loadAvatar() {
-  return localStorage.getItem('myAvatar') || 'default';
-}
+export function loadAvatar() { return localStorage.getItem('myAvatar') || 'default'; }
 export function saveAvatar(id) {
   if (id) localStorage.setItem('myAvatar', id);
   else localStorage.removeItem('myAvatar');
 }
-
-// Итоговое значение для отправки на сервер
 export function getFinalAvatar() {
   const img = loadAvatarImage();
   if (img) return 'IMG:' + img;
   return normalizeAvatar(loadAvatar());
 }
 
-// 🆔 Постоянный ID игрока
 export function getPlayerId() {
   let id = localStorage.getItem('playerId');
   if (!id) {

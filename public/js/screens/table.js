@@ -1,4 +1,4 @@
-import { state, saveMe, applyTheme, playerState, getAvatar, avatarHtml, savePrefs } from '../state.js';
+import { state, saveMe, applyTheme, playerState, getAvatar, avatarHtml, savePrefs, isVeteran, loadMode } from '../state.js';
 import { socket, forceRefresh } from '../socket.js';
 import { cardHtml, backPath, esc, renderHandFan, beatsUI, cardPath } from '../card.js';
 import { buildOverlays, bindOverlays } from '../ui/overlays.js';
@@ -22,7 +22,7 @@ let infoOpen = false;
 let iconsVisible = false;
 let iconsTimer = null;
 
-// 🎴 Preload карт выбранного стиля — чтобы не было «белых» карт в игре
+// 🎴 Preload карт
 function preloadDeck(style) {
   const key = '__preload_' + (style || 'figures');
   if (window[key]) return;
@@ -36,8 +36,7 @@ function preloadDeck(style) {
       img.src = path;
     });
   });
-  const back = backPath({ deckStyle: style });
-  new Image().src = back;
+  new Image().src = backPath({ deckStyle: style });
 }
 
 function playPendingFly() {
@@ -147,10 +146,8 @@ function playPendingFieldFly() {
     img.src = p.src;
     img.style.cssText = `
       position: fixed;
-      left: ${p.left}px;
-      top: ${p.top}px;
-      width: ${p.w}px;
-      height: ${p.h}px;
+      left: ${p.left}px; top: ${p.top}px;
+      width: ${p.w}px; height: ${p.h}px;
       z-index: 9998;
       pointer-events: none;
       border-radius: 6px;
@@ -179,7 +176,7 @@ function ensureSwipeIcons() {
     el.innerHTML = `
       <button class="icon-btn" id="refreshBtn" title="Refresh">🔄</button>
       <button class="icon-btn" id="sortBtn" title="Sort">↕️</button>
-      <button class="icon-btn" id="calcBtn" title="${t('calc.title') || 'Расчёт карт'}">🧮</button>
+      <button class="icon-btn" id="calcBtn" title="Расчёт карт">🧮</button>
       <button class="icon-btn" id="emojiToggle" title="Emoji">😀</button>
       <button class="icon-btn" id="chatBtn" title="${t('chat.title')}">💬</button>
       <button class="icon-btn ${infoOpen?'active':''}" id="infoBtn" title="${t('info.title')}">📊</button>
@@ -331,10 +328,8 @@ function showVoiceDebug() {
     }
   };
 
-  let info = '';
-  info += '=== ДИАГНОСТИКА VOICE ===\n';
+  let info = '=== ДИАГНОСТИКА VOICE ===\n';
   info += 'Time: ' + new Date().toLocaleTimeString() + '\n\n';
-  info += '=== USER AGENT ===\n' + navigator.userAgent + '\n\n';
   info += '=== MIC STATE ===\n';
   info += 'state.micOn: ' + (state.micOn ? '✅' : '❌') + '\n';
   info += 'state.voiceActive: ' + (state.voiceActive ? '✅' : '❌') + '\n';
@@ -352,42 +347,18 @@ function showVoiceDebug() {
   } else { info += '  — нет данных\n'; }
   info += '\n=== ACTIVE PEERS ===\n';
   const peersDebug = getVoiceDebugInfo();
-  if (peersDebug.length === 0) {
-    info += '  — нет активных соединений\n';
-  } else {
-    peersDebug.forEach(p => {
-      info += `  ${p.id}: ICE=${p.ice}, Conn=${p.conn}, Signal=${p.signal}\n`;
-    });
-  }
+  if (peersDebug.length === 0) info += '  — нет активных соединений\n';
+  else peersDebug.forEach(p => {
+    info += `  ${p.id}: ICE=${p.ice}, Conn=${p.conn}, Signal=${p.signal}\n`;
+  });
   info += '\n=== AUDIO ELEMENTS ===\n';
   const audios = getAudioElements();
   if (audios.length === 0) info += '  — нет audio элементов\n';
   else audios.forEach(a => {
     info += `  ${a.id}: paused=${a.paused} muted=${a.muted} vol=${a.volume} hasSrc=${a.hasSrc} tracks=${a.srcTracks}\n`;
   });
-  info += '\n=== TURN CREDENTIALS ===\n';
-  fetch('/api/turn-test')
-    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then(data => { info += '✅ Ответ:\n' + JSON.stringify(data, null, 2) + '\n\n'; updateDebugContent(info); })
-    .catch(e => { info += '❌ ' + e.message + '\n\n'; updateDebugContent(info); });
 
-  info += '=== MIC TEST ===\n';
-  navigator.mediaDevices.getUserMedia({ audio: true })
-    .then(stream => {
-      const tracks = stream.getAudioTracks();
-      info += '✅ getUserMedia OK, tracks: ' + tracks.length + '\n';
-      tracks.forEach(t => { info += `  ${t.label || 'audio'} enabled=${t.enabled}\n`; });
-      stream.getTracks().forEach(t => t.stop());
-      updateDebugContent(info);
-    })
-    .catch(e => { info += '❌ ' + e.name + ' — ' + e.message + '\n'; updateDebugContent(info); });
-
-  updateDebugContent(info);
-
-  function updateDebugContent(text) {
-    const content = document.getElementById('debugContent');
-    if (content) content.textContent = text;
-  }
+  document.getElementById('debugContent').textContent = info;
 }
 
 function sortHand(hand, myDoc, trumpSuit) {
@@ -421,7 +392,9 @@ export function renderTable(app, navigate) {
   const s = state.server;
   if (!s) return;
 
-  // 🎴 Preload карт заранее
+  loadMode();
+  const veteran = isVeteran();
+
   if (s.phase === 'playing' || s.phase === 'roundEnd') {
     preloadDeck(s.opts?.deckStyle || 'figures');
   }
@@ -676,23 +649,33 @@ export function renderTable(app, navigate) {
     trumpSuit: s.trumpSuit,
   });
 
-  let hintHtml = '';
+  // ==================== ПОДСКАЗКА + ТАЙМЕР 3 СЕК ====================
+  let hintText = '';
   if (waitingForSeat !== undefined) {
-    hintHtml = `<div class="hint">${t('hint.waitingSeat')}</div>`;
+    hintText = t(veteran ? 'hint.waitingSeatShort' : 'hint.waitingSeat');
   } else if (canDefend && defenderGaveUp && !bothPassed) {
-    hintHtml = `<div class="hint">⏳ Ждём пас атакующих…</div>`;
+    hintText = '⏳ Ждём пас атакующих…';
   } else if (canDefend && !bothPassed && !s.pendingPass && !s.pendingSwap) {
     const hasMyDoc = s.field.cards.some(x => !x.beatenBy && x.card.r === myDoc && !x.isForced);
-    if (hasMyDoc) hintHtml = `<div class="hint">${t('hint.hasYourDoc')}</div>`;
-    else if (state.defendTarget) hintHtml = `<div class="hint">${t('hint.pullCard')}</div>`;
-    else hintHtml = `<div class="hint">${t('hint.tapEnemyCard')}</div>`;
+    if (hasMyDoc) hintText = t(veteran ? 'hint.hasYourDocShort' : 'hint.hasYourDoc');
+    else if (state.defendTarget) hintText = t(veteran ? 'hint.pullCardShort' : 'hint.pullCard');
+    else hintText = t(veteran ? 'hint.tapEnemyCardShort' : 'hint.tapEnemyCard');
   } else if (canDefend && bothPassed) {
-    hintHtml = `<div class="hint">${t('hint.decideBito')}</div>`;
+    hintText = t(veteran ? 'hint.decideBitoShort' : 'hint.decideBito');
   } else if (isAttacker || isPartnerOfAttacker) {
-    hintHtml = `<div class="hint">${t('hint.pullToField')}</div>`;
+    hintText = t(veteran ? 'hint.pullToFieldShort' : 'hint.pullToField');
   } else if (isMyTurn) {
-    hintHtml = `<div class="hint">${t('hint.yourTurn')}</div>`;
+    hintText = t(veteran ? 'hint.yourTurnShort' : 'hint.yourTurn');
   }
+
+  const now = Date.now();
+  const isNewHint = hintText !== state.__lastHintText;
+  if (isNewHint) {
+    state.__lastHintText = hintText;
+    state.__hintUntil = hintText ? now + 3000 : 0;
+  }
+  const showHint = hintText && now < state.__hintUntil;
+  const hintHtml = showHint ? `<div class="hint">${hintText}</div>` : '';
 
   const emojiPanel = state.emojiOpen ? `<div class="emoji-bar" id="emojiBar">
     ${EMOJIS.map(e => `<button data-e="${e}">${e}</button>`).join('')}</div>` : '';
@@ -733,6 +716,19 @@ export function renderTable(app, navigate) {
 
     <div class="actions">${hintHtml}</div>
   `;
+
+  // ⏱ Таймер скрытия подсказки
+  if (showHint) {
+    clearTimeout(window.__hintTimer);
+    const remaining = state.__hintUntil - Date.now();
+    window.__hintTimer = setTimeout(() => {
+      const el = document.querySelector('.hint');
+      if (el) {
+        el.classList.add('hiding');
+        setTimeout(() => { if (el.parentNode) el.remove(); }, 500);
+      }
+    }, remaining);
+  }
 
   playPendingFly();
   playPendingFieldFly();
@@ -829,13 +825,36 @@ export function renderTable(app, navigate) {
   const bi = g('bitoBtn');     if (bi) bi.onclick = () => { playSound('button'); socket.emit('bito'); };
   const am = g('askMoreBtn');  if (am) am.onclick = () => { playSound('button'); socket.emit('askMore'); };
 
+  // ==================== EMOJI BAR + АВТОСКРЫТИЕ 5 СЕК ====================
   const eb = g('emojiBar');
-  if (eb) eb.onclick = e => {
-    const b = e.target.closest('[data-e]'); if (!b) return;
-    socket.emit('reaction', { emoji: b.dataset.e });
-    state.emojiOpen = false;
-    renderTable(app, navigate);
-  };
+  if (eb) {
+    clearTimeout(window.__emojiTimer);
+    window.__emojiTimer = setTimeout(() => {
+      if (!state.emojiOpen) return;
+      const bar = document.getElementById('emojiBar');
+      if (bar) {
+        bar.classList.add('hiding');
+        setTimeout(() => {
+          state.emojiOpen = false;
+          renderTable(app, navigate);
+        }, 300);
+      } else {
+        state.emojiOpen = false;
+        renderTable(app, navigate);
+      }
+    }, 5000);
+
+    eb.onclick = e => {
+      const b = e.target.closest('[data-e]'); if (!b) return;
+      socket.emit('reaction', { emoji: b.dataset.e });
+      eb.classList.add('hiding');
+      clearTimeout(window.__emojiTimer);
+      setTimeout(() => {
+        state.emojiOpen = false;
+        renderTable(app, navigate);
+      }, 300);
+    };
+  }
 
   const sb = g('settingsBtn');
   if (sb) sb.onclick = () => { playSound('button'); openSettings(() => renderTable(app, navigate)); };
@@ -872,7 +891,6 @@ function bindSwipeIconHandlers(app, navigate) {
     renderTable(app, navigate);
   };
 
-  // 🧮 Расчёт карт — только локально, только себе
   const calcBtn = document.getElementById('calcBtn');
   if (calcBtn) calcBtn.onclick = () => {
     playSound('button');

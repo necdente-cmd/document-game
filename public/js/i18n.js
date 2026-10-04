@@ -113,6 +113,15 @@ const RU = {
   'hint.pullToField': '👆 Тяни карту в поле или тапни её и тапни поле',
   'hint.yourTurn': '👆 Твой ход',
 
+    // ===== hints короткие (для ветерана) =====
+  'hint.waitingSeatShort':  '⏳ Ждём игрока',
+  'hint.hasYourDocShort':   '⚠ Ваш док — поднять',
+  'hint.pullCardShort':     '👆 На карту врага',
+  'hint.tapEnemyCardShort': '👆 Бей карту',
+  'hint.decideBitoShort':   '✋ БИТО или Поднять',
+  'hint.pullToFieldShort':  '👆 Тяни в поле',
+  'hint.yourTurnShort':     '👆 Ход',
+
   // ===== buttons =====
   'btn.pickUp': '📥<br>ПОДНЯТЬ',
   'btn.throwDocs': '🏆<br>БРОСИТЬ',
@@ -250,6 +259,12 @@ const RU = {
   'toast.askMore': '➕ Вдогонку?',
   'calc.even': '🔢 {n} — чётное',
   'calc.odd':  '🔢 {n} — нечётное',
+
+  'mode.title': 'Режим игры',
+  'mode.beginner': 'Новичок',
+  'mode.beginnerHint': 'С подсказками',
+  'mode.veteran': 'Ветеран',
+  'mode.veteranHint': 'Без подсказок',
 
   // ===== errors =====
   'err.roomNotFound': 'Комната не найдена',
@@ -395,6 +410,14 @@ const KY = {
   'hint.pullToField': '👆 Картаны талаага тартыңыз же аны басып, талааны басыңыз',
   'hint.yourTurn': '👆 Сиздин жүрүшүңүз',
 
+  'hint.waitingSeatShort':  '⏳ Оюнчуну күтүү',
+  'hint.hasYourDocShort':   '⚠ Документиңиз — көтөрүү',
+  'hint.pullCardShort':     '👆 Душмандын картасына',
+  'hint.tapEnemyCardShort': '👆 Картаны чабуу',
+  'hint.decideBitoShort':   '✋ КЕТИРҮҮ же Көтөрүү',
+  'hint.pullToFieldShort':  '👆 Талаага тартуу',
+  'hint.yourTurnShort':     '👆 Жүрүш',
+
   'btn.pickUp': '📥<br>КӨТӨРҮҮ',
   'btn.throwDocs': '🏆<br>ТАШТОО',
   'btn.giveCards': '🔄<br>БЕРҮҮ',
@@ -515,6 +538,12 @@ const KY = {
   'toast.askMore': '➕ Кошосунарбы?',
   'calc.even': '🔢 {n} — кол төп',
   'calc.odd':  '🔢 {n} — кол төп эмес',
+
+  'mode.title': 'Оюн режими',
+  'mode.beginner': 'Жаңы оюнчу',
+  'mode.beginnerHint': 'Кеңештер менен',
+  'mode.veteran': 'Тажрыйбалуу',
+  'mode.veteranHint': 'Кеңештер жок',
 
   'err.roomNotFound': 'Бөлмө табылган жок',
   'err.roomFull': 'Бөлмө толук',

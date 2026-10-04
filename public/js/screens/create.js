@@ -1,4 +1,4 @@
-import { loadName, saveName, saveMe, loadOpts, saveOpts, applyTheme, getPlayerId, getFinalAvatar } from '../state.js';
+import { loadName, saveName, saveMe, loadOpts, saveOpts, applyTheme, getPlayerId, getFinalAvatar, loadMode, saveMode } from '../state.js';
 import { socket } from '../socket.js';
 import { rankDisplay } from '../rank-display.js';
 import { t } from '../i18n.js';
@@ -11,8 +11,10 @@ export function renderCreate(app, navigate) {
   const backColor = savedOpts.backColor || 'blue';
   const docSet    = savedOpts.docSet    || 'classic';
   const theme     = savedOpts.theme     || 'classic';
+  const mode      = loadMode();
   let pickedTheme  = theme;
   let pickedDocSet = docSet;
+  let pickedMode   = mode;
 
   const backColors = ['black','blue','green','orange','purple','red'];
   const backs = backColors.map(c => `
@@ -20,7 +22,6 @@ export function renderCreate(app, navigate) {
       <img src="/cards/${c}_back_suits_dark.png" alt="${c}">
     </div>`).join('');
 
-  // 5 стилей колоды — превью Q♥ (12♥)
   const styles = `
     <div class="choice preview-card ${deckStyle==='figures'?'sel':''}" data-deck="figures">
       <img src="/cards/card_heart_12.png" alt="figures">
@@ -72,7 +73,6 @@ export function renderCreate(app, navigate) {
     </div>
   `;
 
-  // Скрывать ли секцию "Рубашка" (у alt1/alt2 свои рубашки)
   const showBackSection = (deckStyle === 'figures' || deckStyle === 'simple' || deckStyle === 'alt3');
 
   app.innerHTML = `
@@ -82,6 +82,19 @@ export function renderCreate(app, navigate) {
       <input id="name" placeholder="${t('create.namePlaceholder')}" value="${savedName}">
       <label>${t('create.avatar')}</label>
       ${renderAvatarPicker()}
+
+      <label>${t('mode.title')}</label>
+      <div class="mode-grid" id="modePick">
+        <div class="mode-card ${pickedMode==='beginner'?'sel':''}" data-mode="beginner">
+          <div class="mode-title">🌱 ${t('mode.beginner')}</div>
+          <div class="mode-hint">${t('mode.beginnerHint')}</div>
+        </div>
+        <div class="mode-card ${pickedMode==='veteran'?'sel':''}" data-mode="veteran">
+          <div class="mode-title">🎖 ${t('mode.veteran')}</div>
+          <div class="mode-hint">${t('mode.veteranHint')}</div>
+        </div>
+      </div>
+
       <label>${t('create.deckStyle')}</label>
       <div class="choice-row deck-row" id="deckPick">${styles}</div>
 
@@ -115,11 +128,17 @@ export function renderCreate(app, navigate) {
 
   bindAvatarPicker();
 
+  document.getElementById('modePick').onclick = e => {
+    const el = e.target.closest('[data-mode]'); if (!el) return;
+    pickedMode = el.dataset.mode;
+    saveMode(pickedMode);
+    [...document.querySelectorAll('#modePick .mode-card')].forEach(x => x.classList.toggle('sel', x === el));
+  };
+
   document.getElementById('deckPick').onclick = e => {
     const el = e.target.closest('[data-deck]'); if (!el) return;
     pickedDeck = el.dataset.deck;
     [...document.querySelectorAll('#deckPick .choice')].forEach(x => x.classList.toggle('sel', x === el));
-    // Скрываем "Рубашку" для alt1/alt2 — у них своя рубашка
     const show = (pickedDeck === 'figures' || pickedDeck === 'simple' || pickedDeck === 'alt3');
     document.getElementById('backSection').style.display = show ? '' : 'none';
   };
@@ -158,14 +177,16 @@ export function renderCreate(app, navigate) {
       handSize: 6,
       scale: 'medium',
       avatar: finalAvatar,
+      mode: pickedMode,
     };
     saveName(name);
     saveOpts(opts);
     applyTheme(opts.theme);
+    saveMode(pickedMode);
 
     socket.emit('createRoom', { name, opts, persistentId: getPlayerId() }, async (r) => {
       if (!r.ok) return document.getElementById('err').textContent = r.err;
-      saveMe({ name, id: r.playerId, roomId: r.roomId, avatar: finalAvatar });
+      saveMe({ name, id: r.playerId, roomId: r.roomId, avatar: finalAvatar, mode: pickedMode });
       try { await navigator.clipboard.writeText(r.roomId); } catch {}
       navigate('table');
     });

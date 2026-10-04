@@ -1,4 +1,4 @@
-import { state, savePrefs, applyScale } from '../state.js';
+import { state, savePrefs, applyScale, loadMode, saveMode, isVeteran } from '../state.js';
 import { socket } from '../socket.js';
 import { showHistory } from './history.js';
 import { t, getLang, setLang } from '../i18n.js';
@@ -16,10 +16,25 @@ export function openSettings(onClose) {
   const scale = document.documentElement.dataset.scale || 'medium';
   const curTheme = document.documentElement.dataset.theme || 'classic';
   const curLang = getLang();
+  const curMode = loadMode();
 
   panel.innerHTML = `
     <button class="close-btn" id="closeSettings">✕</button>
     <h3>${t('settings.title')}</h3>
+
+    <div class="settings-section">
+      <h4>${t('mode.title')}</h4>
+      <div class="mode-grid" id="settingsModePick">
+        <div class="mode-card ${curMode==='beginner'?'sel':''}" data-mode="beginner">
+          <div class="mode-title">🌱 ${t('mode.beginner')}</div>
+          <div class="mode-hint">${t('mode.beginnerHint')}</div>
+        </div>
+        <div class="mode-card ${curMode==='veteran'?'sel':''}" data-mode="veteran">
+          <div class="mode-title">🎖 ${t('mode.veteran')}</div>
+          <div class="mode-hint">${t('mode.veteranHint')}</div>
+        </div>
+      </div>
+    </div>
 
     <div class="settings-section">
       <h4>${t('settings.soundVibro')}</h4>
@@ -95,6 +110,19 @@ export function openSettings(onClose) {
   };
 
   panel.onclick = (e) => {
+    // 🎮 Режим игры
+    const modeEl = e.target.closest('#settingsModePick [data-mode]');
+    if (modeEl) {
+      const val = modeEl.dataset.mode;
+      saveMode(val);
+      state.mode = val;
+      [...panel.querySelectorAll('#settingsModePick .mode-card')].forEach(x =>
+        x.classList.toggle('sel', x === modeEl));
+      // Перерисовать стол — подсказки переключатся сразу
+      if (onClose) onClose();
+      return;
+    }
+
     const tgl = e.target.closest('[data-toggle]');
     if (tgl) {
       const key = tgl.dataset.toggle;
@@ -111,9 +139,7 @@ export function openSettings(onClose) {
       const code = lb.dataset.langSet;
       setLang(code);
       [...panel.querySelectorAll('.lang-btn')].forEach(b => b.classList.toggle('sel', b === lb));
-      // Перерисуем весь экран
       window.dispatchEvent(new CustomEvent('lang-change-requested'));
-      // Закрыть настройки
       panel.classList.remove('open');
       if (onClose) onClose();
       return;
