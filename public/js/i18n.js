@@ -248,6 +248,8 @@ const RU = {
   'toast.micOn': '🎤 Микрофон включён',
   'toast.micError': 'Не удалось получить доступ к микрофону',
   'toast.askMore': '➕ Вдогонку?',
+  'calc.even': '🔢 {n} — чётное',
+  'calc.odd':  '🔢 {n} — нечётное',
 
   // ===== errors =====
   'err.roomNotFound': 'Комната не найдена',
@@ -511,6 +513,8 @@ const KY = {
   'toast.micOn': '🎤 Микрофон күйүк',
   'toast.micError': 'Микрофонго кирүү мүмкүн болбоду',
   'toast.askMore': '➕ Кошосунарбы?',
+  'calc.even': '🔢 {n} — кол төп',
+  'calc.odd':  '🔢 {n} — кол төп эмес',
 
   'err.roomNotFound': 'Бөлмө табылган жок',
   'err.roomFull': 'Бөлмө толук',

@@ -1,6 +1,6 @@
 import { state, saveMe, applyTheme, playerState, getAvatar, avatarHtml, savePrefs } from '../state.js';
 import { socket, forceRefresh } from '../socket.js';
-import { cardHtml, backPath, esc, renderHandFan, beatsUI } from '../card.js';
+import { cardHtml, backPath, esc, renderHandFan, beatsUI, cardPath } from '../card.js';
 import { buildOverlays, bindOverlays } from '../ui/overlays.js';
 import { maybeShowChampion } from '../ui/champion.js';
 import { showHistory } from '../ui/history.js';
@@ -9,7 +9,7 @@ import { openChat } from '../ui/chat.js';
 import { initDrag } from '../drag.js';
 import { EMOJIS } from '../emojis.js';
 import { playSound } from '../sound.js';
-import { toastErr, toastOk } from '../ui/toast.js';
+import { toastErr, toastOk, toastInfo } from '../ui/toast.js';
 import {
   enableVoice, disableVoice, setMicOn, unlockAudio,
   restartVoice, getVoiceDebugInfo, getAudioElements, streamIsLivePublic,
@@ -21,6 +21,24 @@ let sortMode = 0;
 let infoOpen = false;
 let iconsVisible = false;
 let iconsTimer = null;
+
+// 🎴 Preload карт выбранного стиля — чтобы не было «белых» карт в игре
+function preloadDeck(style) {
+  const key = '__preload_' + (style || 'figures');
+  if (window[key]) return;
+  window[key] = true;
+  const ranks = ['6','7','8','9','10','J','Q','K','A'];
+  const suits = ['♠','♥','♦','♣'];
+  ranks.forEach(r => {
+    suits.forEach(s => {
+      const path = cardPath({ r, s, id: 'x' }, { deckStyle: style });
+      const img = new Image();
+      img.src = path;
+    });
+  });
+  const back = backPath({ deckStyle: style });
+  new Image().src = back;
+}
 
 function playPendingFly() {
   const pf = state.pendingFly;
@@ -159,8 +177,9 @@ function ensureSwipeIcons() {
     el.id = 'swipeIcons';
     el.className = 'swipe-icons';
     el.innerHTML = `
-      <button class="icon-btn" id="refreshBtn" title="Refresh">🔃</button>
-      <button class="icon-btn" id="sortBtn" title="Sort">🔄</button>
+      <button class="icon-btn" id="refreshBtn" title="Refresh">🔄</button>
+      <button class="icon-btn" id="sortBtn" title="Sort">↕️</button>
+      <button class="icon-btn" id="calcBtn" title="${t('calc.title') || 'Расчёт карт'}">🧮</button>
       <button class="icon-btn" id="emojiToggle" title="Emoji">😀</button>
       <button class="icon-btn" id="chatBtn" title="${t('chat.title')}">💬</button>
       <button class="icon-btn ${infoOpen?'active':''}" id="infoBtn" title="${t('info.title')}">📊</button>
@@ -274,7 +293,6 @@ function showInfoModal() {
   document.getElementById('infoClose').onclick = close;
 }
 
-// 🧪 Диагностика голосового чата
 function showVoiceDebug() {
   const el = document.createElement('div');
   el.className = 'simple-modal';
@@ -403,6 +421,11 @@ export function renderTable(app, navigate) {
   const s = state.server;
   if (!s) return;
 
+  // 🎴 Preload карт заранее
+  if (s.phase === 'playing' || s.phase === 'roundEnd') {
+    preloadDeck(s.opts?.deckStyle || 'figures');
+  }
+
   captureFieldForFly();
   applyTheme(s.opts.theme);
   setupSwipe();
@@ -444,8 +467,6 @@ export function renderTable(app, navigate) {
   const myTurnNow = isPlaying && isMyTurn && !iAmOut && !s.pendingPass && !s.pendingSwap;
   const iAmDefending = isPlaying && canDefend && !s.pendingPass && !s.pendingSwap;
 
-  // 🎯 Вдогонку? — защитник не может побить ни одну непобитую
-  //     НЕ показываем, если защитник уже сдался (нажал ПОДНЯТЬ)
   let canAskMore = false;
   if (canDefend && s.field && !s.field.askMore && !s.field.defenderGaveUp) {
     const unbeaten = s.field.cards.filter(x => !x.beatenBy && !x.isForced && x.card.r !== myDoc);
@@ -683,24 +704,10 @@ export function renderTable(app, navigate) {
     ? `<div class="score-corner">${s.roundWins[myTeam]} : ${s.roundWins[1 - myTeam]}</div>`
     : '';
 
-  let turnBanner = '';
-  if (myTurnNow && !s.field) {
-    turnBanner = `<div class="turn-banner attack">${t('banner.yourTurn')}</div>`;
-  } else if (myTurnNow && s.field && attackerSeat === mySeat) {
-    turnBanner = `<div class="turn-banner attack">${t('banner.yourTurnAttack')}</div>`;
-  } else if (iAmDefending && !state.defendTarget) {
-    turnBanner = `<div class="turn-banner defend">${t('banner.yourDefend')}</div>`;
-  } else if (iAmDefending && state.defendTarget) {
-    turnBanner = `<div class="turn-banner defend">${t('banner.beatSelected')}</div>`;
-  } else if ((isAttacker || isPartnerOfAttacker) && !iHavePassed) {
-    turnBanner = `<div class="turn-banner attack-sub">${t('banner.canPass')}</div>`;
-  }
-
   app.innerHTML = `
     <div class="table ${myTurnNow ? 'my-turn' : ''} ${iAmDefending ? 'my-defend' : ''}" id="table">
       ${lobbyBar}
       ${passNotice}
-      ${turnBanner}
       ${scoreCorner}
       ${deckArea}
 
@@ -857,18 +864,31 @@ function bindSwipeIconHandlers(app, navigate) {
     toastOk(t('toast.refreshed'));
     setTimeout(hideSwipeIcons, 300);
   };
+
   const sortBtn = document.getElementById('sortBtn');
   if (sortBtn) sortBtn.onclick = () => {
     playSound('button'); hideSwipeIcons();
     sortMode = (sortMode + 1) % 3;
     renderTable(app, navigate);
   };
+
+  // 🧮 Расчёт карт — только локально, только себе
+  const calcBtn = document.getElementById('calcBtn');
+  if (calcBtn) calcBtn.onclick = () => {
+    playSound('button');
+    hideSwipeIcons();
+    const count = state.server?.myHand?.length || 0;
+    const isEven = count % 2 === 0;
+    toastInfo(t(isEven ? 'calc.even' : 'calc.odd', { n: count }));
+  };
+
   const emojiToggle = document.getElementById('emojiToggle');
   if (emojiToggle) emojiToggle.onclick = () => {
     playSound('button'); hideSwipeIcons();
     state.emojiOpen = !state.emojiOpen;
     renderTable(app, navigate);
   };
+
   const micBtn = document.getElementById('micBtn');
   if (micBtn) micBtn.onclick = async () => {
     playSound('button');
@@ -891,8 +911,10 @@ function bindSwipeIconHandlers(app, navigate) {
     hideSwipeIcons();
     renderTable(app, navigate);
   };
+
   const chatBtn = document.getElementById('chatBtn');
   if (chatBtn) chatBtn.onclick = () => { hideSwipeIcons(); openChat(); };
+
   const infoBtn = document.getElementById('infoBtn');
   if (infoBtn) infoBtn.onclick = () => {
     playSound('button'); hideSwipeIcons();
@@ -900,6 +922,7 @@ function bindSwipeIconHandlers(app, navigate) {
     if (infoOpen) showInfoModal();
     else { const m = document.getElementById('infoModal'); if (m) m.remove(); }
   };
+
   const debugBtn = document.getElementById('debugBtn');
   if (debugBtn) debugBtn.onclick = () => {
     playSound('button');

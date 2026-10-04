@@ -14,9 +14,7 @@
     0 4px 20px rgba(0,0,0,.6);
 }
 [data-theme="classic"] .table { background-image: url('/textures/table_classic.jpg'); }
-[data-theme="dark"] .table {
-  background-image: url('/textures/table_dark.jpg');
-}
+[data-theme="dark"] .table { background-image: url('/textures/table_dark.jpg'); }
 [data-theme="neon"] .table {
   background-image: url('/textures/table_neon.jpg');
   box-shadow:
@@ -185,9 +183,7 @@
 }
 .seat.is-partner .name { color: #f1c40f; }
 
-.seat.is-enemy .avatar {
-  border-color: rgba(231,76,60,.6);
-}
+.seat.is-enemy .avatar { border-color: rgba(231,76,60,.6); }
 .seat.is-enemy .name { color: #ff6b6b; }
 
 .seat.active .avatar {
@@ -230,15 +226,12 @@
   transform: translate(-50%, -50%);
   display: flex;
   flex-wrap: wrap;
-  /* РАВНЫЕ зазоры по обеим осям: 40px вертикаль, 40px горизонталь */
   gap: calc(40px * var(--scale));
   justify-content: center;
   align-content: center;
   align-items: center;
   z-index: 5;
   padding: 4px;
-  /* Ширина = 3 карты (0.9×) + 2 горизонтальных gap'а (40px × 2 = 80px).
-     4-я карта не влезает → переносится на 2-й ряд. */
   width: calc(var(--card-w) * 2.7 + 80px);
   max-width: 94vw;
   box-sizing: border-box;
@@ -263,16 +256,33 @@
   from { transform: scale(.6); opacity: 0; }
   to   { transform: scale(1);  opacity: 1; }
 }
+
+/* ==================== БИТАЯ КАРТА — МЯГКОЕ ПУЛЬСИРУЮЩЕЕ СВЕЧЕНИЕ ==================== */
 .slot .card.beaten {
   top: calc(-8px * var(--scale));
-  left: calc(8px * var(--scale));
+  left: calc(16px * var(--scale));
   transform: rotate(6deg);
   z-index: 2;
-  filter: drop-shadow(0 8px 16px rgba(0,0,0,.75))
-          drop-shadow(0 2px 4px rgba(0,0,0,.5));
-  outline: 3px solid #2ecc71;
-  outline-offset: -3px;
+  --glow: 46, 204, 113;
+  animation: beatenGlow 2s ease-in-out infinite;
 }
+[data-theme="dark"]  .slot .card.beaten { --glow: 39, 174, 96; }
+[data-theme="neon"]  .slot .card.beaten { --glow: 0, 229, 255; }
+[data-theme="paper"] .slot .card.beaten { --glow: 124, 191, 133; }
+
+@keyframes beatenGlow {
+  0%, 100% {
+    filter: drop-shadow(0 8px 16px rgba(0,0,0,.75))
+            drop-shadow(0 2px 4px rgba(0,0,0,.5))
+            drop-shadow(0 0 2px rgba(var(--glow), .35));
+  }
+  50% {
+    filter: drop-shadow(0 8px 16px rgba(0,0,0,.75))
+            drop-shadow(0 2px 4px rgba(0,0,0,.5))
+            drop-shadow(0 0 4px rgba(var(--glow), .6));
+  }
+}
+
 .slot.tappable { cursor: pointer; }
 .slot.tappable .card:first-child {
   outline: 3px dashed rgba(241,196,15,.8);
@@ -293,13 +303,32 @@
   filter: drop-shadow(0 0 12px rgba(241,196,15,.9));
 }
 
-/* Подсветка всего поля при драге атакующего */
 .center.drag-over-field {
   outline: 3px dashed rgba(241,196,15,.85);
   outline-offset: 14px;
   border-radius: 22px;
   box-shadow: 0 0 42px rgba(241,196,15,.45);
   transition: box-shadow .2s;
+}
+
+/* ==================== FALLBACK: КАРТА НЕ ЗАГРУЗИЛАСЬ ==================== */
+.card.card-broken {
+  background: linear-gradient(135deg, #555 0%, #2a2a2a 100%) !important;
+  border: 2px solid #888;
+  border-radius: 6px;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(0,0,0,.6);
+}
+.card.card-broken img { display: none !important; }
+.card.card-broken::after {
+  content: attr(data-rank) ' ' attr(data-suit);
+  font-size: 20px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 1px 3px #000;
+  pointer-events: none;
 }
 
 /* ==================== ПЕРЕТАСКИВАЕМАЯ КАРТА ==================== */
@@ -580,13 +609,11 @@
 }
 .extra-actions button:active { transform: scale(.95); }
 
-/* БИТО — зелёный */
 .extra-actions .b1 {
   background: radial-gradient(circle at 40% 40%, #7be495 0%, #2ecc71 100%);
   color: #000;
   text-shadow: none;
 }
-/* ВДОГОНКУ? — фиолетовый */
 .extra-actions .b4 {
   background: radial-gradient(circle at 40% 40%, #bb6bd9 0%, #8e44ad 100%);
   color: #fff;

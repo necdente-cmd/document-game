@@ -15,6 +15,14 @@ export const socket = io({
 
 if (typeof window !== 'undefined') {
   window.socket = socket;
+
+  // 🖼 Ловим 404 на картинках — видно в консоли F12
+  window.addEventListener('error', (e) => {
+    const tgt = e.target;
+    if (tgt && tgt.tagName === 'IMG') {
+      console.warn('[IMG ERROR]', tgt.src || tgt.getAttribute('src'));
+    }
+  }, true);
 }
 
 let reconnecting = false;
@@ -48,7 +56,6 @@ export function forceRefresh() {
             setTimeout(() => socket.emit('syncState'), 200);
             toastOk(t('toast.synced'));
 
-            // 🔊 Восстанавливаем голос
             if (state.voiceActive || state.micOn) {
               import('./voice.js').then(m => {
                 m.restartVoice().catch(e => console.warn('[refresh] voice restart', e));
@@ -128,7 +135,7 @@ export function bindSocket(onStateChange) {
       }
     }
 
-    // ✨ Toast атакующим о «Поднимаю» (защитник сдался, но ждём пас)
+    // ✨ Toast атакующим о «Поднимаю»
     if (prev && !prev.field?.defenderGaveUp && s.field?.defenderGaveUp) {
       const attacker = s.field.attacker;
       const partner = (attacker + 2) % 4;

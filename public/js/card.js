@@ -11,20 +11,15 @@ export function cardPath(card, opts) {
   const rankMap = { '6':'6','7':'7','8':'8','9':'9','10':'10','J':'11','Q':'12','K':'13','A':'1' };
   const s = suitMap[card.s], r = rankMap[card.r];
 
-  // Классические фигурные (существующие)
   if (style === 'figures' || !style) return `/cards/card_${s}_${r}.png`;
-
-  // Простые (существующие)
   if (style === 'simple') return `/cards/simplecard_${s}_${r}.png`;
 
-  // alt1 / alt2 — файлы 6s.png, 12h.png, 1c.png ...
   if (style === 'alt1' || style === 'alt2') {
     const letterMap = { spade:'s', heart:'h', diamond:'d', club:'c' };
     const folder = style === 'alt1' ? 'cards-alt1' : 'cards-alt2';
     return `/${folder}/${r}${letterMap[s]}.png`;
   }
 
-  // alt3 — файлы 6_of_spades.png, queen_of_hearts.png ...
   if (style === 'alt3') {
     const pluralMap = { spade:'spades', heart:'hearts', diamond:'diamonds', club:'clubs' };
     const nameMap = { '1':'ace', '11':'jack', '12':'queen', '13':'king' };
@@ -32,20 +27,22 @@ export function cardPath(card, opts) {
     return `/cards-alt3/${rankName}_of_${pluralMap[s]}.png`;
   }
 
-  // fallback
   return `/cards/card_${s}_${r}.png`;
 }
 
 export function backPath(opts) {
   const style = (opts && opts.deckStyle) || 'figures';
-
-  // Свои рубашки у alt1 и alt2
   if (style === 'alt1') return '/cards-alt1/back.png';
   if (style === 'alt2') return '/cards-alt2/back.png';
-
-  // alt3, figures, simple — стандартная рубашка по backColor
   const color = (opts && opts.backColor) || 'blue';
   return `/cards/${color}_back_suits_dark.png`;
+}
+
+// ❗ Безопасное экранирование для атрибутов
+function attr(v) {
+  return String(v).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
 }
 
 export function cardHtml(card, options = {}) {
@@ -53,9 +50,14 @@ export function cardHtml(card, options = {}) {
   const file = cardPath(card, opts);
   const cls = ['card', options.cls || ''].filter(Boolean).join(' ');
   const style = options.style ? ` style="${options.style}"` : '';
-  const dataAttrs = `data-id="${card.id}"` + (options.dataIndex !== undefined ? ` data-index="${options.dataIndex}"` : '');
-  return `<div class="${cls}" ${dataAttrs}${style}>
-    <img src="${file}" alt="${card.r}${card.s}" draggable="false">
+  const dataAttrs = `data-id="${attr(card.id)}"` +
+    (options.dataIndex !== undefined ? ` data-index="${options.dataIndex}"` : '');
+
+  // Fallback: если PNG не загрузился — превращаем div в серую заглушку с рангом+мастью
+  const onerror = `this.onerror=null;this.parentNode.classList.add('card-broken');this.style.display='none';`;
+
+  return `<div class="${cls}" ${dataAttrs}${style} data-rank="${attr(card.r)}" data-suit="${attr(card.s)}">
+    <img src="${file}" alt="${attr(card.r)}${attr(card.s)}" draggable="false" onerror="${onerror}">
   </div>`;
 }
 
