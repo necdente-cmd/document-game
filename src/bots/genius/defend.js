@@ -1,7 +1,6 @@
 import { RV } from '../../constants.js';
 import { beats, isKozir } from '../../utils.js';
 import { cardValue, getDocs } from '../cards.js';
-import { pDefenderBeats } from './probabilities.js';
 import { shouldPlayAggressive } from './evaluate.js';
 import { log as rlog } from '../../rooms.js';
 
@@ -22,7 +21,7 @@ function isMidTrump(card, room) {
 function findCheapestBeat(hand, card, room, botSeat, myDoc) {
   let best = null, bestVal = Infinity;
   for (const c of hand) {
-    if (c.r === myDoc) continue;
+    if (c.r === myDoc && !isKozir(c, room)) continue;
     if (!beats(c, card, room)) continue;
     const v = cardValue(c, room, botSeat);
     if (v < bestVal) { bestVal = v; best = c; }
@@ -54,7 +53,6 @@ export function defendDecision(room, botSeat, memory, profile) {
   const handSize = bot.hand.length;
   const veryEarly = deckLeft >= 20;
 
-  // 2. Планируем отбития
   const used = new Set();
   const planned = [];
   let totalCost = 0;
@@ -78,7 +76,7 @@ export function defendDecision(room, botSeat, memory, profile) {
     }
   }
 
-  // 3. Не всё бьётся — поднимаем
+  // 2. Не всё бьётся — поднимаем
   if (unbeatable > 0) {
     blog(room, botSeat, `Не могу побить ${unbeatable} — поднимаю`);
     return { action: 'pickUp' };
@@ -88,43 +86,28 @@ export function defendDecision(room, botSeat, memory, profile) {
   const pos = shouldPlayAggressive(room, botSeat);
 
   // ==================== 🔒 Q/K/A КОЗЫРИ ====================
-  // Никогда не тратим в начале, если поле мелкое (< 35).
-  // В эндшпиле или при большой руке — тратим, если поле >= 30.
   if (usesExpensiveTrump) {
-    // Очень дешёвое поле — поднимаем
-    if (totalField < 25) {
-      blog(room, botSeat, `Q/K/A козырь за мусор (${totalField|0}) — поднимаю`);
+    // Не тратим Q/K/A козырь в начале/середине партии, если поле < 50
+    if (!endgameish && totalField < 50) {
+      blog(room, botSeat, `Q/K/A козырь — поле мало (field=${totalField|0}) — поднимаю`);
       return { action: 'pickUp' };
     }
-    // Среднее поле, ранняя игра, рука небольшая — поднимаем
-    if (!endgameish && handSize <= 3 && totalField < 45) {
-      blog(room, botSeat, `Q/K/A козырь рано (field=${totalField|0} hand=${handSize}) — поднимаю`);
-      return { action: 'pickUp' };
-    }
-    // Иначе — отбиваемся
     blog(room, botSeat, `Q/K/A козырь оправдан (field=${totalField|0})`);
   }
 
   // ==================== 🔓 СРЕДНИЕ КОЗЫРИ (9/10/J) ====================
-  // Тратим свободно, если рука большая (>=4) или поле не мусор.
   if (usesMidTrump) {
-    // Совсем мусор + маленькая рука — поднимаем
     if (totalField < 15 && handSize <= 3) {
       blog(room, botSeat, `Средний козырь за мусор (${totalField|0}) — поднимаю`);
       return { action: 'pickUp' };
     }
-    // Ранняя игра + очень дорогая цена отбития — поднимаем
     if (veryEarly && handSize <= 3 && ratio > 3.0) {
       blog(room, botSeat, `Средний козырь дорого рано (ratio=${ratio.toFixed(2)}) — поднимаю`);
       return { action: 'pickUp' };
     }
-    // Иначе отбиваемся
   }
 
   // ==================== Общая проверка ====================
-  // Поднимаем только если:
-  //   - рука маленькая (<=2) И ratio очень высокий (> 3.0)
-  //   - ИЛИ рука средняя (<=3) И ratio (>= 2.5) И поле мелкое (< 25)
   if (handSize <= 2 && ratio > 3.0) {
     blog(room, botSeat, `Очень дорого (ratio=${ratio.toFixed(2)}, hand=${handSize}) — поднимаю`);
     return { action: 'pickUp' };
@@ -133,8 +116,6 @@ export function defendDecision(room, botSeat, memory, profile) {
     blog(room, botSeat, `Дорого для ${handSize} карт (ratio=${ratio.toFixed(2)}) — поднимаю`);
     return { action: 'pickUp' };
   }
-
-  // Атака на нас большая (много карт на столе) + мы не можем все побить дешёво — сдаёмся
   if (targets.length >= 3 && ratio > 2.0) {
     blog(room, botSeat, `Много карт (${targets.length}) + дорого — поднимаю`);
     return { action: 'pickUp' };

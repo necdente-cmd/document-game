@@ -343,7 +343,7 @@ export function setupHandlers(io, broadcast) {
       broadcast(r);
     });
 
-    // 🎬 СИМУЛЯЦИЯ: N ботов играют, хост смотрит
+    // 🎬 СИМУЛЯЦИЯ 4p: 4 бота, хост наблюдатель
     socket.on('simulateGame', ({ games } = {}) => {
       const r = rooms.get(rid); if (!r) return;
       if (r.hostId !== pid) return err('Только хост');
@@ -361,10 +361,8 @@ export function setupHandlers(io, broadcast) {
       r.players = [];
       r.hostId = null;
 
-      // 📝 Открываем лог-файл
       const logPath = startSimulationLog(r);
 
-      // 🤖 4 бота
       while (r.players.length < r.opts.maxPlayers) {
         const bot = addBotToRoom(io, r, broadcast);
         if (!bot) break;
@@ -378,14 +376,66 @@ export function setupHandlers(io, broadcast) {
         r.gameStartTime = Date.now();
         r.winnerTeam = null;
         r._simulation = { gamesPlayed: 0, maxGames };
-        log(r, `🎬 Симуляция: ${maxGames} партий. Лог: ${logPath || 'только консоль'}`);
+        log(r, `🎬 Симуляция 4p: ${maxGames} партий. Лог: ${logPath || 'только консоль'}`);
         log(r, `Участники: ${r.players.map(p => p.name).join(', ')}`);
         startRound(r, 0);
       }
       broadcast(r);
     });
 
-    // 🛑 Остановить симуляцию (хост)
+    // 🎬 СИМУЛЯЦИЯ 3p: 4 бота, seat 0 принудительно выходит
+    socket.on('simulate3p', ({ games } = {}) => {
+      const r = rooms.get(rid); if (!r) return;
+      if (r.hostId !== pid) return err('Только хост');
+      if (r.phase !== 'lobby') return err('Только в лобби');
+
+      const host = r.players.find(p => p.id === pid);
+      if (!host) return err('Хост не найден');
+
+      const maxGames = Math.max(1, Math.min(20, parseInt(games, 10) || 2));
+
+      r.spectators = r.spectators || [];
+      if (!r.spectators.some(s => s.id === pid)) {
+        r.spectators.push({ id: pid, name: host.name });
+      }
+      r.players = [];
+      r.hostId = null;
+
+      const logPath = startSimulationLog(r);
+
+      while (r.players.length < r.opts.maxPlayers) {
+        const bot = addBotToRoom(io, r, broadcast);
+        if (!bot) break;
+      }
+
+      if (r.players.length === r.opts.maxPlayers) {
+        r.teamStep = [0, 0];
+        r.roundWins = [0, 0];
+        r.roundHistory = [];
+        r.playerStats = [0, 0, 0, 0];
+        r.gameStartTime = Date.now();
+        r.winnerTeam = null;
+        r._simulation = { gamesPlayed: 0, maxGames, mode3p: true };
+
+        log(r, `🎬 Симуляция 3p: ${maxGames} партий. Лог: ${logPath || 'только консоль'}`);
+        log(r, `Участники: ${r.players.map(p => p.name).join(', ')}`);
+
+        // Стартуем с seat 2 (партнёр будущей жертвы)
+        startRound(r, 2);
+
+        // Принудительно выбиваем seat 0
+        const victim = r.players.find(p => p.seat === 0);
+        if (victim) {
+          victim.out = true;
+          victim.hand = [];
+          log(r, `⚡ 3p-режим: ${victim.name} (seat 0) принудительно вышел`);
+        }
+        // turnSeat уже = 2 (передан в startRound)
+      }
+      broadcast(r);
+    });
+
+    // 🛑 Остановить симуляцию
     socket.on('stopSimulation', () => {
       const r = rooms.get(rid); if (!r) return;
       if (!r._simulation) return;

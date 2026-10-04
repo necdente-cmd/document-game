@@ -2,7 +2,7 @@ import { rooms, log as rlog, stopSimulationLog } from '../rooms.js';
 import { partnerOf, bothPartnersPassed, uid } from '../utils.js';
 import { registerGameHandlers } from '../game/actions.js';
 import { startRound } from '../game/round.js';
-import { getRandomProfile } from './profiles.js';
+import { getProfileByKey, SIM_PROFILE_KEY } from './profiles.js';
 import { getMemory } from './memory.js';
 import { getDocs } from './cards.js';
 import { botDecideGenius } from './genius/index.js';
@@ -19,7 +19,7 @@ const BOT_NAMES = [
 export function isBot(p) { return !!(p && p.isBot); }
 
 export function createBotPlayer(index) {
-  const profile = getRandomProfile();
+  const profile = getProfileByKey(SIM_PROFILE_KEY);
   const name = BOT_NAMES[(index - 1) % BOT_NAMES.length];
   return {
     id: 'bot_' + uid(),
@@ -106,31 +106,51 @@ function applyDecisions(room, bot, decisions) {
 }
 
 // =====================================================================
+// 🔧 3p-режим: после каждого startRound снова выбиваем seat 0
+// =====================================================================
+function apply3pForceOut(room) {
+  if (!room._simulation?.mode3p) return;
+  const victim = room.players.find(p => p.seat === 0);
+  if (victim) {
+    victim.out = true;
+    victim.hand = [];
+  }
+  // turnSeat может указывать на seat 0 — исправляем на seat 2
+  if (room.turnSeat === 0) room.turnSeat = 2;
+}
+
+// =====================================================================
 // 🎬 АВТОСТАРТ НОВОГО КОНА
-// Победившая команда выбирает стартующего. Выбирает ЛЮБОГО
-// игрока своей команды (вышедший в новом коне вернётся).
 // =====================================================================
 function autoStartRound(io, room, broadcast) {
   const team = room.pendingStart?.winningTeam;
   if (team == null) {
     rlog(room, `⚠ Нет pendingStart для автостарта`);
-    // Fallback: стартуем с seat 0
     startRound(room, 0);
+    apply3pForceOut(room);
     broadcast(room);
     return;
   }
 
-  // Любой игрок победившей команды (в т.ч. out)
-  const bot = room.players.find(p => p.team === team && p.isBot);
-  if (!bot) {
-    rlog(room, `⚠ Нет бота в команде ${team} для автостарта, fallback → seat 0`);
-    startRound(room, 0);
+  // Активные боты победившей команды
+  const teamBots = room.players.filter(p => p.team === team && p.isBot && !p.out);
+  if (!teamBots.length) {
+    rlog(room, `⚠ Нет активного бота в команде ${team}, fallback → seat 2`);
+    startRound(room, 2);
+    apply3pForceOut(room);
     broadcast(room);
     return;
   }
 
-  rlog(room, `🎬 Автостарт кона (выбирает ${bot.name} из команды ${team === 0 ? 'A' : 'B'})`);
-  startRound(room, bot.seat);
+  const bot = teamBots[(Math.random() * teamBots.length) | 0];
+  let starterSeat = bot.seat;
+
+  // В 3p нельзя стартовать с вышедшего
+  if (room._simulation?.mode3p && starterSeat === 0) starterSeat = 2;
+
+  rlog(room, `🎬 Автостарт кона (выбирает ${bot.name} из команды ${team === 0 ? 'A' : 'B'}, seat ${starterSeat})`);
+  startRound(room, starterSeat);
+  apply3pForceOut(room);
   broadcast(room);
 }
 
@@ -164,19 +184,22 @@ function handleGameEnd(io, room, broadcast) {
     room.gameStartTime = Date.now();
     room.winnerTeam = null;
     rlog(room, `🎬 Партия #${sim.gamesPlayed + 1} стартует`);
-    startRound(room, 0);
+
+    const starterSeat = sim.mode3p ? 2 : 0;
+    startRound(room, starterSeat);
+    apply3pForceOut(room);
     broadcast(room);
   }, INTER_GAME_DELAY);
 }
 
 function peekPendingBot(room) {
-  // 🎬 gameEnd
+  // 🎬 gameEnd → авто-перезапуск партии
   if (room.phase === 'gameEnd' && room._simulation) return true;
 
-  // 🎬 roundEnd — автостарт нового кона
+  // 🎬 roundEnd → автостарт нового кона
   if (room.phase === 'roundEnd' && room.pendingStart) {
     const team = room.pendingStart.winningTeam;
-    const bot = room.players.find(p => p.team === team && p.isBot);
+    const bot = room.players.find(p => p.team === team && p.isBot && !p.out);
     if (bot) return bot;
     return null;
   }
@@ -234,7 +257,7 @@ function findActingBot(room) {
     return { special: 'gameEnd' };
   }
 
-  // 🎬 roundEnd — автостарт нового кона
+  // 🎬 roundEnd — автостарт кона
   if (room.phase === 'roundEnd' && room.pendingStart) {
     return { special: 'startRound' };
   }
@@ -330,7 +353,7 @@ export function onRoomChange(io, room, broadcast) {
     return;
   }
 
-  // 🎬 roundEnd → автостарт кона (напрямую)
+  // 🎬 roundEnd → автостарт кона
   if (room.phase === 'roundEnd' && room.pendingStart) {
     const delay = BOT_DELAY + Math.random() * 500;
     room._botTimer = setTimeout(() => {

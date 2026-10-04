@@ -264,102 +264,6 @@ function setupSwipe() {
   }, true);
 }
 
-function showInfoModal() {
-  const s = state.server;
-  if (!s) return;
-  const myTeam = s.myTeam;
-  const myDoc = rankDisplay(s.docs[myTeam]);
-  const oppDoc = rankDisplay(s.docs[1 - myTeam]);
-  const el = document.createElement('div');
-  el.className = 'info-modal';
-  el.id = 'infoModal';
-  el.innerHTML = `
-    <div class="info-modal-inner">
-      <h3>${t('info.title')}</h3>
-      <div class="info-row"><span>${t('info.trump')}</span><b>${esc(s.trumpSuit || '—')}</b></div>
-      <div class="info-row"><span>${t('info.myDoc')}</span><b>${esc(myDoc)}</b></div>
-      <div class="info-row"><span>${t('info.oppDoc')}</span><b>${esc(oppDoc)}</b></div>
-      <div class="info-row"><span>${t('info.score')}</span><b>${s.roundWins[0]} : ${s.roundWins[1]}</b></div>
-      <button class="info-modal-close" id="infoClose">${t('common.close')}</button>
-    </div>
-  `;
-  document.body.appendChild(el);
-  const close = () => el.remove();
-  el.onclick = (e) => { if (e.target === el) close(); };
-  document.getElementById('infoClose').onclick = close;
-}
-
-function showVoiceDebug() {
-  const el = document.createElement('div');
-  el.className = 'simple-modal';
-  el.style.zIndex = 99999;
-  el.innerHTML = `
-    <div class="simple-modal-inner" style="max-width:600px; font-family:monospace; font-size:12px;">
-      <h3 style="font-family:inherit;">🧪 Диагностика голосового чата</h3>
-      <div id="debugContent" style="max-height:70vh; overflow-y:auto; background:#000; color:#0f0; padding:12px; border-radius:8px; line-height:1.5; white-space:pre-wrap; word-break:break-all;"></div>
-      <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="simple-modal-close-btn" id="debugRestart" style="background:#e67e22; color:#fff;">🔄 Перезапустить голос</button>
-        <button class="simple-modal-close-btn" id="debugCopy" style="background:#3498db; color:#fff;">📋 Копировать</button>
-        <button class="simple-modal-close-btn" id="debugClose">Закрыть</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(el);
-  el.onclick = (e) => { if (e.target === el) el.remove(); };
-  document.getElementById('debugClose').onclick = () => el.remove();
-  document.getElementById('debugCopy').onclick = () => {
-    const text = document.getElementById('debugContent').textContent;
-    navigator.clipboard.writeText(text).then(() => {
-      document.getElementById('debugCopy').textContent = '✅ Скопировано';
-      setTimeout(() => document.getElementById('debugCopy').textContent = '📋 Копировать', 1500);
-    });
-  };
-  document.getElementById('debugRestart').onclick = async () => {
-    if (!confirm('Перезапустить голосовой чат?')) return;
-    const btn = document.getElementById('debugRestart');
-    btn.textContent = '⏳ Перезапуск…';
-    try {
-      await restartVoice();
-      btn.textContent = '✅ Готово';
-      setTimeout(() => { el.remove(); }, 1000);
-    } catch (e) {
-      btn.textContent = '❌ Ошибка';
-    }
-  };
-
-  let info = '=== ДИАГНОСТИКА VOICE ===\n';
-  info += 'Time: ' + new Date().toLocaleTimeString() + '\n\n';
-  info += '=== MIC STATE ===\n';
-  info += 'state.micOn: ' + (state.micOn ? '✅' : '❌') + '\n';
-  info += 'state.voiceActive: ' + (state.voiceActive ? '✅' : '❌') + '\n';
-  info += 'streamIsLive: ' + (streamIsLivePublic() ? '✅' : '❌') + '\n\n';
-  info += '=== SOCKET ===\n';
-  info += 'Connected: ' + (window.socket?.connected ? '✅' : '❌') + '\n';
-  info += 'Socket ID: ' + (window.socket?.id || '—') + '\n';
-  info += 'Me ID: ' + (state.me?.id || '—') + '\n';
-  info += 'Room: ' + (state.me?.roomId || '—') + '\n\n';
-  info += '=== PLAYERS ===\n';
-  if (state.server?.players) {
-    state.server.players.forEach(p => {
-      info += `  ${p.name} (seat ${p.seat}) voiceEnabled: ${p.voiceEnabled ? '✅' : '❌'}\n`;
-    });
-  } else { info += '  — нет данных\n'; }
-  info += '\n=== ACTIVE PEERS ===\n';
-  const peersDebug = getVoiceDebugInfo();
-  if (peersDebug.length === 0) info += '  — нет активных соединений\n';
-  else peersDebug.forEach(p => {
-    info += `  ${p.id}: ICE=${p.ice}, Conn=${p.conn}, Signal=${p.signal}\n`;
-  });
-  info += '\n=== AUDIO ELEMENTS ===\n';
-  const audios = getAudioElements();
-  if (audios.length === 0) info += '  — нет audio элементов\n';
-  else audios.forEach(a => {
-    info += `  ${a.id}: paused=${a.paused} muted=${a.muted} vol=${a.volume} hasSrc=${a.hasSrc} tracks=${a.srcTracks}\n`;
-  });
-
-  document.getElementById('debugContent').textContent = info;
-}
-
 function sortHand(hand, myDoc, trumpSuit) {
   const RV = { '6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14 };
   const SO = { '♠':0, '♥':1, '♦':2, '♣':3 };
@@ -413,10 +317,11 @@ function renderSpectatorView(app, navigate) {
   const docs = s.docs || [];
   const trump = s.trumpSuit || '—';
   const sim = s.simulation || {};
+  const modeTag = sim.mode3p ? ' · 3p' : '';
 
   app.innerHTML = `
     <div class="table spectator" id="table">
-      <div class="spectator-label">🎬 Наблюдатель${sim.maxGames ? ` · партия ${sim.gamesPlayed + 1}/${sim.maxGames}` : ''}</div>
+      <div class="spectator-label">🎬 Наблюдатель${modeTag}${sim.maxGames ? ` · партия ${sim.gamesPlayed + 1}/${sim.maxGames}` : ''}</div>
       <div class="score-corner">${s.roundWins[0]} : ${s.roundWins[1]}</div>
       <div class="spectator-info">
         Козырь: ${esc(trump)} · Док A: ${esc(docs[0] || '—')} · Док B: ${esc(docs[1] || '—')}
@@ -568,13 +473,14 @@ export function renderTable(app, navigate) {
           ? `<button class="start-big" id="startBtn">${t('lobby.startGame')}</button>`
           : isHost ? `<div class="waiting-hint">${t('lobby.waitingPlayers')}</div>`
           : `<div class="waiting-hint">${t('lobby.waitingHost')}</div>`}
-                ${isHost ? `
+        ${isHost ? `
           <div class="lobby-bot-buttons">
             ${playersCount < maxP ? `
               <button class="bot-btn bot-btn-genius" id="addGeniusBtn">🧠 + Genius</button>
               <button class="bot-btn bot-btn-fill" id="fillBotsBtn">4 бота, старт</button>
             ` : ''}
-            <button class="bot-btn bot-btn-sim" id="simulateBtn">🎬 Наблюдать (4 бота)</button>
+            <button class="bot-btn bot-btn-sim" id="simulateBtn">🎬 Симуляция 4p</button>
+            <button class="bot-btn bot-btn-sim" id="simulate3pBtn">🎬 Тест 3p</button>
           </div>` : ''}
       </div>`;
   }
@@ -878,12 +784,17 @@ export function renderTable(app, navigate) {
   if (agb) agb.onclick = () => { playSound('button'); socket.emit('addBot'); };
   const fbb = g('fillBotsBtn');
   if (fbb) fbb.onclick = () => { playSound('button'); socket.emit('fillBots', { start: true }); };
-
-    const sbb = g('simulateBtn');
+  const sbb = g('simulateBtn');
   if (sbb) sbb.onclick = () => {
     playSound('button');
-    const games = parseInt(prompt('Сколько партий?', '2'), 10) || 2;
+    const games = parseInt(prompt('Сколько партий 4p?', '2'), 10) || 2;
     socket.emit('simulateGame', { games });
+  };
+  const s3b = g('simulate3pBtn');
+  if (s3b) s3b.onclick = () => {
+    playSound('button');
+    const games = parseInt(prompt('Сколько партий 3p?', '2'), 10) || 2;
+    socket.emit('simulate3p', { games });
   };
 
   const pu = g('pickUpBtn');   if (pu) pu.onclick = () => { playSound('button'); socket.emit('pickUp'); state.defendTarget = null; };
@@ -1006,14 +917,32 @@ function bindSwipeIconHandlers(app, navigate) {
   if (infoBtn) infoBtn.onclick = () => {
     playSound('button'); hideSwipeIcons();
     infoOpen = !infoOpen;
-    if (infoOpen) showInfoModal();
-    else { const m = document.getElementById('infoModal'); if (m) m.remove(); }
+    if (infoOpen) {
+      const s = state.server;
+      const el = document.createElement('div');
+      el.className = 'info-modal';
+      el.id = 'infoModal';
+      el.innerHTML = `
+        <div class="info-modal-inner">
+          <h3>${t('info.title')}</h3>
+          <div class="info-row"><span>${t('info.trump')}</span><b>${esc(s.trumpSuit || '—')}</b></div>
+          <div class="info-row"><span>${t('info.score')}</span><b>${s.roundWins[0]} : ${s.roundWins[1]}</b></div>
+          <button class="info-modal-close" id="infoClose">${t('common.close')}</button>
+        </div>
+      `;
+      document.body.appendChild(el);
+      const close = () => { el.remove(); infoOpen = false; };
+      el.onclick = (e) => { if (e.target === el) close(); };
+      document.getElementById('infoClose').onclick = close;
+    } else {
+      const m = document.getElementById('infoModal');
+      if (m) m.remove();
+    }
   };
 
   const debugBtn = document.getElementById('debugBtn');
   if (debugBtn) debugBtn.onclick = () => {
     playSound('button');
     hideSwipeIcons();
-    showVoiceDebug();
   };
 }

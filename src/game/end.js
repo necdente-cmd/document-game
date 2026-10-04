@@ -8,10 +8,14 @@ export function winByThrow(r, team, winnerSeat) {
   r.roundHistory.push({ n: r.roundHistory.length + 1, winner: team });
 
   const ladder = LADDERS[r.opts.docSet];
-  if (r.teamStep[team] === ladder.length - 1) {
+
+  // 🔧 Победа → +1 ступень. Чемпион = тот, кто ПОСЛЕ победы на Т (последней ступени).
+  r.teamStep[team]++;
+  if (r.teamStep[team] >= ladder.length - 1) {
+    r.teamStep[team] = ladder.length - 1;
     r.phase = 'gameEnd';
     r.winnerTeam = team;
-    log(r, `🏆 Команда ${team ? 'B' : 'A'} — ЧЕМПИОН!`);
+    log(r, `🏆 Команда ${team ? 'B' : 'A'} — ЧЕМПИОН! (ступень ${ladder[r.teamStep[team]]})`);
     for (const p of r.players.filter(p => p.team === team)) {
       if (p.persistentId) {
         incrementStat(p.persistentId, 'rounds_won');
@@ -22,10 +26,10 @@ export function winByThrow(r, team, winnerSeat) {
     logEvent('gameWin', null, r.id, { team });
     return;
   }
-  r.teamStep[team]++;
+
   r.phase = 'roundEnd';
   r.pendingStart = { winningTeam: team };
-  log(r, `Команда ${team ? 'B' : 'A'} выиграла кон. Счёт ${r.roundWins[0]}:${r.roundWins[1]}`);
+  log(r, `Команда ${team ? 'B' : 'A'} выиграла кон. Счёт ${r.roundWins[0]}:${r.roundWins[1]} (ступень ${ladder[r.teamStep[team]]})`);
   for (const p of r.players.filter(p => p.team === team)) {
     if (p.persistentId) incrementStat(p.persistentId, 'rounds_won');
   }
