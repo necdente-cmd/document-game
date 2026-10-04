@@ -1,5 +1,5 @@
 import { uid } from './utils.js';
-import { rooms, newRoom, log, clearDisconnectTimer, pub } from './rooms.js';
+import { rooms, newRoom, log, clearDisconnectTimer, pub, startSimulationLog } from './rooms.js';
 import { startRound } from './game/round.js';
 import { registerGameHandlers } from './game/actions.js';
 import { DISCONNECT_TIMEOUT_MS } from './constants.js';
@@ -20,7 +20,6 @@ export function setupHandlers(io, broadcast) {
 
     const ctx = { rooms, broadcast, err, getMe, getRid: () => rid };
 
-    // ==================== 🔐 TURN credentials ====================
     socket.on('get-ice-servers', () => {
       try {
         const servers = getIceServers();
@@ -84,6 +83,16 @@ export function setupHandlers(io, broadcast) {
           broadcast(r);
           return;
         }
+        const spec = r.spectators?.find(s => s.id === playerId);
+        if (spec) {
+          pid = playerId;
+          rid = r.id;
+          socket.join(pid);
+          socket.join(r.id);
+          cb({ ok: true, roomId: r.id, playerId: pid, spectator: true });
+          broadcast(r);
+          return;
+        }
       }
 
       if (r.players.length >= r.opts.maxPlayers) return cb({ ok: false, err: 'Комната заполнена' });
@@ -114,8 +123,9 @@ export function setupHandlers(io, broadcast) {
     // СИНХРОНИЗАЦИЯ
     socket.on('syncState', () => {
       const r = rooms.get(rid); if (!r) return;
-      const p = getMe(); if (!p) return;
-      socket.emit('state', pub(r, p.id));
+      const p = getMe();
+      if (p) socket.emit('state', pub(r, p.id));
+      else if (r.spectators?.some(s => s.id === pid)) socket.emit('state', pub(r, null));
     });
 
     // РАССТАНОВКА
@@ -199,6 +209,14 @@ export function setupHandlers(io, broadcast) {
     // ВЫХОД
     socket.on('leaveRoom', () => {
       const r = rooms.get(rid); if (!r) return;
+
+      if (r.spectators?.some(s => s.id === pid)) {
+        r.spectators = r.spectators.filter(s => s.id !== pid);
+        pid = null;
+        rid = null;
+        return;
+      }
+
       const p = getMe(); if (!p) return;
 
       if (p.voiceEnabled) {
@@ -271,11 +289,9 @@ export function setupHandlers(io, broadcast) {
       const r = rooms.get(rid); if (!r) return;
       const p = getMe(); if (!p) return;
       p.voiceEnabled = true;
-
       const peers = r.players
         .filter(x => x.voiceEnabled && x.id !== pid && !x.isBot)
         .map(x => x.id);
-
       socket.emit('voice-peers', { peers });
       socket.to(r.id).emit('voice-peer-joined', { playerId: pid });
     });
@@ -324,6 +340,57 @@ export function setupHandlers(io, broadcast) {
         r.winnerTeam = null;
         startRound(r, 0);
       }
+      broadcast(r);
+    });
+
+    // 🎬 СИМУЛЯЦИЯ: N ботов играют, хост смотрит
+    socket.on('simulateGame', ({ games } = {}) => {
+      const r = rooms.get(rid); if (!r) return;
+      if (r.hostId !== pid) return err('Только хост');
+      if (r.phase !== 'lobby') return err('Только в лобби');
+
+      const host = r.players.find(p => p.id === pid);
+      if (!host) return err('Хост не найден');
+
+      const maxGames = Math.max(1, Math.min(20, parseInt(games, 10) || 2));
+
+      r.spectators = r.spectators || [];
+      if (!r.spectators.some(s => s.id === pid)) {
+        r.spectators.push({ id: pid, name: host.name });
+      }
+      r.players = [];
+      r.hostId = null;
+
+      // 📝 Открываем лог-файл
+      const logPath = startSimulationLog(r);
+
+      // 🤖 4 бота
+      while (r.players.length < r.opts.maxPlayers) {
+        const bot = addBotToRoom(io, r, broadcast);
+        if (!bot) break;
+      }
+
+      if (r.players.length === r.opts.maxPlayers) {
+        r.teamStep = [0, 0];
+        r.roundWins = [0, 0];
+        r.roundHistory = [];
+        r.playerStats = [0, 0, 0, 0];
+        r.gameStartTime = Date.now();
+        r.winnerTeam = null;
+        r._simulation = { gamesPlayed: 0, maxGames };
+        log(r, `🎬 Симуляция: ${maxGames} партий. Лог: ${logPath || 'только консоль'}`);
+        log(r, `Участники: ${r.players.map(p => p.name).join(', ')}`);
+        startRound(r, 0);
+      }
+      broadcast(r);
+    });
+
+    // 🛑 Остановить симуляцию (хост)
+    socket.on('stopSimulation', () => {
+      const r = rooms.get(rid); if (!r) return;
+      if (!r._simulation) return;
+      r._simulation = null;
+      log(r, `🛑 Симуляция остановлена вручную`);
       broadcast(r);
     });
 

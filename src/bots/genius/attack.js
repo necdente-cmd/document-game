@@ -4,9 +4,11 @@ import { cardValue, getDocs } from '../cards.js';
 import { pDefenderBeats } from './probabilities.js';
 import { pickExactWinner, isEndgame } from './endgame.js';
 import { shouldPlayAggressive } from './evaluate.js';
+import { log as rlog } from '../../rooms.js';
 
 function blog(room, seat, msg) {
-  console.log(`[${room.players[seat].name}] ${msg}`);
+  const name = room.players[seat]?.name || `seat${seat}`;
+  rlog(room, `[${name}] ${msg}`);
 }
 
 function isExpensiveTrump(card, room) {
@@ -34,7 +36,7 @@ export function pickLeadCards(room, botSeat, memory, profile) {
   const docs = getDocs(room);
   const myDoc = docs[myTeam];
   if (!myDoc) {
-    console.error(`[pickLeadCards] ${bot.name}: myDoc undefined (team=${myTeam})`);
+    log(room, `[${bot.name}] ⚠ myDoc undefined (team=${myTeam})`);
     return [];
   }
 
@@ -78,12 +80,11 @@ export function pickExtraCards(room, botSeat, memory, profile) {
   const bot = room.players[botSeat];
   if (!bot) return [];
 
-  // 🔒 Считаем команду и доки через botSeat (не через bot.team, чтобы избежать рассинхрона)
   const myTeam = botSeat % 2;
   const docs = getDocs(room);
   const myDoc = docs[myTeam];
   if (!myDoc) {
-    console.error(`[pickExtraCards] ${bot.name}: myDoc undefined (team=${myTeam})`);
+    log(room, `[${bot.name}] ⚠ myDoc undefined (team=${myTeam})`);
     return [];
   }
 
@@ -101,19 +102,17 @@ export function pickExtraCards(room, botSeat, memory, profile) {
 
   const dumpMode = room.field.defenderGaveUp || room.field.askMore;
 
-  // 🔒 ТОЛЬКО карты того же ранга, что на столе.
   // 🚫 Никогда: свой док, любой козырь.
-  // 🚫 Убрано правило "форс-док защитника" — оно давало фальш (6♠ при 7 на столе, если 6 = док).
+  // 🔒 Только карты ранга, который уже на столе.
   const cand = bot.hand.filter(c => {
-    if (c.r === myDoc) return false;      // свой док
-    if (isKozir(c, room)) return false;   // козырь
-    return ranksOnTable.has(c.r);         // только ранг со стола
+    if (c.r === myDoc) return false;
+    if (isKozir(c, room)) return false;
+    return ranksOnTable.has(c.r);
   });
 
-  // 🛡 Двойная страховка: если вдруг что-то просочилось
   const safeCand = cand.filter(c => {
     if (c.r === myDoc) {
-      console.error(`[pickExtraCards] BUG: own doc ${c.r}${c.s} slipped for ${bot.name} (team=${myTeam} myDoc=${myDoc})`);
+      log(room, `[${bot.name}] ❌ BUG: own doc ${c.r}${c.s} slipped (team=${myTeam} myDoc=${myDoc})`);
       return false;
     }
     return true;

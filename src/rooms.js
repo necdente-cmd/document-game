@@ -1,9 +1,11 @@
 import { LADDERS } from './constants.js';
 import { code } from './utils.js';
+import fs from 'fs';
+import path from 'path';
 
 export const rooms = new Map();
 
-// Ленивая загрузка manager.js (чтобы избежать циклического импорта)
+// Ленивая загрузка manager.js
 let _managerPromise = null;
 function getManager() {
   if (!_managerPromise) {
@@ -28,6 +30,7 @@ export function newRoom(opts = {}) {
       ...opts,
     },
     players: [],
+    spectators: [],
     hostId: null,
     phase: 'lobby',
     deck: [],
@@ -56,6 +59,9 @@ export function newRoom(opts = {}) {
     swapUsedByTeam: [false, false],
     disconnectTimers: {},
     _botTimer: null,
+    _stuckSince: undefined,
+    _simulation: null,
+    _logStream: null,
   };
   rooms.set(r.id, r);
   return r;
@@ -119,6 +125,8 @@ export function pub(r, forId) {
     turnSeat: r.turnSeat,
     log: r.log.slice(-25),
     swapUsedByTeam: r.swapUsedByTeam,
+    isSimulation: !!r._simulation,
+    simulation: r._simulation ? { ...r._simulation } : null,
   };
 }
 
@@ -128,6 +136,11 @@ export function makeBroadcast(io) {
       if (p.isBot) continue;
       io.to(p.id).emit('state', pub(r, p.id));
     }
+    if (r.spectators && r.spectators.length) {
+      for (const sp of r.spectators) {
+        io.to(sp.id).emit('state', pub(r, null));
+      }
+    }
     getManager().then(m => {
       if (m && m.onRoomChange) m.onRoomChange(io, r, broadcast);
     }).catch(() => {});
@@ -136,7 +149,34 @@ export function makeBroadcast(io) {
 
 export function log(r, t) {
   r.log.push(t);
-  console.log(`[${r.id}] ${t}`);
+  const line = `[${r.id}] ${t}`;
+  console.log(line);
+  if (r._logStream) {
+    try { r._logStream.write(line + '\n'); } catch {}
+  }
+}
+
+export function startSimulationLog(r) {
+  try {
+    const logsDir = path.join(process.cwd(), 'logs');
+    if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    const logPath = path.join(logsDir, `sim-${ts}.log`);
+    r._logStream = fs.createWriteStream(logPath, { flags: 'w' });
+    r._logStream.on('error', (e) => console.error('[sim-log] error:', e));
+    console.log(`[sim] 📝 Log file: ${logPath}`);
+    return logPath;
+  } catch (e) {
+    console.error('[sim] Failed to create log file:', e);
+    return null;
+  }
+}
+
+export function stopSimulationLog(r) {
+  if (r._logStream) {
+    try { r._logStream.end(); } catch {}
+    r._logStream = null;
+  }
 }
 
 export function clearDisconnectTimer(r, playerId) {

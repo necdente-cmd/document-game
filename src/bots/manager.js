@@ -1,6 +1,7 @@
-import { rooms } from '../rooms.js';
+import { rooms, log, stopSimulationLog } from '../rooms.js';
 import { partnerOf, bothPartnersPassed, uid } from '../utils.js';
 import { registerGameHandlers } from '../game/actions.js';
+import { startRound } from '../game/round.js';
 import { getRandomProfile } from './profiles.js';
 import { getMemory } from './memory.js';
 import { getDocs } from './cards.js';
@@ -8,6 +9,8 @@ import { botDecideGenius } from './genius/index.js';
 
 const BOT_DELAY = 1500;
 const FORCE_PASS_DELAY = 4000;
+const INTER_GAME_DELAY = 3000;
+const INTER_ROUND_DELAY = 2000;
 
 const BOT_NAMES = [
   'Муке', 'Даке', 'Шүкү', 'Доке',
@@ -31,7 +34,7 @@ export function createBotPlayer(index) {
 }
 
 export function addBotToRoom(io, room, broadcast) {
-  if (room.phase !== 'lobby') return null;
+  if (room.phase !== 'lobby' && room.phase !== 'gameEnd') return null;
   if (room.players.length >= room.opts.maxPlayers) return null;
 
   const n = room.players.filter(p => p.isBot).length + 1;
@@ -74,6 +77,7 @@ function safeDecide(room, bot) {
     return botDecideGenius(room, bot.seat, getMemory(room), bot.botProfile) || [];
   } catch (e) {
     console.error(`[${bot.name}] decide error:`, e);
+    log(room, `[${bot.name}] ❌ decide error: ${e.message}`);
     return [];
   }
 }
@@ -98,11 +102,58 @@ function applyDecisions(room, bot, decisions) {
       case 'swapAccept':       s.emit('swapAccept', {}); break;
       case 'swapReject':       s.emit('swapReject', {}); break;
       case 'swapConfirm':      s.emit('swapConfirm', {}); break;
+      case 'autoStart':        s.emit('chooseStart', { seat: bot.seat }); break;
     }
   }
 }
 
+// =====================================================================
+// Авто-перезапуск новой партии (симуляция)
+// =====================================================================
+function handleGameEnd(io, room, broadcast) {
+  const sim = room._simulation;
+  if (!sim) return;
+
+  sim.gamesPlayed++;
+  const winner = room.winnerTeam;
+  log(room, `🏆 Партия #${sim.gamesPlayed} завершена. Победила команда ${winner === 0 ? 'A' : 'B'}. Счёт ${room.roundWins[0]}:${room.roundWins[1]}`);
+
+  if (sim.gamesPlayed >= sim.maxGames) {
+    log(room, `🎬 ✅ Симуляция завершена: ${sim.gamesPlayed}/${sim.maxGames} партий`);
+    setTimeout(() => {
+      stopSimulationLog(room);
+      room._simulation = null;
+      log(room, `📝 Лог сохранён`);
+    }, 2000);
+    return;
+  }
+
+  room._botTimer = setTimeout(() => {
+    room._botTimer = null;
+    room.teamStep = [0, 0];
+    room.roundWins = [0, 0];
+    room.roundHistory = [];
+    room.playerStats = [0, 0, 0, 0];
+    room.gameStartTime = Date.now();
+    room.winnerTeam = null;
+    log(room, `🎬 Партия #${sim.gamesPlayed + 1} стартует`);
+    startRound(room, 0);
+    broadcast(room);
+  }, INTER_GAME_DELAY);
+}
+
 function peekPendingBot(room) {
+  // Новая партия (симуляция)
+  if (room.phase === 'gameEnd' && room._simulation) return true;
+
+  // Автостарт нового кона
+  if (room.phase === 'roundEnd' && room.pendingStart) {
+    const team = room.pendingStart.winningTeam;
+    const bot = room.players.find(p => p.team === team && p.isBot && !p.out);
+    if (bot) return bot;
+    return null;
+  }
+
   if (room.pendingSwap) {
     const sw = room.pendingSwap;
     if (sw.stage === 'partnerConfirm') {
@@ -124,18 +175,14 @@ function peekPendingBot(room) {
     const f = room.field;
     const def = room.players[f.defender];
     const unbeaten = f.cards.some(e => !e.beatenBy);
-
     if (unbeaten && def && def.isBot && !def.out && !f.defenderGaveUp) return def;
-
     for (const seat of [f.attacker, (f.attacker + 2) % 4]) {
       const b = room.players[seat];
       if (b && b.isBot && !b.out && !f.passedSeats.includes(seat)) return b;
     }
-
     if (!unbeaten && bothPartnersPassed(room) && def && def.isBot && !def.out && !f.defenderGaveUp) {
       return def;
     }
-
     if (!unbeaten && !f.defenderGaveUp && !f.askMore) {
       const waiters = [];
       for (const seat of [f.attacker, (f.attacker + 2) % 4]) {
@@ -155,6 +202,19 @@ function peekPendingBot(room) {
 }
 
 function findActingBot(room) {
+  // 🎬 Партия закончена — авто-перезапуск
+  if (room.phase === 'gameEnd' && room._simulation) {
+    return { bot: null, decisions: [], special: 'gameEnd' };
+  }
+
+  // 🎬 Автостарт нового кона
+  if (room.phase === 'roundEnd' && room.pendingStart) {
+    const team = room.pendingStart.winningTeam;
+    const bot = room.players.find(p => p.team === team && p.isBot && !p.out);
+    if (bot) return { bot, decisions: [{ action: 'autoStart' }] };
+    return null;
+  }
+
   if (room.pendingSwap) {
     const sw = room.pendingSwap;
     if (sw.stage === 'partnerConfirm') {
@@ -182,13 +242,11 @@ function findActingBot(room) {
     const par = (atk + 2) % 4;
     const unbeaten = f.cards.filter(e => !e.beatenBy);
 
-    // === 1. Защитник с неотбитыми ===
     if (unbeaten.length > 0 && def && def.isBot && !def.out && !f.defenderGaveUp) {
       const d = safeDecide(room, def);
       if (d.length) return { bot: def, decisions: d };
     }
 
-    // === 2. Атакующий / партнёр ===
     for (const seat of [atk, par]) {
       const b = room.players[seat];
       if (!b || !b.isBot || b.out) continue;
@@ -197,21 +255,18 @@ function findActingBot(room) {
       if (d.length) return { bot: b, decisions: d };
     }
 
-    // === 3. Всё отбито + оба пасанули → защитник решает bito/pickup ===
     if (unbeaten.length === 0 && bothPartnersPassed(room)
         && def && def.isBot && !def.out && !f.defenderGaveUp) {
       const d = safeDecide(room, def);
       if (d.length) return { bot: def, decisions: d };
-      // 🔧 Fallback: если decide ничего не вернул — принудительно bito/pickUp
       const docs = getDocs(room);
       const defDoc = docs[def.team];
       const hasDocOnTable = f.cards.some(e => e.card.r === defDoc);
       const action = hasDocOnTable ? 'pickUp' : 'bito';
-      console.log(`[${def.name}] Fallback → ${action}`);
+      log(room, `[${def.name}] Fallback → ${action}`);
       return { bot: def, decisions: [{ action }] };
     }
 
-    // === 4. Стоп-блок: всё отбито, но не все пасанули ===
     if (unbeaten.length === 0 && !f.defenderGaveUp && !f.askMore) {
       const waiters = [];
       for (const seat of [atk, par]) {
@@ -244,7 +299,17 @@ function findActingBot(room) {
 
 export function onRoomChange(io, room, broadcast) {
   if (room._botTimer) { clearTimeout(room._botTimer); room._botTimer = null; }
-  if (room.phase !== 'playing') { room._stuckSince = undefined; return; }
+
+  // 🎬 gameEnd → авто-перезапуск
+  if (room.phase === 'gameEnd' && room._simulation) {
+    handleGameEnd(io, room, broadcast);
+    return;
+  }
+
+  if (room.phase !== 'playing' && room.phase !== 'roundEnd') {
+    room._stuckSince = undefined;
+    return;
+  }
 
   const peek = peekPendingBot(room);
   if (!peek) return;
@@ -257,6 +322,10 @@ export function onRoomChange(io, room, broadcast) {
       if (room._stuckSince) {
         onRoomChange(io, room, broadcast);
       }
+      return;
+    }
+    if (found.special === 'gameEnd') {
+      handleGameEnd(io, room, broadcast);
       return;
     }
     room._stuckSince = undefined;

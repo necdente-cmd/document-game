@@ -1,11 +1,13 @@
 import { RV } from '../../constants.js';
 import { beats, isKozir } from '../../utils.js';
-import { cardValue, getDocs, isDoc } from '../cards.js';
+import { cardValue, getDocs } from '../cards.js';
 import { pDefenderBeats } from './probabilities.js';
 import { shouldPlayAggressive } from './evaluate.js';
+import { log as rlog } from '../../rooms.js';
 
 function blog(room, seat, msg) {
-  console.log(`[${room.players[seat].name}] ${msg}`);
+  const name = room.players[seat]?.name || `seat${seat}`;
+  rlog(room, `[${name}] ${msg}`);
 }
 
 function isExpensiveTrump(card, room) {
@@ -17,15 +19,10 @@ function isMidTrump(card, room) {
   return isKozir(card, room) && rv >= RV['9'] && rv < RV['Q'];
 }
 
-/**
- * Найти самую дешёвую карту для биты.
- * 🚫 Свой док (в т.ч. козырный) — НИКОГДА не используется для биты.
- */
 function findCheapestBeat(hand, card, room, botSeat, myDoc) {
   let best = null, bestVal = Infinity;
   for (const c of hand) {
-    // Свой док не трогаем
-    if (c.r === myDoc) continue;
+    if (c.r === myDoc) continue; // свой док не трогаем
     if (!beats(c, card, room)) continue;
     const v = cardValue(c, room, botSeat);
     if (v < bestVal) { bestVal = v; best = c; }
@@ -38,7 +35,6 @@ export function defendDecision(room, botSeat, memory, profile) {
   const myDoc = getDocs(room)[bot.team];
   const field = room.field;
 
-  // Обязательный подъём (форс-карта или наш док уже на столе)
   const mustPickup = field.cards.some(e =>
     !e.beatenBy && (e.isForced || e.card.r === myDoc)
   );
@@ -84,7 +80,7 @@ export function defendDecision(room, botSeat, memory, profile) {
     return { action: 'pickUp' };
   }
 
-  // 🔒 ДОРОГИЕ КОЗЫРИ (Q/K/A)
+  // 🔒 Q/K/A козыри
   if (usesExpensiveTrump) {
     if (!endgameish && !criticalHand) {
       blog(room, botSeat, `Жалко дорогой козырь (Q/K/A) за ${totalField|0} — поднимаю`);
@@ -96,7 +92,7 @@ export function defendDecision(room, botSeat, memory, profile) {
     }
   }
 
-  // 🔒 СРЕДНИЕ КОЗЫРИ (9/10/J)
+  // 🔒 9/10/J козыри
   if (usesMidTrump && !endgameish && !criticalHand) {
     const midRatio = totalField > 0 ? totalCost / totalField : 1;
     if (midRatio > 1.4) {
@@ -105,7 +101,6 @@ export function defendDecision(room, botSeat, memory, profile) {
     }
   }
 
-  // Общая проверка
   const ratio = totalField > 0 ? totalCost / totalField : 1;
   const pos = shouldPlayAggressive(room, botSeat);
 
