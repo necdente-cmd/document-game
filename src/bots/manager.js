@@ -106,23 +106,36 @@ function applyDecisions(room, bot, decisions) {
 }
 
 // =====================================================================
-// 🎬 АВТОСТАРТ НОВОГО КОНА (без сокета — напрямую)
+// 🎬 АВТОСТАРТ НОВОГО КОНА
+// Победившая команда выбирает стартующего. Выбирает ЛЮБОГО
+// игрока своей команды (вышедший в новом коне вернётся).
 // =====================================================================
 function autoStartRound(io, room, broadcast) {
   const team = room.pendingStart?.winningTeam;
-  if (team == null) return;
-  const bot = room.players.find(p => p.team === team && p.isBot && !p.out);
-  if (!bot) {
-    rlog(room, `⚠ Нет бота в команде ${team} для автостарта кона`);
+  if (team == null) {
+    rlog(room, `⚠ Нет pendingStart для автостарта`);
+    // Fallback: стартуем с seat 0
+    startRound(room, 0);
+    broadcast(room);
     return;
   }
-  rlog(room, `🎬 Автостарт кона (выбирает ${bot.name})`);
+
+  // Любой игрок победившей команды (в т.ч. out)
+  const bot = room.players.find(p => p.team === team && p.isBot);
+  if (!bot) {
+    rlog(room, `⚠ Нет бота в команде ${team} для автостарта, fallback → seat 0`);
+    startRound(room, 0);
+    broadcast(room);
+    return;
+  }
+
+  rlog(room, `🎬 Автостарт кона (выбирает ${bot.name} из команды ${team === 0 ? 'A' : 'B'})`);
   startRound(room, bot.seat);
   broadcast(room);
 }
 
 // =====================================================================
-// 🎬 АВТО-ПЕРЕЗАПУСК ПАРТИИ (симуляция)
+// 🎬 АВТО-ПЕРЕЗАПУСК ПАРТИИ
 // =====================================================================
 function handleGameEnd(io, room, broadcast) {
   const sim = room._simulation;
@@ -163,7 +176,7 @@ function peekPendingBot(room) {
   // 🎬 roundEnd — автостарт нового кона
   if (room.phase === 'roundEnd' && room.pendingStart) {
     const team = room.pendingStart.winningTeam;
-    const bot = room.players.find(p => p.team === team && p.isBot && !p.out);
+    const bot = room.players.find(p => p.team === team && p.isBot);
     if (bot) return bot;
     return null;
   }
@@ -221,7 +234,7 @@ function findActingBot(room) {
     return { special: 'gameEnd' };
   }
 
-  // 🎬 roundEnd — автостарт нового кона (special, напрямую startRound)
+  // 🎬 roundEnd — автостарт нового кона
   if (room.phase === 'roundEnd' && room.pendingStart) {
     return { special: 'startRound' };
   }
@@ -317,7 +330,7 @@ export function onRoomChange(io, room, broadcast) {
     return;
   }
 
-  // 🎬 roundEnd → автостарт кона (напрямую, без сокета)
+  // 🎬 roundEnd → автостарт кона (напрямую)
   if (room.phase === 'roundEnd' && room.pendingStart) {
     const delay = BOT_DELAY + Math.random() * 500;
     room._botTimer = setTimeout(() => {
