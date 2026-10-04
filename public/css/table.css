@@ -914,15 +914,12 @@
 }
 
 /* ==================== ЛЕТЯЩАЯ РЕАКЦИЯ-СМАЙЛ ==================== */
-/* Появляется у аватара игрока → летит к центру стола → исчезает */
+/* Анимация полностью управляется из JS (WAAPI), здесь только база */
 .reaction-fly {
   position: fixed;
   z-index: 9999;
   pointer-events: none;
-  /* Стартовая позиция — точка, заданная через left/top */
-  transform: translate(-50%, -50%) scale(.5);
-  opacity: 0;
-  animation: reactionFly 1.4s cubic-bezier(.2,.8,.35,1) forwards;
+  transform: translate(-50%, -50%);
   filter: drop-shadow(0 8px 24px rgba(0,0,0,.6));
   will-change: transform, opacity;
 }
@@ -933,50 +930,6 @@
   align-items: center;
   justify-content: center;
 }
-.reaction-fly.reaction-out {
-  animation: reactionFadeOut .4s cubic-bezier(.4,0,.6,1) forwards;
-}
-
-/* Полёт: появился у аватара → уменьшился → увеличился в центре стола */
-@keyframes reactionFly {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(.3);
-  }
-  15% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  60% {
-    opacity: 1;
-    transform: translate(calc(-50% + var(--fly-dx) * .55),
-                       calc(-50% + var(--fly-dy) * .55 - 30px))
-               scale(.75) rotate(-8deg);
-  }
-  100% {
-    opacity: 1;
-    transform: translate(calc(-50% + var(--fly-dx)),
-                         calc(-50% + var(--fly-dy)))
-               scale(1.1) rotate(0);
-  }
-}
-
-@keyframes reactionFadeOut {
-  0% {
-    opacity: 1;
-    transform: translate(calc(-50% + var(--fly-dx)),
-                         calc(-50% + var(--fly-dy)))
-               scale(1.1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(calc(-50% + var(--fly-dx)),
-                         calc(-50% + var(--fly-dy) - 20px))
-               scale(.4);
-  }
-}
-
-/* На маленьких экранах — смайл поменьше */
 @media (max-width: 400px) {
   .reaction-inner { width: 96px; height: 96px; }
 }
