@@ -1,12 +1,16 @@
 import { RV } from '../../constants.js';
 import { partnerOf, isKozir } from '../../utils.js';
-import { cardValue, getDocs } from '../cards.js';
+import { cardValue, getDocs, isDoc } from '../cards.js';
 import { pDefenderBeats } from './probabilities.js';
 import { pickExactWinner, isEndgame } from './endgame.js';
 import { shouldPlayAggressive } from './evaluate.js';
 
 function blog(room, seat, msg) {
   console.log(`[${room.players[seat].name}] ${msg}`);
+}
+
+function isExpensiveTrump(card, room) {
+  return isKozir(card, room) && RV[card.r] >= RV['Q'];
 }
 
 export function tryEndgameLead(room, botSeat) {
@@ -27,7 +31,17 @@ export function pickLeadCards(room, botSeat, memory, profile) {
   const myDoc = getDocs(room)[bot.team];
   const aggressive = shouldPlayAggressive(room, botSeat);
 
-  const cand = bot.hand.filter(c => c.r !== myDoc);
+  // Док нельзя заходить (правило игры). Козыри не трогаем.
+  const allCand = bot.hand.filter(c => c.r !== myDoc);
+  if (!allCand.length) return [];
+
+  const nonTrump = allCand.filter(c => !isKozir(c, room));
+  const endgameish = isEndgame(room);
+  const safeCand = nonTrump.length > 0
+    ? nonTrump
+    : allCand.filter(c => !isExpensiveTrump(c, room) || endgameish);
+
+  const cand = safeCand.length > 0 ? safeCand : allCand;
   if (!cand.length) return [];
 
   const defenderSlot = (botSeat + 1) % 4;
@@ -36,7 +50,7 @@ export function pickLeadCards(room, botSeat, memory, profile) {
   for (const c of cand) {
     const val = cardValue(c, room, botSeat);
     const risk = pDefenderBeats(room, botSeat, defenderSlot, c);
-    const kozirPenalty = isKozir(c, room) ? 60 : 0;
+    const kozirPenalty = isKozir(c, room) ? 80 : 0;
     const riskWeight = aggressive ? 20 : 50;
     const score = val + kozirPenalty + risk * riskWeight;
     if (score < bestScore) {
@@ -51,14 +65,6 @@ export function pickLeadCards(room, botSeat, memory, profile) {
   return [best.id];
 }
 
-/**
- * Добор карт к существующему столу.
- *
- * Логика:
- *  - Если защитник сдался или просит вдогонку → можно докидывать мусор,
- *    но не козыри и не доки (они уйдут защитнику).
- *  - Иначе → добавляем только подходящие по рангу карты, недорогие.
- */
 export function pickExtraCards(room, botSeat, memory, profile) {
   if (!room.field) return [];
   const bot = room.players[botSeat];
@@ -76,19 +82,18 @@ export function pickExtraCards(room, botSeat, memory, profile) {
     if (e.beatenBy) ranksOnTable.add(e.beatenBy.r);
   }
 
-  // Мусорный режим: защитник сдался / просит вдогонку — можно скидывать
   const dumpMode = room.field.defenderGaveUp || room.field.askMore;
 
-  // Кандидаты: подходящие по рангу или док защитника (форс)
+  // 🚫 Свой док и козыри не подкидываем НИКОГДА
   const cand = bot.hand.filter(c => {
-    if (c.r === myDoc) return false; // свой док никогда
-    if (c.r === defDoc && defDoc !== myDoc) return true; // форс-добор
+    if (c.r === myDoc) return false;
+    if (isKozir(c, room)) return false;
+    if (c.r === defDoc && defDoc !== myDoc) return true;
     return ranksOnTable.has(c.r);
   });
 
   if (!cand.length) return [];
 
-  // Сортируем по цене: сначала дешёвые
   cand.sort((a, b) => cardValue(a, room, botSeat) - cardValue(b, room, botSeat));
 
   const defHand = defender.hand.length;
@@ -99,9 +104,6 @@ export function pickExtraCards(room, botSeat, memory, profile) {
   for (const c of cand) {
     if (chosen.length >= space) break;
     const val = cardValue(c, room, botSeat);
-    // В мусорном режиме козыри не докидываем — они слишком ценны
-    if (isKozir(c, room) && !aggressive) continue;
-    if (dumpMode && isKozir(c, room)) continue;
     if (!aggressive && val > threshold) continue;
     chosen.push(c);
   }

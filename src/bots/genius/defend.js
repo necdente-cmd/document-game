@@ -1,6 +1,6 @@
 import { RV } from '../../constants.js';
 import { beats, isKozir } from '../../utils.js';
-import { cardValue, getDocs } from '../cards.js';
+import { cardValue, getDocs, isDoc } from '../cards.js';
 import { pDefenderBeats } from './probabilities.js';
 import { shouldPlayAggressive } from './evaluate.js';
 
@@ -8,10 +8,24 @@ function blog(room, seat, msg) {
   console.log(`[${room.players[seat].name}] ${msg}`);
 }
 
+function isExpensiveTrump(card, room) {
+  return isKozir(card, room) && RV[card.r] >= RV['Q'];
+}
+
+function isMidTrump(card, room) {
+  const rv = RV[card.r];
+  return isKozir(card, room) && rv >= RV['9'] && rv < RV['Q'];
+}
+
+/**
+ * Найти самую дешёвую карту для биты.
+ * 🚫 Свой док (в т.ч. козырный) — НИКОГДА не используется для биты.
+ */
 function findCheapestBeat(hand, card, room, botSeat, myDoc) {
   let best = null, bestVal = Infinity;
   for (const c of hand) {
-    if (c.r === myDoc && !isKozir(c, room)) continue;
+    // Свой док не трогаем
+    if (c.r === myDoc) continue;
     if (!beats(c, card, room)) continue;
     const v = cardValue(c, room, botSeat);
     if (v < bestVal) { bestVal = v; best = c; }
@@ -24,11 +38,12 @@ export function defendDecision(room, botSeat, memory, profile) {
   const myDoc = getDocs(room)[bot.team];
   const field = room.field;
 
+  // Обязательный подъём (форс-карта или наш док уже на столе)
   const mustPickup = field.cards.some(e =>
     !e.beatenBy && (e.isForced || e.card.r === myDoc)
   );
   if (mustPickup) {
-    blog(room, botSeat, 'Обязан поднять (форс/наш док)');
+    blog(room, botSeat, 'Обязан поднять (форс/наш док на столе)');
     return { action: 'pickUp' };
   }
 
@@ -37,11 +52,17 @@ export function defendDecision(room, botSeat, memory, profile) {
   );
   if (targets.length === 0) return { action: 'pass' };
 
+  const deckLeft = room.deck.length + (room.trumpCard ? 1 : 0);
+  const endgameish = deckLeft <= 4;
+  const criticalHand = bot.hand.length <= 2;
+
   const used = new Set();
   const planned = [];
   let totalCost = 0;
   let totalField = 0;
   let unbeatable = 0;
+  let usesExpensiveTrump = false;
+  let usesMidTrump = false;
 
   for (const t of targets) {
     totalField += cardValue(t.card, room, botSeat);
@@ -51,28 +72,44 @@ export function defendDecision(room, botSeat, memory, profile) {
       planned.push({ targetId: t.card.id, withId: beat.card.id });
       used.add(beat.card.id);
       totalCost += beat.val;
+      if (isExpensiveTrump(beat.card, room)) usesExpensiveTrump = true;
+      if (isMidTrump(beat.card, room)) usesMidTrump = true;
     } else {
       unbeatable++;
     }
   }
 
   if (unbeatable > 0) {
-    const handLeft = bot.hand.length - planned.length;
-    if (handLeft >= 3 && shouldPlayAggressive(room, botSeat) === false) {
-      blog(room, botSeat, `Не могу побить ${unbeatable} — поднимаю`);
-      return { action: 'pickUp' };
-    }
-    blog(room, botSeat, `Не могу побить ${unbeatable} — поднимаю (нет выбора)`);
+    blog(room, botSeat, `Не могу побить ${unbeatable} — поднимаю`);
     return { action: 'pickUp' };
   }
 
+  // 🔒 ДОРОГИЕ КОЗЫРИ (Q/K/A)
+  if (usesExpensiveTrump) {
+    if (!endgameish && !criticalHand) {
+      blog(room, botSeat, `Жалко дорогой козырь (Q/K/A) за ${totalField|0} — поднимаю`);
+      return { action: 'pickUp' };
+    }
+    if (endgameish && totalField < 40 && !criticalHand) {
+      blog(room, botSeat, `Козырь Q/K/A дороже поля (${totalField|0}) — поднимаю`);
+      return { action: 'pickUp' };
+    }
+  }
+
+  // 🔒 СРЕДНИЕ КОЗЫРИ (9/10/J)
+  if (usesMidTrump && !endgameish && !criticalHand) {
+    const midRatio = totalField > 0 ? totalCost / totalField : 1;
+    if (midRatio > 1.4) {
+      blog(room, botSeat, `Средний козырь за ${totalField|0} — дорого, поднимаю`);
+      return { action: 'pickUp' };
+    }
+  }
+
+  // Общая проверка
   const ratio = totalField > 0 ? totalCost / totalField : 1;
   const pos = shouldPlayAggressive(room, botSeat);
 
-  const deckLeft = room.deck.length + (room.trumpCard ? 1 : 0);
-  const endgameish = deckLeft <= 4;
-
-  if (!pos && !endgameish && ratio > 1.5 && totalField < 60) {
+  if (!pos && !endgameish && ratio > 1.6 && totalField < 60) {
     blog(room, botSeat,
       `Дорого (cost=${totalCost | 0} field=${totalField | 0} ratio=${ratio.toFixed(2)}) — поднимаю`);
     return { action: 'pickUp' };
