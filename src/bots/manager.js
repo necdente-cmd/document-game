@@ -6,15 +6,19 @@ import { getMemory } from './memory.js';
 import { botDecideGenius } from './genius/index.js';
 
 const BOT_DELAY = 1500;
-const FORCE_PASS_DELAY = 4000; // мс — сколько ждём, если бот «молчит»
+const FORCE_PASS_DELAY = 4000;
+
+// Имена ботов (по кругу, если ботов больше чем имён)
+const BOT_NAMES = ['Муке', 'Даке', 'Шүкү', 'Доке'];
 
 export function isBot(p) { return !!(p && p.isBot); }
 
 export function createBotPlayer(index) {
   const profile = getRandomProfile();
+  const name = BOT_NAMES[(index - 1) % BOT_NAMES.length];
   return {
     id: 'bot_' + uid(),
-    name: `🧠 Genius ${index}`,
+    name,
     seat: -1, team: -1,
     hand: [], connected: true, out: false,
     persistentId: null, avatar: '', voiceEnabled: false,
@@ -154,13 +158,11 @@ function findActingBot(room) {
     const par = (atk + 2) % 4;
     const unbeaten = f.cards.filter(e => !e.beatenBy);
 
-    // 1. Защитник
     if (unbeaten.length > 0 && def && def.isBot && !def.out && !f.defenderGaveUp) {
       const d = decide(room, def);
       if (d.length) return { bot: def, decisions: d };
     }
 
-    // 2. Атакующий / партнёр — бот сам решает: добавить или ждать
     for (const seat of [atk, par]) {
       const b = room.players[seat];
       if (!b || !b.isBot || b.out) continue;
@@ -169,15 +171,13 @@ function findActingBot(room) {
       if (d.length) return { bot: b, decisions: d };
     }
 
-    // 3. Всё отбито + защитник не сдался + оба атакующих молчат (боты хотят ждать)
-    //    → форсим пас через FORCE_PASS_DELAY, чтобы игра не зависла.
     if (unbeaten.length === 0 && !f.defenderGaveUp && !f.askMore) {
       const waiters = [];
       for (const seat of [atk, par]) {
         const b = room.players[seat];
         if (!b || b.out) continue;
         if (f.passedSeats.includes(seat)) continue;
-        if (!b.isBot) return null; // человек в игре — пусть решает сам
+        if (!b.isBot) return null;
         waiters.push(b);
       }
       if (waiters.length > 0 && room._stuckSince === undefined) {
@@ -192,14 +192,12 @@ function findActingBot(room) {
       return null;
     }
 
-    // 4. Всё отбито + оба пасанули → защитник решает (бито / подъём)
     if (unbeaten.length === 0 && bothPartnersPassed(room)
         && def && def.isBot && !def.out && !f.defenderGaveUp) {
       const d = decide(room, def);
       if (d.length) return { bot: def, decisions: d };
     }
 
-    // 5. Защитник сдался + оба пасанули → pickup уже случился в actions.js
     room._stuckSince = undefined;
     return null;
   }
@@ -223,8 +221,6 @@ export function onRoomChange(io, room, broadcast) {
     room._botTimer = null;
     const found = findActingBot(room);
     if (!found) {
-      // Никто не действует. Если мы в «ступоре» (все отбито, ждём пас),
-      // перепланируем проверку — вдруг форс-пас уже пора.
       if (room._stuckSince) {
         onRoomChange(io, room, broadcast);
       }
