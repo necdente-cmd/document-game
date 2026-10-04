@@ -15,6 +15,9 @@ export function startRound(r, starterSeat = 0) {
   r.lastAttacker = null;
   r.lastTarget = null;
   r.forcedTarget = null;
+  r.forcedSlot = null;                              // 🆕 слот для подотбоя
+  r.teamPairLastSlot = [null, null];                // 🆕 последний слот атаки команды
+  r.teamLastTarget = [null, null];                  // 🆕 последняя цель атаки команды
   r.swapUsedByTeam = [false, false];
   if (!r.gameStartTime) r.gameStartTime = Date.now();
   r.phase = 'playing';
@@ -67,7 +70,7 @@ export function drawTo(r, prioritySeat = null) {
     }
   }
 
-  // ✅ ФИКС: после добора помечаем out тех, у кого 0 карт и добор невозможен
+  // ✅ После добора помечаем out тех, у кого 0 карт и добор невозможен
   const deckEmpty = r.deck.length === 0 && !r.trumpCard;
   if (deckEmpty) {
     for (const p of r.players) {

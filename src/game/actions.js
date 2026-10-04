@@ -1,6 +1,7 @@
 import { MAX_ATTACK, EMOJIS, SWAP_TIMEOUT_MS } from '../constants.js';
 import {
   isKozir, beats, partnerOf, pickTarget, bothPartnersPassed, opponentsOf,
+  getAttackSlot, getPodotboySlot, teamOf,
 } from '../utils.js';
 import { docsOf, log, clearSwapTimer } from '../rooms.js';
 import { drawTo } from './round.js';
@@ -20,22 +21,33 @@ export function registerGameHandlers(io, socket, ctx) {
 
     let defenderSeat;
     let isFirstAttack = false;
+    let attackerSlot = null;
+
     if (r.field) {
       const attacker = r.field.attacker;
       const partnerSeat = partnerOf(attacker);
       if (p.seat !== attacker && p.seat !== partnerSeat) return err('Только атакующий или партнёр');
       if (r.field.passedSeats.includes(p.seat)) return err('Вы уже сказали «Пас»');
       defenderSeat = r.field.defender;
+      attackerSlot = r.field.attackerSlot;
     } else {
       isFirstAttack = true;
       if (r.turnSeat !== p.seat) return err('Не ваш ход');
+
+      // Определяем цель
       if (r.forcedTarget != null && r.players[r.forcedTarget] && !r.players[r.forcedTarget].out) {
         defenderSeat = r.forcedTarget;
       } else {
         defenderSeat = pickTarget(r, p.seat);
       }
       if (defenderSeat === null) return err('Некого атаковать');
+
+      // Определяем слот атаки
+      attackerSlot = getAttackSlot(r, p.seat, defenderSeat);
+
+      // Сбрасываем одноразовые флаги
       r.forcedTarget = null;
+      r.forcedSlot = null;
     }
 
     const defender = r.players[defenderSeat];
@@ -85,7 +97,9 @@ export function registerGameHandlers(io, socket, ctx) {
     if (!r.field) {
       r.field = {
         attacker: p.seat,
+        attackerSlot,                            // 🆕 слот атаки
         defender: defenderSeat,
+        defenderSlot: (attackerSlot + 1) % 4,    // 🆕 слот защиты
         cards: [],
         passedSeats: [],
         limit: Math.min(defender.hand.length, MAX_ATTACK),
@@ -94,6 +108,10 @@ export function registerGameHandlers(io, socket, ctx) {
       };
       r.lastAttacker = p.seat;
       r.lastTarget = defenderSeat;
+
+      // 🆕 Обновляем данные для чередования следующего хода команды
+      r.teamPairLastSlot[teamOf(p.seat)] = attackerSlot;
+      r.teamLastTarget[teamOf(p.seat)] = defenderSeat;
     }
 
     for (const id of cardIds) {
@@ -136,7 +154,6 @@ export function registerGameHandlers(io, socket, ctx) {
     r.field.askMore = true;
     log(r, `${p.name}: «Вдогонку?»`);
 
-    // ✅ Если оба атакующих УЖЕ пасанули — сразу поднимаем
     if (bothPartnersPassed(r)) {
       const defender = r.players[r.field.defender];
       const attackerSeat = r.field.attacker;
@@ -162,14 +179,9 @@ export function registerGameHandlers(io, socket, ctx) {
     r.lastAttacker = attackerSeat;
     r.lastTarget = defenderSeat;
     r.forcedTarget = null;
+    r.forcedSlot = null;
     drawTo(r, attackerSeat);
     log(r, `${defender.name} поднял. Ход у ${r.players[r.turnSeat].name}`);
-  }
-
-  // Следующий противник от seat (первый по часовой, кроме партнёра, не out)
-  function nextOpponent(r, seat) {
-    const opps = opponentsOf(r, seat);
-    return opps.length > 0 ? opps[0] : null;
   }
 
   // ==================== ПОДНЯТЬ ВСЁ ====================
@@ -181,7 +193,6 @@ export function registerGameHandlers(io, socket, ctx) {
     r.field.defenderGaveUp = true;
     log(r, `${p.name}: «Поднимаю» — ждём пас атакующих`);
 
-    // ✅ Если оба атакующих УЖЕ пасанули — сразу поднимаем
     if (bothPartnersPassed(r)) {
       const attackerSeat = r.field.attacker;
       const defenderSeat = r.field.defender;
@@ -205,7 +216,6 @@ export function registerGameHandlers(io, socket, ctx) {
     r.field.passedSeats.push(p.seat);
     log(r, `${p.name}: «Пас»`);
 
-    // ✨ Авто-поднятие после «Вдогонку?» ИЛИ «Поднимаю», когда оба пасанули
     if ((r.field.askMore || r.field.defenderGaveUp) && bothPartnersPassed(r)) {
       const defender = r.players[r.field.defender];
       const attackerSeat = r.field.attacker;
@@ -219,7 +229,7 @@ export function registerGameHandlers(io, socket, ctx) {
     broadcast(r);
   });
 
-  // ==================== БИТО ====================
+  // ==================== БИТО (с подотбоем) ====================
   socket.on('bito', () => {
     const r = rooms.get(getRid()); if (!r || !r.field) return;
     const p = getMe(); if (!p) return;
@@ -230,31 +240,44 @@ export function registerGameHandlers(io, socket, ctx) {
 
     const attackerSeat = r.field.attacker;
 
-    // ✨ ФИКС: вычислить следующего противника ДО выхода защитника
-    const nextOpp = nextOpponent(r, p.seat);
-
+    // Очистка поля
     r.field = null;
-    r.lastAttacker = null;
-    r.lastTarget = null;
-    r.forcedTarget = null;
 
-    // Если у защитника кончились карты — он вышел
+    // Проверка выхода защитника
     if (p.hand.length === 0) p.out = true;
 
-    const partnerSeat = partnerOf(p.seat);
-    const partner = r.players[partnerSeat];
+    const team = teamOf(p.seat);
+    let turnPlayer = null;
 
-    if (p.out && partner && !partner.out) {
-      // ✨ Партнёр играет в слоте вышедшего — атакует того же противника
-      r.turnSeat = partner.seat;
-      r.forcedTarget = nextOpp;
+    if (!p.out) {
+      // Защитник в игре — сам делает подотбой
+      turnPlayer = p;
     } else {
-      // Защитник продолжает играть сам
-      r.turnSeat = p.seat;
+      // Защитник вышел — подотбой делает партнёр (если в игре)
+      const partnerSeat = partnerOf(p.seat);
+      const partner = r.players[partnerSeat];
+      if (partner && !partner.out) {
+        turnPlayer = partner;
+      }
+    }
+
+    if (turnPlayer) {
+      // 🎯 Подотбой: атакуем того, кто атаковал
+      const podotboySlot = getPodotboySlot(r, turnPlayer.seat, attackerSeat);
+      r.turnSeat = turnPlayer.seat;
+      r.forcedTarget = attackerSeat;
+      r.forcedSlot = podotboySlot;
+      // Для следующей обычной атаки этой команды — чередование от этого слота
+      r.teamPairLastSlot[team] = podotboySlot;
+      r.teamLastTarget[team] = attackerSeat;
+      log(r, `${p.name}: «Бито!» Ход у ${turnPlayer.name} (подотбой → ${r.players[attackerSeat].name})`);
+    } else {
+      // Оба вышли — передаём ход атакующему (пусть следующий кон)
+      r.turnSeat = attackerSeat;
+      log(r, `${p.name}: «Бито!»`);
     }
 
     drawTo(r, attackerSeat);
-    log(r, `${p.name}: «Бито!» Ход у ${r.players[r.turnSeat].name}`);
     if (checkTeamExitWin(r)) return broadcast(r);
     broadcast(r);
   });
@@ -280,8 +303,7 @@ export function registerGameHandlers(io, socket, ctx) {
     if (!requester) return;
     if (p.team === requester.team) return err('Подтвердить может только противник');
 
-    // ✨ ФИКС: вычислить следующего противника ДО выхода
-    const nextOpp = nextOpponent(r, requester.seat);
+    const nextOpp = opponentsOf(r, requester.seat)[0] ?? null;
 
     const partner = r.players[partnerOf(requester.seat)];
     partner.hand.push(...requester.hand);
@@ -291,7 +313,8 @@ export function registerGameHandlers(io, socket, ctx) {
     log(r, `${p.name} подтвердил документы ${requester.name} → ${partner.name}`);
     r.pendingPass = null;
     r.turnSeat = partner.seat;
-    r.forcedTarget = nextOpp;  // ✨ партнёр играет в слоте вышедшего
+    r.forcedTarget = nextOpp;
+    r.forcedSlot = null;
     r.lastAttacker = null;
     r.lastTarget = null;
     if (checkTeamExitWin(r)) return broadcast(r);
@@ -390,8 +413,7 @@ export function registerGameHandlers(io, socket, ctx) {
     const fromPlayer = r.players[r.pendingSwap.from];
     const toPlayer = r.players[r.pendingSwap.to];
 
-    // ✨ ФИКС: вычислить следующего противника от слота выходящего
-    const nextOpp = nextOpponent(r, fromPlayer.seat);
+    const nextOpp = opponentsOf(r, fromPlayer.seat)[0] ?? null;
 
     clearSwapTimer(r);
     toPlayer.hand.push(...fromPlayer.hand);
@@ -401,7 +423,8 @@ export function registerGameHandlers(io, socket, ctx) {
     r.swapUsedByTeam[fromPlayer.team] = true;
     r.pendingSwap = null;
     r.turnSeat = toPlayer.seat;
-    r.forcedTarget = nextOpp;  // ✨ партнёр играет в слоте вышедшего
+    r.forcedTarget = nextOpp;
+    r.forcedSlot = null;
     log(r, `${fromPlayer.name} ↔ ${toPlayer.name} — своп завершён`);
     if (checkTeamExitWin(r)) return broadcast(r);
     broadcast(r);
