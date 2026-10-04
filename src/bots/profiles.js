@@ -3,8 +3,8 @@ export const PROFILES = {
     key: 'aggressive',
     name: 'Агрессивный',
     icon: '⚔',
-    attackThreshold: 0.35,   // ниже — атакует смелее (больше карт)
-    defendThreshold: 0.75,   // выше — отбивается, даже если дорого
+    attackThreshold: 0.35,
+    defendThreshold: 0.75,
     riskAversion: 0.2,
     partnerWeight: 0.5,
   },
@@ -13,7 +13,7 @@ export const PROFILES = {
     name: 'Осторожный',
     icon: '🛡',
     attackThreshold: 0.7,
-    defendThreshold: 0.3,    // ниже — чаще поднимает, чтобы не палить карты
+    defendThreshold: 0.3,
     riskAversion: 0.8,
     partnerWeight: 0.8,
   },
@@ -28,7 +28,15 @@ export const PROFILES = {
   },
 };
 
+// 🎬 Профиль для всех ботов в симуляции (честный тест)
+// Меняй на 'aggressive' или 'cautious' для сравнения
+export const SIM_PROFILE_KEY = 'balanced';
+
 export function getRandomProfile() {
   const keys = Object.keys(PROFILES);
   return { ...PROFILES[keys[(Math.random() * keys.length) | 0]] };
+}
+
+export function getProfileByKey(key) {
+  return { ...(PROFILES[key] || PROFILES.balanced) };
 }
