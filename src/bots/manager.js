@@ -9,7 +9,10 @@ const BOT_DELAY = 1500;
 const FORCE_PASS_DELAY = 4000;
 
 // Имена ботов (по кругу, если ботов больше чем имён)
-const BOT_NAMES = ['Муке', 'Даке', 'Шүкү', 'Доке'];
+const BOT_NAMES = [
+  'Муке', 'Даке', 'Шүкү', 'Доке',
+  'Соке', 'Куке', 'Ули',  'Токо',
+];
 
 export function isBot(p) { return !!(p && p.isBot); }
 
