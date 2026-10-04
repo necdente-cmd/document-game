@@ -914,12 +914,13 @@
 }
 
 /* ==================== ЛЕТЯЩАЯ РЕАКЦИЯ-СМАЙЛ ==================== */
-/* Анимация полностью управляется из JS (WAAPI), здесь только база */
+/* Появляется у аватара → 70px к столу, увеличиваясь → fade-out. Всё за 3.2с */
 .reaction-fly {
   position: fixed;
   z-index: 9999;
   pointer-events: none;
   transform: translate(-50%, -50%);
+  animation: reactionFly 3.2s cubic-bezier(.25, .8, .35, 1) forwards;
   filter: drop-shadow(0 8px 24px rgba(0,0,0,.6));
   will-change: transform, opacity;
 }
@@ -930,6 +931,44 @@
   align-items: center;
   justify-content: center;
 }
+
+@keyframes reactionFly {
+  /* 0ms — маленький у аватара */
+  0% {
+    transform: translate(-50%, -50%) scale(.3);
+    opacity: 0;
+  }
+  /* 400ms — показался у аватара */
+  12% {
+    transform: translate(-50%, -50%) scale(.85);
+    opacity: 1;
+  }
+  /* 1700ms — прошёл примерно половину пути, растёт */
+  53% {
+    transform: translate(
+        calc(-50% + var(--fly-dx) * .6),
+        calc(-50% + var(--fly-dy) * .6)
+      ) scale(1.15);
+    opacity: 1;
+  }
+  /* 2500ms — достиг 70px, максимальный размер */
+  78% {
+    transform: translate(
+        calc(-50% + var(--fly-dx)),
+        calc(-50% + var(--fly-dy))
+      ) scale(1.35);
+    opacity: 1;
+  }
+  /* 3200ms — плавно растаял, чуть вверх */
+  100% {
+    transform: translate(
+        calc(-50% + var(--fly-dx)),
+        calc(-50% + var(--fly-dy) - 15px)
+      ) scale(.6);
+    opacity: 0;
+  }
+}
+
 @media (max-width: 400px) {
   .reaction-inner { width: 96px; height: 96px; }
 }

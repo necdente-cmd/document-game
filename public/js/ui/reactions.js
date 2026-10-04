@@ -37,7 +37,7 @@ async function loadJson(url) {
   return p;
 }
 
-// --- Полный жизненный цикл одной анимацией (WAAPI) ---
+// --- Показ реакции: у аватара → 70px к столу → увеличивается → fade-out ---
 export async function showReaction(seat, emoji) {
   const table = document.getElementById('table');
   if (!table || !state.server) return;
@@ -45,7 +45,7 @@ export async function showReaction(seat, emoji) {
   const cp = REACTION_CODE[emoji];
   if (!cp) return;
 
-  // 📍 Старт — аватар игрока
+  // 📍 Старт — аватар игрока (или рука для своей реакции)
   let startRect;
   const avatarEl = document.querySelector(`.seat[data-seat="${seat}"] .avatar`);
   if (avatarEl) {
@@ -59,62 +59,31 @@ export async function showReaction(seat, emoji) {
   const startX = startRect.left + startRect.width / 2;
   const startY = startRect.top  + startRect.height / 2;
 
-  // 📍 Финиш — центр стола (58% высоты)
+  // 📍 Направление полёта — от аватара к центру стола
   const tableRect = table.getBoundingClientRect();
-  const endX = tableRect.left + tableRect.width / 2;
-  const endY = tableRect.top + tableRect.height * 0.58;
+  const tableCx = tableRect.left + tableRect.width / 2;
+  const tableCy = tableRect.top + tableRect.height * 0.58;
 
-  const dx = endX - startX;
-  const dy = endY - startY;
+  const dxRaw = tableCx - startX;
+  const dyRaw = tableCy - startY;
+  const len = Math.hypot(dxRaw, dyRaw) || 1;
+  // 🎯 Ровно 70px в сторону центра стола
+  const FLY_DIST = 70;
+  const dx = (dxRaw / len) * FLY_DIST;
+  const dy = (dyRaw / len) * FLY_DIST;
 
   // Контейнер — в точке старта
   const wrap = document.createElement('div');
   wrap.className = 'reaction-fly';
   wrap.style.left = startX + 'px';
   wrap.style.top  = startY + 'px';
+  wrap.style.setProperty('--fly-dx', dx + 'px');
+  wrap.style.setProperty('--fly-dy', dy + 'px');
 
   const inner = document.createElement('div');
   inner.className = 'reaction-inner';
   wrap.appendChild(inner);
   document.body.appendChild(wrap);
-
-  // 🎬 ОДНА анимация — от старта до конца, без стыков
-  const DURATION = 1900;
-  const anim = wrap.animate([
-    // 0% — появляется у аватара, маленький
-    { transform: 'translate(-50%, -50%) scale(.3)', opacity: 0, offset: 0 },
-    // 12% (~230ms) — развернулся у аватара
-    { transform: 'translate(-50%, -50%) scale(1)', opacity: 1, offset: 0.12 },
-    // 50% (~950ms) — полёт по дуге, лёгкий поворот, чуть выше центра
-    {
-      transform: `translate(calc(-50% + ${dx * 0.55}px), calc(-50% + ${dy * 0.55 - 30}px)) scale(.78) rotate(-8deg)`,
-      opacity: 1,
-      offset: 0.5,
-      easing: 'cubic-bezier(.3,.6,.3,1)'
-    },
-    // 78% (~1480ms) — достиг центра, чуть увеличен
-    {
-      transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(1.15)`,
-      opacity: 1,
-      offset: 0.78,
-      easing: 'cubic-bezier(.2,.9,.3,1.2)'
-    },
-    // 88% (~1670ms) — осел в центре
-    {
-      transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(1)`,
-      opacity: 1,
-      offset: 0.88
-    },
-    // 100% (~1900ms) — растаял
-    {
-      transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px - 20px)) scale(.4)`,
-      opacity: 0,
-      offset: 1
-    }
-  ], {
-    duration: DURATION,
-    fill: 'forwards'
-  });
 
   // Загружаем Lottie
   try {
@@ -137,6 +106,6 @@ export async function showReaction(seat, emoji) {
     inner.style.justifyContent = 'center';
   }
 
-  // Удаляем из DOM после завершения
-  setTimeout(() => wrap.remove(), DURATION + 50);
+  // Удаляем из DOM (длительность анимации + запас)
+  setTimeout(() => wrap.remove(), 3400);
 }
