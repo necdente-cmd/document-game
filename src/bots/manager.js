@@ -1,6 +1,5 @@
 import { rooms } from '../rooms.js';
-import { partnerOf, bothPartnersPassed } from '../utils.js';
-import { uid } from '../utils.js';
+import { partnerOf, bothPartnersPassed, uid } from '../utils.js';
 import { registerGameHandlers } from '../game/actions.js';
 import { getRandomProfile } from './profiles.js';
 import { getMemory } from './memory.js';
@@ -50,7 +49,8 @@ export function registerBotSocket(io, room, bot, broadcast) {
         catch (e) { console.error(`[${bot.name}] emit ${event}`, e); }
       }
     },
-    join() {}, to() { return { emit() {} }; },
+    join() {},
+    to() { return { emit() {} }; },
   };
   const ctx = {
     rooms,
@@ -65,7 +65,7 @@ export function registerBotSocket(io, room, bot, broadcast) {
 
 function decide(room, bot) {
   if (bot.botType === 'genius') {
-    // TODO Этап 5
+    // TODO Этап 5 — пока используем Smart
     return botDecideSmart(room, bot.seat, getMemory(room), bot.botProfile) || [];
   }
   return botDecideSmart(room, bot.seat, getMemory(room), bot.botProfile) || [];
@@ -77,7 +77,9 @@ function applyDecisions(room, bot, decisions) {
   for (const d of decisions) {
     switch (d.action) {
       case 'attack':           s.emit('attack', { cardIds: d.cardIds }); break;
-      case 'defend':           for (const b of d.beats) s.emit('defend', { targetId: b.targetId, withId: b.withId }); break;
+      case 'defend':
+        for (const b of d.beats) s.emit('defend', { targetId: b.targetId, withId: b.withId });
+        break;
       case 'pickUp':           s.emit('pickUp', {}); break;
       case 'pass':             s.emit('endAttack', {}); break;
       case 'bito':             s.emit('bito', {}); break;
@@ -93,8 +95,65 @@ function applyDecisions(room, bot, decisions) {
   }
 }
 
+// =====================================================================
+// БЫСТРАЯ ПРОВЕРКА: кто потенциально сейчас может действовать?
+// НЕ принимает решений, только смотрит состояние.
+// =====================================================================
+function peekPendingBot(room) {
+  // Pending swap
+  if (room.pendingSwap) {
+    const sw = room.pendingSwap;
+    if (sw.stage === 'partnerConfirm') {
+      const p = room.players[sw.to];
+      if (p && p.isBot) return p;
+    }
+    if (sw.stage === 'opponentConfirm') {
+      const b = room.players.find(x => x.team !== sw.team && !x.out && x.isBot);
+      if (b) return b;
+    }
+    return null;
+  }
+
+  // Pending pass docs
+  if (room.pendingPass) {
+    const req = room.players[room.pendingPass.seat];
+    if (!req) return null;
+    return room.players.find(x => x.team !== req.team && x.isBot) || null;
+  }
+
+  // Есть поле
+  if (room.field) {
+    const f = room.field;
+    const def = room.players[f.defender];
+    const unbeaten = f.cards.some(e => !e.beatenBy);
+
+    // Защитник с неотбитыми
+    if (unbeaten && def && def.isBot && !def.out && !f.defenderGaveUp) return def;
+
+    // Атакующий / партнёр
+    for (const seat of [f.attacker, (f.attacker + 2) % 4]) {
+      const b = room.players[seat];
+      if (b && b.isBot && !b.out && !f.passedSeats.includes(seat)) return b;
+    }
+
+    // Всё отбито + оба пасанули → защитник решает
+    if (!unbeaten && bothPartnersPassed(room) && def && def.isBot && !def.out && !f.defenderGaveUp) {
+      return def;
+    }
+    return null;
+  }
+
+  // Поля нет — обычный ход
+  const t = room.players[room.turnSeat];
+  if (t && t.isBot && !t.out) return t;
+  return null;
+}
+
+// =====================================================================
+// ПОЛНОЕ РЕШЕНИЕ (findActingBot). Вызывается ТОЛЬКО внутри таймера,
+// на свежих данных. Это исключает race condition и дубли логов.
+// =====================================================================
 function findActingBot(room) {
-  // pendingSwap
   if (room.pendingSwap) {
     const sw = room.pendingSwap;
     if (sw.stage === 'partnerConfirm') {
@@ -107,29 +166,29 @@ function findActingBot(room) {
     }
     return null;
   }
-  // pendingPass
+
   if (room.pendingPass) {
-    const team = room.players[room.pendingPass.seat].team;
-    const b = room.players.find(x => x.team !== team && x.isBot);
+    const requester = room.players[room.pendingPass.seat];
+    if (!requester) return null;
+    const b = room.players.find(x => x.team !== requester.team && x.isBot);
     if (b) return { bot: b, decisions: [{ action: 'passDocsConfirm' }] };
     return null;
   }
 
-  // Есть поле
   if (room.field) {
     const f = room.field;
     const def = room.players[f.defender];
     const atk = f.attacker;
     const par = (atk + 2) % 4;
-
-    // 1. Защитник — если есть неотбитые и он не сдался
     const unbeaten = f.cards.filter(e => !e.beatenBy);
+
+    // 1. Защитник с неотбитыми
     if (unbeaten.length > 0 && def && def.isBot && !def.out && !f.defenderGaveUp) {
       const d = decide(room, def);
       if (d.length) return { bot: def, decisions: d };
     }
 
-    // 2. Атакующий и партнёр (если не пасанули)
+    // 2. Атакующий / партнёр
     for (const seat of [atk, par]) {
       const b = room.players[seat];
       if (!b || !b.isBot || b.out) continue;
@@ -138,16 +197,15 @@ function findActingBot(room) {
       if (d.length) return { bot: b, decisions: d };
     }
 
-    // 3. Защитник сдался + оба пасанули → автопикап уже отработал в actions.js
-    // 4. Всё отбито + оба пасанули → bito или pickup (защитник)
-    if (unbeaten.length === 0 && bothPartnersPassed(room) && def && def.isBot && !def.out && !f.defenderGaveUp) {
+    // 3. Всё отбито + оба пасанули
+    if (unbeaten.length === 0 && bothPartnersPassed(room)
+        && def && def.isBot && !def.out && !f.defenderGaveUp) {
       const d = decide(room, def);
       if (d.length) return { bot: def, decisions: d };
     }
     return null;
   }
 
-  // Поля нет — просто ход
   const t = room.players[room.turnSeat];
   if (t && t.isBot && !t.out) {
     const d = decide(room, t);
@@ -156,18 +214,23 @@ function findActingBot(room) {
   return null;
 }
 
+// =====================================================================
+// ГЛАВНАЯ ТОЧКА ВХОДА
+// =====================================================================
 export function onRoomChange(io, room, broadcast) {
   if (room._botTimer) { clearTimeout(room._botTimer); room._botTimer = null; }
   if (room.phase !== 'playing') return;
 
-  const found = findActingBot(room);
-  if (!found) return;
+  // Быстрая проверка без решений
+  const peek = peekPendingBot(room);
+  if (!peek) return;
 
-  const { bot, decisions } = found;
-  const delay = (BOT_DELAY[bot.botType] || 1000) + Math.random() * 400;
+  const delay = (BOT_DELAY[peek.botType] || 1000) + Math.random() * 400;
   room._botTimer = setTimeout(() => {
     room._botTimer = null;
-    applyDecisions(room, bot, decisions);
-    // broadcast внутри emit — зациклит onRoomChange
+    // Свежее решение на актуальном состоянии
+    const found = findActingBot(room);
+    if (!found) return;
+    applyDecisions(room, found.bot, found.decisions);
   }, delay);
 }
