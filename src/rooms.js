@@ -33,9 +33,10 @@ export function newRoom(opts = {}) {
     log: [],
     lastAttacker: null,
     lastTarget: null,
-    forcedTarget: null,              // слот цели (0-3) после бито/подъёма
-    teamPairLastSlot: [null, null],  // 🆕 последний слот атаки команды (0/1)
-    teamLastTargetSlot: [null, null],// 🆕 последняя цель атаки команды (0/1)
+    forcedTarget: null,              // слот цели (0-3)
+    forcedAttackerSlot: null,        // слот атаки (для передачи доков/свопа)
+    teamPairLastSlot: [null, null],
+    teamLastTargetSlot: [null, null],
     roundHistory: [],
     playerStats: [0, 0, 0, 0],
     gameStartTime: null,

@@ -14,9 +14,10 @@ export function startRound(r, starterSeat = 0) {
   r.pendingFalsh = null;
   r.lastAttacker = null;
   r.lastTarget = null;
-  r.forcedTarget = null;                          // 🆕 слот цели
-  r.teamPairLastSlot = [null, null];              // 🆕 слоты атаки команды A/B
-  r.teamLastTargetSlot = [null, null];            // 🆕 цели атаки команды A/B
+  r.forcedTarget = null;
+  r.forcedAttackerSlot = null;
+  r.teamPairLastSlot = [null, null];
+  r.teamLastTargetSlot = [null, null];
   r.swapUsedByTeam = [false, false];
   if (!r.gameStartTime) r.gameStartTime = Date.now();
   r.phase = 'playing';
@@ -41,7 +42,6 @@ export function drawTo(r, prioritySeat = null) {
     if (!r.players[s].out && !order.includes(s)) order.push(s);
   }
 
-  // Добор до 6
   let changed = true;
   while (changed && r.deck.length > 0) {
     changed = false;
@@ -54,7 +54,6 @@ export function drawTo(r, prioritySeat = null) {
     }
   }
 
-  // Отдать козырь если колода пуста
   if (r.deck.length === 0 && r.trumpCard) {
     let target = null;
     for (const seat of order) {
@@ -69,7 +68,6 @@ export function drawTo(r, prioritySeat = null) {
     }
   }
 
-  // ✅ После добора помечаем out тех, у кого 0 карт и добор невозможен
   const deckEmpty = r.deck.length === 0 && !r.trumpCard;
   if (deckEmpty) {
     for (const p of r.players) {

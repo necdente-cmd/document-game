@@ -12,8 +12,6 @@ export function winByThrow(r, team, winnerSeat) {
     r.phase = 'gameEnd';
     r.winnerTeam = team;
     log(r, `🏆 Команда ${team ? 'B' : 'A'} — ЧЕМПИОН!`);
-
-    // 📊 Логирование статистики
     for (const p of r.players.filter(p => p.team === team)) {
       if (p.persistentId) {
         incrementStat(p.persistentId, 'rounds_won');
@@ -28,12 +26,8 @@ export function winByThrow(r, team, winnerSeat) {
   r.phase = 'roundEnd';
   r.pendingStart = { winningTeam: team };
   log(r, `Команда ${team ? 'B' : 'A'} выиграла кон. Счёт ${r.roundWins[0]}:${r.roundWins[1]}`);
-
-  // 📊 Логирование статистики
   for (const p of r.players.filter(p => p.team === team)) {
-    if (p.persistentId) {
-      incrementStat(p.persistentId, 'rounds_won');
-    }
+    if (p.persistentId) incrementStat(p.persistentId, 'rounds_won');
   }
   logEvent('roundWin', null, r.id, { team });
 }
@@ -44,12 +38,8 @@ export function winByExit(r, team) {
   r.phase = 'roundEnd';
   r.pendingStart = { winningTeam: team };
   log(r, `Команда ${team ? 'B' : 'A'} выиграла кон (все вышли). Счёт ${r.roundWins[0]}:${r.roundWins[1]}`);
-
-  // 📊 Логирование статистики
   for (const p of r.players.filter(p => p.team === team)) {
-    if (p.persistentId) {
-      incrementStat(p.persistentId, 'rounds_won');
-    }
+    if (p.persistentId) incrementStat(p.persistentId, 'rounds_won');
   }
   logEvent('roundWin', null, r.id, { team, byExit: true });
 }

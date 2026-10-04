@@ -48,40 +48,45 @@ export function isSlotActive(r, slot) {
   return playerAtSlot(r, slot) !== null;
 }
 
-// ✅ Следующий активный слот по часовой от fromSlot (не считая партнёрского)
-export function nextActiveSlot(r, fromSlot) {
+// ✅ Слоты, где реально играет игрок (свой + партнёрский если партнёр вышел)
+export function slotsOf(r, playerSeat) {
+  const result = [playerSeat];
+  const partner = r.players[partnerOf(playerSeat)];
+  if (partner && partner.out) result.push(partnerOf(playerSeat));
+  return result;
+}
+
+// ✅ Следующий активный слот по часовой от fromSlot.
+// ownerSeat — seat игрока, чьи слоты исключаем (нельзя атаковать себя)
+export function nextActiveSlot(r, fromSlot, ownerSeat = null) {
   const partnerSlot = partnerOf(fromSlot);
+  const mySlots = ownerSeat != null ? slotsOf(r, ownerSeat) : [fromSlot];
+
   for (let i = 1; i <= 3; i++) {
     const s = (fromSlot + i) % 4;
     if (s === partnerSlot) continue;
+    if (mySlots.includes(s)) continue;
     if (!isSlotActive(r, s)) continue;
     return s;
   }
   return null;
 }
 
-// ✅ Слоты, которыми играет игрок (если партнёр вышел — два слота)
-export function slotsOf(r, playerSeat) {
-  const partner = r.players[partnerOf(playerSeat)];
-  const result = [playerSeat];
-  if (partner && partner.out) result.push(partnerOf(playerSeat));
-  return result;
-}
-
-// ✅ Противники по seat (совместимо со старым кодом)
+// Противники по seat (совместимость)
 export function opponentsOf(r, attackerSeat) {
-  const partner = partnerOf(attackerSeat);
+  const mySlots = slotsOf(r, attackerSeat);
+  const partnerSlot = partnerOf(attackerSeat);
   const list = [];
   for (let i = 1; i <= 3; i++) {
     const s = (attackerSeat + i) % 4;
-    if (s === partner) continue;
+    if (s === partnerSlot) continue;
+    if (mySlots.includes(s)) continue;
     if (!isSlotActive(r, s)) continue;
     list.push(s);
   }
   return list;
 }
 
-// ✅ Первый противник (для совместимости)
 export function pickTarget(r, attackerSeat) {
   const list = opponentsOf(r, attackerSeat);
   return list.length > 0 ? list[0] : null;
