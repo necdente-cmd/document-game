@@ -1,9 +1,11 @@
 import { HAND_SIZE, SWAP_TIMEOUT_MS } from '../constants.js';
 import { shuffle, makeDeck } from '../utils.js';
 import { docsOf, log, clearSwapTimer } from '../rooms.js';
+import { resetMemory } from '../bots/memory.js';
 
 export function startRound(r, starterSeat = 0) {
   clearSwapTimer(r);
+  resetMemory(r);
   r.deck = shuffle(makeDeck());
   r.trumpCard = r.deck.shift();
   r.trumpSuit = r.trumpCard.s;

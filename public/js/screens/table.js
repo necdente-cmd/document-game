@@ -464,7 +464,7 @@ export function renderTable(app, navigate) {
     const emptySlots = Math.max(0, maxP - playersCount);
 
     const playerCards = s.players.map(p => {
-      const botBadge = p.isBot ? `<div class="wp-bot">🤖 BOT</div>` : '';
+      const botBadge = p.isBot ? `<div class="wp-bot">🧠 BOT</div>` : '';
       return `
       <div class="wp-card ${p.isHost?'host':''} ${p.isBot?'bot':''}">
         <div class="wp-avatar">${avatarHtml(getAvatar(p.seat))}</div>
@@ -523,8 +523,7 @@ export function renderTable(app, navigate) {
           : `<div class="waiting-hint">${t('lobby.waitingHost')}</div>`}
         ${isHost && playersCount < maxP ? `
           <div class="lobby-bot-buttons">
-            <button class="bot-btn" id="addSmartBtn">🤖 + Smart</button>
-            <button class="bot-btn" id="addGeniusBtn">🧠 + Genius</button>
+            <button class="bot-btn bot-btn-genius" id="addGeniusBtn">🧠 + Genius</button>
             <button class="bot-btn bot-btn-fill" id="fillBotsBtn">4 бота, старт</button>
           </div>` : ''}
       </div>`;
@@ -546,7 +545,7 @@ export function renderTable(app, navigate) {
   const seats = s.players.filter(p => p.seat !== mySeat).map(p => {
     const isThisInPassed = passedSeats.includes(p.seat);
     const offlineBadge = !p.connected ? `<div class="badge-off">⚠ ${t('state.offline')}</div>` : '';
-    const botBadge = p.isBot ? `<div class="badge-bot">🤖</div>` : '';
+    const botBadge = p.isBot ? `<div class="badge-bot">🧠</div>` : '';
     const posArr = ['bottom','left','top','right'];
     const pos = posArr[((p.seat - mySeat + 4) % 4)] || 'top';
     const st = playerState(s, p.seat);
@@ -824,13 +823,11 @@ export function renderTable(app, navigate) {
 
   const st = g('startBtn'); if (st) st.onclick = () => { playSound('button'); socket.emit('startGame'); };
 
-  // 🤖 Кнопки ботов
-  const asb = g('addSmartBtn');
-  if (asb) asb.onclick = () => { playSound('button'); socket.emit('addBot', { type: 'smart' }); };
+  // 🧠 Кнопки ботов
   const agb = g('addGeniusBtn');
-  if (agb) agb.onclick = () => { playSound('button'); socket.emit('addBot', { type: 'genius' }); };
+  if (agb) agb.onclick = () => { playSound('button'); socket.emit('addBot'); };
   const fbb = g('fillBotsBtn');
-  if (fbb) fbb.onclick = () => { playSound('button'); socket.emit('fillBots', { type: 'smart', start: true }); };
+  if (fbb) fbb.onclick = () => { playSound('button'); socket.emit('fillBots', { start: true }); };
 
   const pu = g('pickUpBtn');   if (pu) pu.onclick = () => { playSound('button'); socket.emit('pickUp'); state.defendTarget = null; };
   const th = g('throwBtn');    if (th) th.onclick = () => { playSound('button'); socket.emit('throwDocs'); };

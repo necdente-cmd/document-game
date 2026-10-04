@@ -7,6 +7,7 @@ import { docsOf, log, clearSwapTimer } from '../rooms.js';
 import { drawTo } from './round.js';
 import { winByThrow, checkTeamExitWin, onlyDocs, hasDefenderDoc } from './end.js';
 import { getMode } from './modes/index.js';
+import { notePlayed } from '../bots/memory.js';
 
 export function registerGameHandlers(io, socket, ctx) {
   const { rooms, broadcast, getMe, getRid, err } = ctx;
@@ -24,7 +25,6 @@ export function registerGameHandlers(io, socket, ctx) {
     let defenderSeat, isFirstAttack = false, attackerSlot, defenderSlot;
 
     if (r.field) {
-      // Продолжение атаки
       const attacker = r.field.attacker;
       const partnerSeat = partnerOf(attacker);
       if (p.seat !== attacker && p.seat !== partnerSeat) return err('Только атакующий или партнёр');
@@ -36,7 +36,6 @@ export function registerGameHandlers(io, socket, ctx) {
       isFirstAttack = true;
       if (r.turnSeat !== p.seat) return err('Не ваш ход');
 
-      // Слот атаки: forced (после передачи доков/свопа) или обычный
       if (r.forcedAttackerSlot != null) {
         attackerSlot = r.forcedAttackerSlot;
         r.forcedAttackerSlot = null;
@@ -44,7 +43,6 @@ export function registerGameHandlers(io, socket, ctx) {
         attackerSlot = mode.getAttackerSlot(r, p.seat);
       }
 
-      // Цель: forced или следующий по часовой
       if (r.forcedTarget != null) {
         defenderSlot = r.forcedTarget;
         r.forcedTarget = null;
@@ -52,7 +50,6 @@ export function registerGameHandlers(io, socket, ctx) {
         defenderSlot = nextActiveSlot(r, attackerSlot, p.seat);
       }
 
-      // Защита от атаки себя
       const defCheck = defenderSlot != null ? playerAtSlot(r, defenderSlot) : null;
       if (defCheck && defCheck.seat === p.seat) {
         defenderSlot = nextActiveSlot(r, defenderSlot, p.seat);
@@ -132,6 +129,7 @@ export function registerGameHandlers(io, socket, ctx) {
       const c = p.hand.splice(idx, 1)[0];
       const isForced = (c.r === defenderDoc);
       r.field.cards.push({ card: c, beatenBy: null, fromSeat: p.seat, isForced });
+      notePlayed(r, c);
     }
 
     log(r, `${p.name} (слот ${attackerSlot}) → ${cardIds.length} карт(ы) → ${defender.name}`);
@@ -154,6 +152,7 @@ export function registerGameHandlers(io, socket, ctx) {
     if (!beats(wc, entry.card, r)) return err('Не бьёт');
     p.hand.splice(idx, 1);
     entry.beatenBy = wc;
+    notePlayed(r, wc);
     log(r, `${p.name} бьёт ${entry.card.r}${entry.card.s} → ${wc.r}${wc.s}`);
     broadcast(r);
   });
@@ -246,7 +245,6 @@ export function registerGameHandlers(io, socket, ctx) {
 
     r.field = null;
 
-    // Если у защитника кончились карты — он вышел
     if (p.hand.length === 0) p.out = true;
 
     const mode = getMode(r);
@@ -300,7 +298,6 @@ export function registerGameHandlers(io, socket, ctx) {
     log(r, `${p.name} подтвердил документы ${requester.name} → ${partner.name}`);
     r.pendingPass = null;
     r.turnSeat = partner.seat;
-    // 🆕 Партнёр играет в слоте передавшего
     r.forcedAttackerSlot = requester.seat;
     r.forcedTarget = nextActiveSlot(r, requester.seat, partner.seat);
     r.lastAttacker = null;
@@ -410,7 +407,6 @@ export function registerGameHandlers(io, socket, ctx) {
     r.swapUsedByTeam[fromPlayer.team] = true;
     r.pendingSwap = null;
     r.turnSeat = toPlayer.seat;
-    // 🆕 Вернувшийся играет в слоте вышедшего (своём)
     r.forcedAttackerSlot = fromPlayer.seat;
     r.forcedTarget = nextActiveSlot(r, fromPlayer.seat, toPlayer.seat);
     log(r, `${fromPlayer.name} ↔ ${toPlayer.name} — своп завершён`);

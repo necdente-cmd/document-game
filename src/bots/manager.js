@@ -3,33 +3,31 @@ import { partnerOf, bothPartnersPassed, uid } from '../utils.js';
 import { registerGameHandlers } from '../game/actions.js';
 import { getRandomProfile } from './profiles.js';
 import { getMemory } from './memory.js';
-import { botDecideSmart } from './smart/index.js';
+import { botDecideGenius } from './genius/index.js';
 
-const BOT_DELAY = { smart: 1000, genius: 2500 };
+const BOT_DELAY = 1500;
 
 export function isBot(p) { return !!(p && p.isBot); }
 
-export function createBotPlayer(type, index) {
+export function createBotPlayer(index) {
   const profile = getRandomProfile();
-  const icon = type === 'genius' ? '🧠' : '🤖';
-  const label = type === 'genius' ? 'Genius' : 'Smart';
   return {
     id: 'bot_' + uid(),
-    name: `${icon} ${label} ${index}`,
+    name: `🧠 Genius ${index}`,
     seat: -1, team: -1,
     hand: [], connected: true, out: false,
     persistentId: null, avatar: '', voiceEnabled: false,
-    isBot: true, botType: type, botProfile: profile,
+    isBot: true, botType: 'genius', botProfile: profile,
     _socket: null,
   };
 }
 
-export function addBotToRoom(io, room, type, broadcast) {
+export function addBotToRoom(io, room, broadcast) {
   if (room.phase !== 'lobby') return null;
   if (room.players.length >= room.opts.maxPlayers) return null;
 
-  const n = room.players.filter(p => p.isBot && p.botType === type).length + 1;
-  const bot = createBotPlayer(type, n);
+  const n = room.players.filter(p => p.isBot).length + 1;
+  const bot = createBotPlayer(n);
   bot.seat = room.players.length;
   bot.team = bot.seat % 2;
   room.players.push(bot);
@@ -64,11 +62,7 @@ export function registerBotSocket(io, room, bot, broadcast) {
 }
 
 function decide(room, bot) {
-  if (bot.botType === 'genius') {
-    // TODO Этап 5 — пока используем Smart
-    return botDecideSmart(room, bot.seat, getMemory(room), bot.botProfile) || [];
-  }
-  return botDecideSmart(room, bot.seat, getMemory(room), bot.botProfile) || [];
+  return botDecideGenius(room, bot.seat, getMemory(room), bot.botProfile) || [];
 }
 
 function applyDecisions(room, bot, decisions) {
@@ -95,12 +89,7 @@ function applyDecisions(room, bot, decisions) {
   }
 }
 
-// =====================================================================
-// БЫСТРАЯ ПРОВЕРКА: кто потенциально сейчас может действовать?
-// НЕ принимает решений, только смотрит состояние.
-// =====================================================================
 function peekPendingBot(room) {
-  // Pending swap
   if (room.pendingSwap) {
     const sw = room.pendingSwap;
     if (sw.stage === 'partnerConfirm') {
@@ -113,46 +102,30 @@ function peekPendingBot(room) {
     }
     return null;
   }
-
-  // Pending pass docs
   if (room.pendingPass) {
     const req = room.players[room.pendingPass.seat];
     if (!req) return null;
     return room.players.find(x => x.team !== req.team && x.isBot) || null;
   }
-
-  // Есть поле
   if (room.field) {
     const f = room.field;
     const def = room.players[f.defender];
     const unbeaten = f.cards.some(e => !e.beatenBy);
-
-    // Защитник с неотбитыми
     if (unbeaten && def && def.isBot && !def.out && !f.defenderGaveUp) return def;
-
-    // Атакующий / партнёр
     for (const seat of [f.attacker, (f.attacker + 2) % 4]) {
       const b = room.players[seat];
       if (b && b.isBot && !b.out && !f.passedSeats.includes(seat)) return b;
     }
-
-    // Всё отбито + оба пасанули → защитник решает
     if (!unbeaten && bothPartnersPassed(room) && def && def.isBot && !def.out && !f.defenderGaveUp) {
       return def;
     }
     return null;
   }
-
-  // Поля нет — обычный ход
   const t = room.players[room.turnSeat];
   if (t && t.isBot && !t.out) return t;
   return null;
 }
 
-// =====================================================================
-// ПОЛНОЕ РЕШЕНИЕ (findActingBot). Вызывается ТОЛЬКО внутри таймера,
-// на свежих данных. Это исключает race condition и дубли логов.
-// =====================================================================
 function findActingBot(room) {
   if (room.pendingSwap) {
     const sw = room.pendingSwap;
@@ -166,7 +139,6 @@ function findActingBot(room) {
     }
     return null;
   }
-
   if (room.pendingPass) {
     const requester = room.players[room.pendingPass.seat];
     if (!requester) return null;
@@ -174,7 +146,6 @@ function findActingBot(room) {
     if (b) return { bot: b, decisions: [{ action: 'passDocsConfirm' }] };
     return null;
   }
-
   if (room.field) {
     const f = room.field;
     const def = room.players[f.defender];
@@ -182,13 +153,10 @@ function findActingBot(room) {
     const par = (atk + 2) % 4;
     const unbeaten = f.cards.filter(e => !e.beatenBy);
 
-    // 1. Защитник с неотбитыми
     if (unbeaten.length > 0 && def && def.isBot && !def.out && !f.defenderGaveUp) {
       const d = decide(room, def);
       if (d.length) return { bot: def, decisions: d };
     }
-
-    // 2. Атакующий / партнёр
     for (const seat of [atk, par]) {
       const b = room.players[seat];
       if (!b || !b.isBot || b.out) continue;
@@ -196,8 +164,6 @@ function findActingBot(room) {
       const d = decide(room, b);
       if (d.length) return { bot: b, decisions: d };
     }
-
-    // 3. Всё отбито + оба пасанули
     if (unbeaten.length === 0 && bothPartnersPassed(room)
         && def && def.isBot && !def.out && !f.defenderGaveUp) {
       const d = decide(room, def);
@@ -205,7 +171,6 @@ function findActingBot(room) {
     }
     return null;
   }
-
   const t = room.players[room.turnSeat];
   if (t && t.isBot && !t.out) {
     const d = decide(room, t);
@@ -214,21 +179,16 @@ function findActingBot(room) {
   return null;
 }
 
-// =====================================================================
-// ГЛАВНАЯ ТОЧКА ВХОДА
-// =====================================================================
 export function onRoomChange(io, room, broadcast) {
   if (room._botTimer) { clearTimeout(room._botTimer); room._botTimer = null; }
   if (room.phase !== 'playing') return;
 
-  // Быстрая проверка без решений
   const peek = peekPendingBot(room);
   if (!peek) return;
 
-  const delay = (BOT_DELAY[peek.botType] || 1000) + Math.random() * 400;
+  const delay = BOT_DELAY + Math.random() * 500;
   room._botTimer = setTimeout(() => {
     room._botTimer = null;
-    // Свежее решение на актуальном состоянии
     const found = findActingBot(room);
     if (!found) return;
     applyDecisions(room, found.bot, found.decisions);

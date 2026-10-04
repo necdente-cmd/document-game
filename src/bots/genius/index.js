@@ -10,11 +10,10 @@ function onlyDocs(room, seat) {
   return p.hand.length > 0 && p.hand.every(c => c.r === doc);
 }
 
-export function botDecideSmart(room, botSeat, memory, profile) {
+export function botDecideGenius(room, botSeat, memory, profile) {
   const bot = room.players[botSeat];
   if (!bot) return [];
 
-  // ---- Бот вышел: просит своп ----
   if (bot.out) {
     const partner = room.players[partnerOf(botSeat)];
     if (!partner || partner.out) return [];
@@ -25,14 +24,11 @@ export function botDecideSmart(room, botSeat, memory, profile) {
     return [{ action: 'swapAsk' }];
   }
 
-  // ---- Есть поле ----
   if (room.field) {
     const f = room.field;
 
-    // Защитник
     if (f.defender === botSeat) {
-      if (f.defenderGaveUp) return []; // уже сдался — ждём пас
-
+      if (f.defenderGaveUp) return [];
       const hasUnbeaten = f.cards.some(e => !e.beatenBy);
       if (!hasUnbeaten) {
         if (bothPartnersPassed(room)) {
@@ -45,7 +41,6 @@ export function botDecideSmart(room, botSeat, memory, profile) {
       return [defendDecision(room, botSeat, memory, profile)];
     }
 
-    // Атакующий или партнёр
     const attacker = f.attacker;
     const partner = partnerOf(attacker);
     if (botSeat === attacker || botSeat === partner) {
@@ -55,10 +50,8 @@ export function botDecideSmart(room, botSeat, memory, profile) {
     return [];
   }
 
-  // ---- Поля нет — обычный ход ----
   if (room.turnSeat !== botSeat) return [];
 
-  // Только доки?
   if (onlyDocs(room, botSeat)) {
     const partner = room.players[partnerOf(botSeat)];
     if (partner && partner.out) return [{ action: 'throwDocs' }];
@@ -66,7 +59,6 @@ export function botDecideSmart(room, botSeat, memory, profile) {
     return [];
   }
 
-  // Партнёр вышел, своп не использован — при сильной руке отдать партнёру
   const partner = room.players[partnerOf(botSeat)];
   if (partner && partner.out && !room.swapUsedByTeam[bot.team]) {
     const trumps = bot.hand.filter(c => c.s === room.trumpSuit).length;
@@ -75,7 +67,6 @@ export function botDecideSmart(room, botSeat, memory, profile) {
     }
   }
 
-  // Обычный заход
   const ids = pickLeadCards(room, botSeat, memory, profile);
   if (!ids.length) return [];
   return [{ action: 'attack', cardIds: ids }];

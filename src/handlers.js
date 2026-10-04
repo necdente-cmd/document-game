@@ -111,14 +111,14 @@ export function setupHandlers(io, broadcast) {
       broadcast(r);
     });
 
-    // 🎯 СИНХРОНИЗАЦИЯ
+    // СИНХРОНИЗАЦИЯ
     socket.on('syncState', () => {
       const r = rooms.get(rid); if (!r) return;
       const p = getMe(); if (!p) return;
       socket.emit('state', pub(r, p.id));
     });
 
-    // 🎯 РАССТАНОВКА
+    // РАССТАНОВКА
     socket.on('setSeatOrder', ({ order }) => {
       const r = rooms.get(rid); if (!r) return;
       if (r.hostId !== pid) return err('Только хост может менять расстановку');
@@ -266,7 +266,7 @@ export function setupHandlers(io, broadcast) {
       broadcast(r);
     });
 
-    // ==================== 🎤 ГОЛОС ====================
+    // ГОЛОС
     socket.on('voice-enabled', () => {
       const r = rooms.get(rid); if (!r) return;
       const p = getMe(); if (!p) return;
@@ -294,26 +294,24 @@ export function setupHandlers(io, broadcast) {
       io.to(to).emit('voice-signal', { from: pid, data });
     });
 
-    // ==================== 🤖 БОТЫ ====================
-    socket.on('addBot', ({ type } = {}) => {
+    // БОТЫ
+    socket.on('addBot', () => {
       const r = rooms.get(rid); if (!r) return;
       if (r.hostId !== pid) return err('Только хост');
       if (r.phase !== 'lobby') return err('Только в лобби');
       if (r.players.length >= r.opts.maxPlayers) return err('Комната заполнена');
-      const t = (type === 'genius') ? 'genius' : 'smart';
-      const bot = addBotToRoom(io, r, t, broadcast);
+      const bot = addBotToRoom(io, r, broadcast);
       if (!bot) return;
       log(r, `Добавлен ${bot.name}`);
       broadcast(r);
     });
 
-    socket.on('fillBots', ({ type, start } = {}) => {
+    socket.on('fillBots', ({ start } = {}) => {
       const r = rooms.get(rid); if (!r) return;
       if (r.hostId !== pid) return err('Только хост');
       if (r.phase !== 'lobby') return err('Только в лобби');
-      const t = (type === 'genius') ? 'genius' : 'smart';
       while (r.players.length < r.opts.maxPlayers) {
-        const bot = addBotToRoom(io, r, t, broadcast);
+        const bot = addBotToRoom(io, r, broadcast);
         if (!bot) break;
         log(r, `Добавлен ${bot.name}`);
       }
