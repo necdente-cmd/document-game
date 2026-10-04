@@ -51,6 +51,14 @@ export function pickLeadCards(room, botSeat, memory, profile) {
   return [best.id];
 }
 
+/**
+ * Добор карт к существующему столу.
+ *
+ * Логика:
+ *  - Если защитник сдался или просит вдогонку → можно докидывать мусор,
+ *    но не козыри и не доки (они уйдут защитнику).
+ *  - Иначе → добавляем только подходящие по рангу карты, недорогие.
+ */
 export function pickExtraCards(room, botSeat, memory, profile) {
   if (!room.field) return [];
   const bot = room.players[botSeat];
@@ -58,8 +66,6 @@ export function pickExtraCards(room, botSeat, memory, profile) {
   const myDoc = docs[bot.team];
   const defender = room.players[room.field.defender];
   const defDoc = docs[defender.team];
-
-  if (room.field.askMore || room.field.defenderGaveUp) return [];
 
   const space = room.field.limit - room.field.cards.length;
   if (space <= 0) return [];
@@ -70,32 +76,38 @@ export function pickExtraCards(room, botSeat, memory, profile) {
     if (e.beatenBy) ranksOnTable.add(e.beatenBy.r);
   }
 
+  // Мусорный режим: защитник сдался / просит вдогонку — можно скидывать
+  const dumpMode = room.field.defenderGaveUp || room.field.askMore;
+
+  // Кандидаты: подходящие по рангу или док защитника (форс)
   const cand = bot.hand.filter(c => {
-    if (c.r === myDoc) return false;
-    if (c.r === defDoc && defDoc !== myDoc) return true;
+    if (c.r === myDoc) return false; // свой док никогда
+    if (c.r === defDoc && defDoc !== myDoc) return true; // форс-добор
     return ranksOnTable.has(c.r);
   });
 
   if (!cand.length) return [];
 
+  // Сортируем по цене: сначала дешёвые
   cand.sort((a, b) => cardValue(a, room, botSeat) - cardValue(b, room, botSeat));
 
   const defHand = defender.hand.length;
-  const aggressive = defHand <= 3 || shouldPlayAggressive(room, botSeat);
-
+  const aggressive = dumpMode || defHand <= 3 || shouldPlayAggressive(room, botSeat);
   const threshold = aggressive ? 80 : 40 + profile.attackThreshold * 30;
 
   const chosen = [];
   for (const c of cand) {
     if (chosen.length >= space) break;
     const val = cardValue(c, room, botSeat);
-    if (!aggressive && val > threshold) continue;
+    // В мусорном режиме козыри не докидываем — они слишком ценны
     if (isKozir(c, room) && !aggressive) continue;
+    if (dumpMode && isKozir(c, room)) continue;
+    if (!aggressive && val > threshold) continue;
     chosen.push(c);
   }
 
   if (chosen.length > 0) {
-    blog(room, botSeat, `Подкидываю: ${chosen.map(c => c.r + c.s).join(' ')}`);
+    blog(room, botSeat, `Подкидываю: ${chosen.map(c => c.r + c.s).join(' ')}${dumpMode ? ' (мусор)' : ''}`);
   }
   return chosen.map(c => c.id);
 }

@@ -45,7 +45,8 @@ export function botDecideGenius(room, botSeat, memory, profile) {
     const partner = partnerOf(attacker);
     if (botSeat === attacker || botSeat === partner) {
       if (f.passedSeats.includes(botSeat)) return [];
-      return [passDecision(room, botSeat, memory, profile)];
+      const d = passDecision(room, botSeat, memory, profile);
+      return d ? [d] : [];
     }
     return [];
   }
