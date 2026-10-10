@@ -3,6 +3,7 @@ import { getDocs } from '../cards.js';
 import { pickLeadCards } from './attack.js';
 import { defendDecision } from './defend.js';
 import { passDecision } from './pass.js';
+import { iAmSoloOnTeam } from './partnership.js';
 
 function onlyDocs(room, seat) {
   const p = room.players[seat];
@@ -53,6 +54,7 @@ export function botDecideGenius(room, botSeat, memory, profile) {
 
   if (room.turnSeat !== botSeat) return [];
 
+  // Только доки?
   if (onlyDocs(room, botSeat)) {
     const partner = room.players[partnerOf(botSeat)];
     if (partner && partner.out) return [{ action: 'throwDocs' }];
@@ -60,10 +62,13 @@ export function botDecideGenius(room, botSeat, memory, profile) {
     return [];
   }
 
+  // Своп если партнёр вышел и у нас сильная рука
   const partner = room.players[partnerOf(botSeat)];
   if (partner && partner.out && !room.swapUsedByTeam[bot.team]) {
     const trumps = bot.hand.filter(c => c.s === room.trumpSuit).length;
-    if (trumps >= 3 && bot.hand.length >= 4) {
+    // 🆕 Только при сильной руке + если у нас >=3 козырей или >=2 крупных
+    const strongTrumps = bot.hand.filter(c => c.s === room.trumpSuit && ['Q','K','A'].includes(c.r)).length;
+    if (trumps >= 3 || strongTrumps >= 2) {
       return [{ action: 'swapInitiate' }];
     }
   }

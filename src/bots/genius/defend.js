@@ -1,7 +1,7 @@
 import { RV } from '../../constants.js';
-import { beats, isKozir } from '../../utils.js';
+import { beats, isKozir, partnerOf } from '../../utils.js';
 import { cardValue, getDocs } from '../cards.js';
-import { shouldPlayAggressive } from './evaluate.js';
+import { shouldPlayAggressive, shouldPlayConservatively, handStrength } from './evaluate.js';
 import { log as rlog } from '../../rooms.js';
 
 function blog(room, seat, msg) {
@@ -53,6 +53,16 @@ export function defendDecision(room, botSeat, memory, profile) {
   const handSize = bot.hand.length;
   const veryEarly = deckLeft >= 20;
 
+  // 🆕 Оценка руки защитника
+  const myStrength = handStrength(bot.hand, room, botSeat);
+  const conservatively = shouldPlayConservatively(room, botSeat);
+  const aggressive = shouldPlayAggressive(room, botSeat);
+
+  // Партнёрская логика: если партнёр вышел — мы один, экономим
+  const partner = room.players[partnerOf(botSeat)];
+  const partnerOut = !partner || partner.out;
+
+  // Планируем отбития
   const used = new Set();
   const planned = [];
   let totalCost = 0;
@@ -76,18 +86,21 @@ export function defendDecision(room, botSeat, memory, profile) {
     }
   }
 
-  // 2. Не всё бьётся — поднимаем
+  // Не всё бьётся
   if (unbeatable > 0) {
+    // Если мы одиноки и рука слабая — поднимаем сразу
+    if (partnerOut && myStrength < 30) {
+      blog(room, botSeat, `Слабый один — поднимаю (strength=${myStrength})`);
+      return { action: 'pickUp' };
+    }
     blog(room, botSeat, `Не могу побить ${unbeatable} — поднимаю`);
     return { action: 'pickUp' };
   }
 
   const ratio = totalField > 0 ? totalCost / totalField : 1;
-  const pos = shouldPlayAggressive(room, botSeat);
 
-  // ==================== 🔒 Q/K/A КОЗЫРИ ====================
+  // 🔒 Q/K/A КОЗЫРИ
   if (usesExpensiveTrump) {
-    // Не тратим Q/K/A козырь в начале/середине партии, если поле < 50
     if (!endgameish && totalField < 50) {
       blog(room, botSeat, `Q/K/A козырь — поле мало (field=${totalField|0}) — поднимаю`);
       return { action: 'pickUp' };
@@ -95,7 +108,7 @@ export function defendDecision(room, botSeat, memory, profile) {
     blog(room, botSeat, `Q/K/A козырь оправдан (field=${totalField|0})`);
   }
 
-  // ==================== 🔓 СРЕДНИЕ КОЗЫРИ (9/10/J) ====================
+  // 🔓 СРЕДНИЕ КОЗЫРИ
   if (usesMidTrump) {
     if (totalField < 15 && handSize <= 3) {
       blog(room, botSeat, `Средний козырь за мусор (${totalField|0}) — поднимаю`);
@@ -107,7 +120,28 @@ export function defendDecision(room, botSeat, memory, profile) {
     }
   }
 
-  // ==================== Общая проверка ====================
+  // 🆕 ОСТОРОЖНЫЙ РЕЖИМ (cautious) — поднимает больше
+  if (conservatively && !aggressive) {
+    if (ratio > 2.0 && totalField < 40) {
+      blog(room, botSeat, `Осторожный: ratio=${ratio.toFixed(2)} — поднимаю`);
+      return { action: 'pickUp' };
+    }
+    if (handSize <= 2 && ratio > 1.5) {
+      blog(room, botSeat, `Осторожный, мало карт (${handSize}) — поднимаю`);
+      return { action: 'pickUp' };
+    }
+  }
+
+  // 🆕 АГРЕССИВНЫЙ РЕЖИМ — бьёт даже дорого
+  if (aggressive) {
+    // Давит, только если рука позволяет
+    if (handSize >= 3) {
+      blog(room, botSeat, `Агрессивно отбиваю (ratio=${ratio.toFixed(2)})`);
+      return { action: 'defend', beats: planned };
+    }
+  }
+
+  // Стандартная логика
   if (handSize <= 2 && ratio > 3.0) {
     blog(room, botSeat, `Очень дорого (ratio=${ratio.toFixed(2)}, hand=${handSize}) — поднимаю`);
     return { action: 'pickUp' };
