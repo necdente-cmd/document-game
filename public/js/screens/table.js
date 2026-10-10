@@ -15,7 +15,7 @@ import {
   restartVoice, getVoiceDebugInfo, getAudioElements, streamIsLivePublic,
 } from '../voice.js';
 import { rankDisplay } from '../rank-display.js';
-import { t } from '../i18n.js';
+import { t, setLang, getLang } from '../i18n.js';
 
 let sortMode = 0;
 let infoOpen = false;
@@ -331,6 +331,148 @@ function renderSpectatorView(app, navigate) {
   `;
 }
 
+// ==================== 🏠 ЛОББИ (НОВЫЙ ДИЗАЙН) ====================
+function renderLobby(s, meP, isHost) {
+  const playersCount = s.players.length;
+  const maxP = s.opts.maxPlayers;
+  const emptySlots = Math.max(0, maxP - playersCount);
+  const curLang = getLang();
+
+  // Превью настроек комнаты
+  const docName = s.opts.docSet === 'short' ? t('create.docShort') : t('create.docClassic');
+  const themeNames = {
+    classic: t('create.themeClassic'),
+    dark: t('create.themeDark'),
+    neon: t('create.themeNeon'),
+    paper: t('create.themePaper'),
+  };
+  const themeName = themeNames[s.opts.theme] || s.opts.theme;
+
+  // 🎴 Разбиваем на 2 команды
+  const teamA = [0, 2].map(slot => s.players.find(p => p.seat === slot));
+  const teamB = [1, 3].map(slot => s.players.find(p => p.seat === slot));
+
+  const renderTeamSlot = (slot, player, teamCls) => {
+    const posName = ['A1','B2','A3','B4'][slot];
+    const isEmpty = !player;
+    const isMe = player && player.id === meP?.id;
+    const avatar = player ? avatarHtml(getAvatar(player.seat)) : '·';
+    const name = player ? esc(player.name) : t('lobby.emptySlot');
+    const botMark = player?.isBot ? `<span class="slot-bot">${t('lobby.botAvatar')}</span>` : '';
+    const hostMark = player?.isHost ? `<span class="slot-host">👑</span>` : '';
+    const meMark = isMe ? `<span class="slot-me">${t('lobby.you')}</span>` : '';
+
+    return `
+      <div class="team-slot ${teamCls} ${isEmpty ? 'empty' : ''} ${isMe ? 'is-me' : ''}">
+        <div class="slot-pos">${posName}</div>
+        <div class="slot-avatar">${avatar}</div>
+        <div class="slot-info">
+          <div class="slot-name">${hostMark}${name}${meMark}</div>
+          ${botMark ? `<div class="slot-tag">${botMark}</div>` : ''}
+        </div>
+      </div>
+    `;
+  };
+
+  // Расстановка — всегда видна
+  const seatOrderBlock = `
+    <div class="seat-order-block">
+      <div class="so-title">${t('lobby.seating')}${isHost ? ' ' + t('lobby.seatingHint') : ''}</div>
+      <div class="so-grid">
+        ${[0,1,2,3].map(slot => {
+          const posName = ['A1','B2','A3','B4'][slot];
+          const teamCls = slot % 2 === 0 ? 'team-a' : 'team-b';
+          const playerAtSlot = s.players.find(p => p.seat === slot);
+          if (!playerAtSlot) {
+            return `
+              <div class="so-player ${teamCls} empty">
+                <span class="so-pos">${posName}</span>
+                <span class="so-avatar">·</span>
+                <span class="so-name">${t('lobby.emptySlot')}</span>
+                <span class="so-team">${slot % 2 === 0 ? '★' : '✗'}</span>
+              </div>`;
+          }
+          const avatar = avatarHtml(getAvatar(playerAtSlot.seat));
+          const isMe = playerAtSlot.id === meP?.id;
+          const isPicked = state.swapPick === playerAtSlot.id;
+          const teamIcon = slot % 2 === 0 ? '★' : '✗';
+          const clickable = isHost ? 'so-clickable' : '';
+          return `
+            <div class="so-player ${teamCls} ${isPicked ? 'picked' : ''} ${clickable}" data-player-id="${playerAtSlot.id}">
+              <span class="so-pos">${posName}</span>
+              <span class="so-avatar">${avatar}</span>
+              <span class="so-name">${esc(playerAtSlot.name)}${isMe ? ' <small>' + t('lobby.you') + '</small>' : ''}</span>
+              <span class="so-team">${teamIcon}</span>
+            </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `;
+
+  return `
+    <div class="lobby">
+      <!-- 🆕 Верхняя панель: флажки + выход -->
+      <div class="lobby-topbar">
+        <div class="lobby-langs">
+          <button class="lang-btn ${curLang === 'ru' ? 'active' : ''}" data-lang="ru" title="Русский">🇷🇺</button>
+          <button class="lang-btn ${curLang === 'ky' ? 'active' : ''}" data-lang="ky" title="Кыргызча">🇰🇬</button>
+        </div>
+        <button class="leave-btn" id="leaveLobbyBtn" title="${t('lobby.leave')}">
+          🚪 ${t('lobby.leave')}
+        </button>
+      </div>
+
+      <!-- Лого + код -->
+      <img src="/logo.png" class="lobby-logo" alt="Документ">
+      <div class="waiting-label">${t('lobby.roomCode')}</div>
+      <button class="waiting-code" id="roomCode" title="${t('lobby.copyCode')}">${esc(s.id)}</button>
+
+      <!-- 🆕 Превью настроек -->
+      <div class="lobby-opts">
+        <span>🎴 ${docName}</span>
+        <span class="lobby-opts-dot">·</span>
+        <span>🎨 ${themeName}</span>
+      </div>
+
+      <!-- 🆕 Две команды -->
+      <div class="lobby-teams">
+        <div class="lobby-team team-a">
+          <div class="team-header">★ ${t('lobby.teamA')}</div>
+          ${renderTeamSlot(0, teamA[0], 'team-a')}
+          ${renderTeamSlot(2, teamA[1], 'team-a')}
+        </div>
+        <div class="lobby-team team-b">
+          <div class="team-header">✗ ${t('lobby.teamB')}</div>
+          ${renderTeamSlot(1, teamB[0], 'team-b')}
+          ${renderTeamSlot(3, teamB[1], 'team-b')}
+        </div>
+      </div>
+
+      <!-- Расстановка (всегда видна) -->
+      ${seatOrderBlock}
+
+      <!-- Статус -->
+      <div class="waiting-status">
+        ${playersCount} / ${maxP} ${t('lobby.players')} ${playersCount < maxP ? '<span class="dots"><span>.</span><span>.</span><span>.</span></span>' : ''}
+      </div>
+
+      <!-- Кнопка старта или ожидание -->
+      ${isHost && playersCount === maxP
+        ? `<button class="start-big" id="startBtn">${t('lobby.startGame')}</button>`
+        : isHost ? `<div class="waiting-hint">${t('lobby.waitingPlayers')}</div>`
+        : `<div class="waiting-hint">${t('lobby.waitingHost')}</div>`}
+
+      <!-- Кнопка бота -->
+      ${isHost && playersCount < maxP ? `
+        <div class="lobby-bot-buttons">
+          <button class="bot-btn bot-btn-genius" id="addGeniusBtn">
+            ${t('lobby.botAvatar')} ${t('lobby.addBot')}
+          </button>
+        </div>` : ''}
+    </div>
+  `;
+}
+
 export function renderTable(app, navigate) {
   const s = state.server;
   if (!s) return;
@@ -405,77 +547,7 @@ export function renderTable(app, navigate) {
   }
 
   // ==================== ЛОББИ ====================
-  let lobbyBar = '';
-  if (s.phase === 'lobby') {
-    const playersCount = s.players.length;
-    const maxP = s.opts.maxPlayers;
-    const isHost = meP?.isHost;
-    const emptySlots = Math.max(0, maxP - playersCount);
-
-    const playerCards = s.players.map(p => {
-      const botBadge = p.isBot ? `<div class="wp-bot">${t('lobby.botAvatar')} ${t('lobby.botBadge')}</div>` : '';
-      return `
-      <div class="wp-card ${p.isHost?'host':''} ${p.isBot?'bot':''}">
-        <div class="wp-avatar">${avatarHtml(getAvatar(p.seat))}</div>
-        <div class="wp-name">${esc(p.name)}</div>
-        ${p.isHost ? `<div class="wp-host">${t('lobby.host')}</div>` : ''}
-        ${botBadge}
-      </div>`;
-    }).join('');
-
-    const emptyCards = Array.from({ length: emptySlots }).map(() => `
-      <div class="wp-card wp-empty">
-        <div class="wp-avatar">·</div>
-        <div class="wp-name">${t('lobby.waitingSlot')}</div>
-      </div>
-    `).join('');
-
-    lobbyBar = `
-      <div class="waiting">
-        <img src="/logo.png" class="lobby-logo" alt="Документ">
-        <div class="waiting-label">${t('lobby.roomCode')}</div>
-        <button class="waiting-code" id="roomCode" title="${t('lobby.copyCode')}">${esc(s.id)}</button>
-        <div class="waiting-players-grid">
-          ${playerCards}${emptyCards}
-        </div>
-        ${playersCount === maxP ? `
-          <div class="seat-order-block">
-            <div class="so-title">${t('lobby.seating')}${isHost ? ' ' + t('lobby.seatingHint') : ''}</div>
-            <div class="so-grid">
-              ${[0,1,2,3].map(slot => {
-                const posName = ['A1','B2','A3','B4'][slot];
-                const teamCls = slot % 2 === 0 ? 'team-a' : 'team-b';
-                const playerAtSlot = s.players.find(p => p.seat === slot);
-                if (!playerAtSlot) return '';
-                const avatar = avatarHtml(getAvatar(playerAtSlot.seat));
-                const isMe = playerAtSlot.id === meP?.id;
-                const isPicked = state.swapPick === playerAtSlot.id;
-                const teamIcon = slot % 2 === 0 ? '★' : '✗';
-                const clickable = isHost ? 'so-clickable' : '';
-                return `
-                  <div class="so-player ${teamCls} ${isPicked ? 'picked' : ''} ${clickable}" data-player-id="${playerAtSlot.id}">
-                    <span class="so-pos">${posName}</span>
-                    <span class="so-avatar">${avatar}</span>
-                    <span class="so-name">${esc(playerAtSlot.name)}${isMe ? ' <small>' + t('lobby.you') + '</small>' : ''}</span>
-                    <span class="so-team">${teamIcon}</span>
-                  </div>`;
-              }).join('')}
-            </div>
-          </div>
-        ` : ''}
-        <div class="waiting-status">
-          ${playersCount} / ${maxP} ${t('lobby.players')} ${playersCount < maxP ? '<span class="dots"><span>.</span><span>.</span><span>.</span></span>' : ''}
-        </div>
-        ${isHost && playersCount === maxP
-          ? `<button class="start-big" id="startBtn">${t('lobby.startGame')}</button>`
-          : isHost ? `<div class="waiting-hint">${t('lobby.waitingPlayers')}</div>`
-          : `<div class="waiting-hint">${t('lobby.waitingHost')}</div>`}
-        ${isHost && playersCount < maxP ? `
-          <div class="lobby-bot-buttons">
-            <button class="bot-btn bot-btn-genius" id="addGeniusBtn">${t('lobby.botAvatar')} ${t('lobby.addBot')}</button>
-          </div>` : ''}
-      </div>`;
-  }
+  const lobbyBar = (s.phase === 'lobby') ? renderLobby(s, meP, meP?.isHost) : '';
 
   let passNotice = '';
   if (s.field && !s.pendingPass && !s.pendingSwap) {
@@ -724,6 +796,7 @@ export function renderTable(app, navigate) {
     };
   }
 
+  // 🆕 Копирование кода по тапу (как было)
   const roomCodeEl = g('roomCode');
   if (roomCodeEl) {
     roomCodeEl.onclick = async () => {
@@ -735,6 +808,24 @@ export function renderTable(app, navigate) {
       }
     };
   }
+
+  // 🆕 Переключение языка флажками
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.onclick = () => {
+      playSound('button');
+      setLang(btn.dataset.lang);
+      // Перерисуется через слушатель lang-change
+    };
+  });
+
+  // 🆕 Выход из лобби
+  const leaveBtn = g('leaveLobbyBtn');
+  if (leaveBtn) leaveBtn.onclick = () => {
+    playSound('button');
+    if (confirm(t('lobby.leaveConfirm'))) {
+      socket.emit('leaveRoom');
+    }
+  };
 
   if (meP?.isHost && s.phase === 'lobby') {
     document.querySelectorAll('.so-player').forEach(el => {
@@ -830,7 +921,6 @@ export function renderTable(app, navigate) {
     });
   }
 
-  // 🌐 Перерисовка при смене языка
   if (!window.__langChangeBound) {
     window.__langChangeBound = true;
     window.addEventListener('lang-change', () => {

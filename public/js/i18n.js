@@ -79,6 +79,12 @@ const RU = {
   'lobby.addBot': 'Добавить бота',
   'lobby.botBadge': 'БОТ',
   'lobby.botAvatar': '🤖',
+  'lobby.teamA': 'Команда A',
+  'lobby.teamB': 'Команда B',
+  'lobby.leave': 'Выйти',
+  'lobby.leaveConfirm': 'Покинуть комнату?',
+  'lobby.emptySlot': 'Пусто',
+  'lobby.communication': 'Связь',
 
   // ===== positions =====
   'pos.A1': 'A1',
@@ -389,6 +395,12 @@ const KY = {
   'lobby.addBot': 'Бот кошуу',
   'lobby.botBadge': 'БОТ',
   'lobby.botAvatar': '🤖',
+  'lobby.teamA': 'А командасы',
+  'lobby.teamB': 'Б командасы',
+  'lobby.leave': 'Чыгуу',
+  'lobby.leaveConfirm': 'Бөлмөдөн чыгасызбы?',
+  'lobby.emptySlot': 'Бош',
+  'lobby.communication': 'Байланыш',
 
   'state.beat': 'чабып жатат',
   'state.think': 'ойлонуп жатат',
