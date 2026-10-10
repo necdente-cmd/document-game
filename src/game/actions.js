@@ -8,8 +8,6 @@ import { drawTo } from './round.js';
 import { winByThrow, checkTeamExitWin, onlyDocs, hasDefenderDoc } from './end.js';
 import { getMode } from './modes/index.js';
 import { notePlayed } from '../bots/memory.js';
-import { noteForBotsWhosePartnerIs } from '../bots/adaptation.js';
-import { cardValue } from '../bots/cards.js';
 
 export function registerGameHandlers(io, socket, ctx) {
   const { rooms, broadcast, getMe, getRid, err } = ctx;
@@ -82,10 +80,22 @@ export function registerGameHandlers(io, socket, ctx) {
       }
     }
 
+    // 🎯 Проверка «навязанного документа»:
+    // 1) Наш док СТАРШЕ дока защитника
+    // 2) На столе УЖЕ есть карта-док защитника (защитник бил своим доком-козырем)
     const ladder = LADDERS[r.opts.docSet];
     const myDocIdx = ladder.indexOf(myDoc);
     const defDocIdx = ladder.indexOf(defenderDoc);
-    const canForceDoc = myDocIdx > defDocIdx;
+    const ourDocIsHigher = myDocIdx > defDocIdx;
+
+    const defenderDocOnTable = r.field
+      ? r.field.cards.some(e =>
+          e.card.r === defenderDoc ||
+          (e.beatenBy && e.beatenBy.r === defenderDoc)
+        )
+      : false;
+
+    const canForceDoc = ourDocIsHigher && defenderDocOnTable;
 
     for (const id of cardIds) {
       const c = p.hand.find(x => x.id === id);
@@ -131,23 +141,12 @@ export function registerGameHandlers(io, socket, ctx) {
       };
     }
 
-    // 🆕 Собираем карты для трекинга адаптации
-    const playedCards = [];
     for (const id of cardIds) {
       const idx = p.hand.findIndex(x => x.id === id);
       const c = p.hand.splice(idx, 1)[0];
       const isForced = (c.r === defenderDoc);
       r.field.cards.push({ card: c, beatenBy: null, fromSeat: p.seat, isForced });
       notePlayed(r, c);
-      playedCards.push(c);
-    }
-
-    // 🆕 Трекинг для ботов (если p — человек)
-    if (isFirstAttack) {
-      noteForBotsWhosePartnerIs(r, p.seat, 'attack', { cards: playedCards });
-    } else {
-      const isJunk = playedCards.every(c => cardValue(c, r, p.seat) < 40);
-      noteForBotsWhosePartnerIs(r, p.seat, 'extra', { count: playedCards.length, isJunk });
     }
 
     log(r, `${p.name} (слот ${attackerSlot}) → ${cardIds.length} карт(ы) → ${defender.name}`);
@@ -171,12 +170,6 @@ export function registerGameHandlers(io, socket, ctx) {
     p.hand.splice(idx, 1);
     entry.beatenBy = wc;
     notePlayed(r, wc);
-
-    // 🆕 Трекинг защиты
-    const fieldValue = cardValue(entry.card, r, p.seat);
-    const usedExpensiveTrump = isKozir(wc, r) && ['Q', 'K', 'A'].includes(wc.r);
-    noteForBotsWhosePartnerIs(r, p.seat, 'defend', { fieldValue, usedExpensiveTrump });
-
     log(r, `${p.name} бьёт ${entry.card.r}${entry.card.s} → ${wc.r}${wc.s}`);
     broadcast(r);
   });
@@ -227,12 +220,6 @@ export function registerGameHandlers(io, socket, ctx) {
     const p = getMe(); if (!p || r.field.defender !== p.seat) return err('Не вы защищаетесь');
     if (r.field.defenderGaveUp) return;
     r.field.defenderGaveUp = true;
-
-    // 🆕 Трекинг подъёма
-    let fieldVal = 0;
-    for (const e of r.field.cards) fieldVal += cardValue(e.card, r, p.seat);
-    noteForBotsWhosePartnerIs(r, p.seat, 'pickup', { fieldValue: fieldVal });
-
     log(r, `${p.name}: «Поднимаю» — ждём пас атакующих`);
     if (bothPartnersPassed(r)) {
       performPickup(r, p, r.field.attacker, r.field.defender);
@@ -251,10 +238,6 @@ export function registerGameHandlers(io, socket, ctx) {
     if (p.seat !== attacker && p.seat !== partnerSeat) return err('Только атакующий или партнёр');
     if (r.field.passedSeats.includes(p.seat)) return;
     r.field.passedSeats.push(p.seat);
-
-    // 🆕 Трекинг паса
-    noteForBotsWhosePartnerIs(r, p.seat, 'pass', { fieldCount: r.field.cards.length });
-
     log(r, `${p.name}: «Пас»`);
     if ((r.field.askMore || r.field.defenderGaveUp) && bothPartnersPassed(r)) {
       performPickup(r, r.players[r.field.defender], r.field.attacker, r.field.defender);

@@ -4,7 +4,6 @@ import { cardValue, getDocs } from '../cards.js';
 import { pDefenderBeats } from './probabilities.js';
 import { pickExactWinner, isEndgame } from './endgame.js';
 import { shouldPlayAggressive } from './evaluate.js';
-import { partnerNeedsHelp, isSafeExtraForPartner } from './partnership.js';
 import { log as rlog } from '../../rooms.js';
 
 function blog(room, seat, msg) {
@@ -16,14 +15,26 @@ function isExpensiveTrump(card, room) {
   return isKozir(card, room) && RV[card.r] >= RV['Q'];
 }
 
+/**
+ * Навязанный документ разрешён ТОЛЬКО если:
+ *  - наш док старше дока защитника
+ *  - на столе УЖЕ есть карта-док защитника (в непобитой или битой карте)
+ */
 function canForceDoc(room, botSeat, defSeat) {
+  if (!room.field) return false;
+
   const ladder = LADDERS[room.opts.docSet];
   const myDoc = ladder[room.teamStep[botSeat % 2]];
   const defDoc = ladder[room.teamStep[defSeat % 2]];
-  return ladder.indexOf(myDoc) > ladder.indexOf(defDoc);
+  const ourDocIsHigher = ladder.indexOf(myDoc) > ladder.indexOf(defDoc);
+  if (!ourDocIsHigher) return false;
+
+  return room.field.cards.some(e =>
+    e.card.r === defDoc ||
+    (e.beatenBy && e.beatenBy.r === defDoc)
+  );
 }
 
-// ==================== ENDGAME ====================
 export function tryEndgameLead(room, botSeat) {
   if (!isEndgame(room)) return null;
   const winner = pickExactWinner(room, botSeat);
@@ -34,7 +45,6 @@ export function tryEndgameLead(room, botSeat) {
   return null;
 }
 
-// ==================== ЗАХОД (первая атака) ====================
 export function pickLeadCards(room, botSeat, memory, profile) {
   const endgameChoice = tryEndgameLead(room, botSeat);
   if (endgameChoice) return endgameChoice;
@@ -45,48 +55,33 @@ export function pickLeadCards(room, botSeat, memory, profile) {
   const myTeam = botSeat % 2;
   const docs = getDocs(room);
   const myDoc = docs[myTeam];
-  if (!myDoc) return [];
-
-  const defenderSlot = (botSeat + 1) % 4;
-  const defender = room.players[defenderSlot];
-  const defenderCards = defender ? defender.hand.length : 0;
-  const aggressive = shouldPlayAggressive(room, botSeat);
-
-  // Все некозырные не-док карты
-  const nonTrump = bot.hand.filter(c => c.r !== myDoc && !isKozir(c, room));
-  const allCand = bot.hand.filter(c => c.r !== myDoc);
-
-  // 🆕 Стратегия выбора:
-  //  - Если врагов мало (<=3) → давим крупными
-  //  - Если врагов много (>=5) → тихая разведка мелкими
-  //  - Если есть пара одного ранга → заходим парой
-  //  - Иначе — золотая середина по формуле
-
-  let pool = nonTrump.length > 0 ? nonTrump : allCand;
-  if (!pool.length) return [];
-
-  // 🆕 Давим крупными если враг слаб
-  if (aggressive && defenderCards <= 3) {
-    // Ищем самую дорогую некозырную
-    let best = null, bestVal = -1;
-    for (const c of pool) {
-      const v = cardValue(c, room, botSeat);
-      if (v > bestVal) { bestVal = v; best = c; }
-    }
-    if (best) {
-      blog(room, botSeat, `Захожу крупной ${best.r}${best.s} (враг слаб, val=${bestVal|0})`);
-      return [best.id];
-    }
+  if (!myDoc) {
+    rlog(room, `[${bot.name}] ⚠ myDoc undefined (team=${myTeam})`);
+    return [];
   }
 
-  // Обычный режим — ищем самую «безопасную» дешёвую
+  const aggressive = shouldPlayAggressive(room, botSeat);
+
+  const allCand = bot.hand.filter(c => c.r !== myDoc);
+  if (!allCand.length) return [];
+
+  const nonTrump = allCand.filter(c => !isKozir(c, room));
+  const endgameish = isEndgame(room);
+  const safeCand = nonTrump.length > 0
+    ? nonTrump
+    : allCand.filter(c => !isExpensiveTrump(c, room) || endgameish);
+
+  const cand = safeCand.length > 0 ? safeCand : allCand;
+  if (!cand.length) return [];
+
+  const defenderSlot = (botSeat + 1) % 4;
+
   let best = null, bestScore = Infinity, bestInfo = '';
-  for (const c of pool) {
+  for (const c of cand) {
     const val = cardValue(c, room, botSeat);
     const risk = pDefenderBeats(room, botSeat, defenderSlot, c);
-    const kozirPenalty = isKozir(c, room) ? 100 : 0;
-    // 🆕 Меньше рискуем в начале игры, больше — в эндшпиле
-    const riskWeight = aggressive ? 15 : 45;
+    const kozirPenalty = isKozir(c, room) ? 80 : 0;
+    const riskWeight = aggressive ? 20 : 50;
     const score = val + kozirPenalty + risk * riskWeight;
     if (score < bestScore) {
       bestScore = score;
@@ -96,9 +91,9 @@ export function pickLeadCards(room, botSeat, memory, profile) {
   }
   if (!best) return [];
 
-  // 🆕 Заходим парой того же ранга (если есть и защитник может отбить 2)
-  const sameRank = pool.filter(c => c.r === best.r && c.id !== best.id);
-  if (sameRank.length > 0 && defenderCards >= 2) {
+  // Заход парой того же ранга
+  const sameRank = cand.filter(c => c.r === best.r && c.id !== best.id);
+  if (sameRank.length > 0 && room.players[defenderSlot]?.hand.length >= 2) {
     const pair = [best, sameRank[0]];
     blog(room, botSeat, `Захожу парой ${best.r}${best.s}+${sameRank[0].s} (${bestInfo})`);
     return pair.map(c => c.id);
@@ -108,7 +103,6 @@ export function pickLeadCards(room, botSeat, memory, profile) {
   return [best.id];
 }
 
-// ==================== ПОДКИДЫВАНИЕ ====================
 export function pickExtraCards(room, botSeat, memory, profile) {
   if (!room.field) return [];
   const bot = room.players[botSeat];
@@ -137,7 +131,6 @@ export function pickExtraCards(room, botSeat, memory, profile) {
   const dumpMode = room.field.defenderGaveUp || room.field.askMore;
   const canForce = canForceDoc(room, botSeat, room.field.defender);
 
-  // Кандидаты
   const cand = bot.hand.filter(c => {
     if (c.r === myDoc) return false;
     if (isKozir(c, room)) return false;
@@ -148,7 +141,6 @@ export function pickExtraCards(room, botSeat, memory, profile) {
 
   if (!cand.length) return [];
 
-  // Приоритет: навязанный док > безопасные для партнёра > дешёвые
   cand.sort((a, b) => {
     const aForce = canForce && a.r === defDoc ? 0 : 1;
     const bForce = canForce && b.r === defDoc ? 0 : 1;
@@ -158,14 +150,7 @@ export function pickExtraCards(room, botSeat, memory, profile) {
 
   const defHand = defender.hand.length;
   const aggressive = dumpMode || defHand <= 3 || shouldPlayAggressive(room, botSeat);
-
-  // 🆕 Партнёрская логика: если партнёр защитник и вот-вот поднимет — не подкидываем
-  const partnerIsDefender = partnerOf(botSeat) === room.field.defender;
-  const partnerGiveup = partnerIsDefender && room.field.defenderGaveUp;
-  if (partnerGiveup) {
-    // Партнёр поднимает — не помогаем врагам, лучше не подкидывать
-    return [];
-  }
+  const threshold = aggressive ? 80 : 40 + profile.attackThreshold * 30;
 
   const chosen = [];
   for (const c of cand) {
@@ -176,13 +161,7 @@ export function pickExtraCards(room, botSeat, memory, profile) {
       continue;
     }
     const val = cardValue(c, room, botSeat);
-    // 🆕 Мусор скидываем охотнее
-    const threshold = aggressive ? 80 : 40 + profile.dumpJunk * 30;
     if (!aggressive && val > threshold) continue;
-    // 🆕 Если партнёр в защите и не может побить эту карту — не подкидываем
-    if (partnerIsDefender && !isSafeExtraForPartner(room, botSeat, c)) {
-      continue;
-    }
     chosen.push(c);
   }
 
