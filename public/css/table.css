@@ -1642,7 +1642,7 @@
   color: rgba(255, 255, 255, 0.04);
   font-weight: 700;
   user-select: none;
-  animation: wlFloat 14s ease-in-out infinite;
+  animation: wlFloat 7sease-in-out infinite;
 }
 .wl-f1 { top: 8%;  left: 6%;  animation-delay: 0s;   font-size: 90px; }
 .wl-f2 { top: 22%; right: 8%; animation-delay: 2s;   color: rgba(220, 90, 90, 0.06); }
@@ -1683,19 +1683,96 @@
   border-color: rgba(100, 180, 255, 0.5);
 }
 
-/* Логотип */
+/* ==================== 🌟 ЛОГОТИП v2 ==================== */
+
+/* Контейнер с отражением */
 .wl-logo-wrap {
   position: relative;
-  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 4px;
 }
+
+/* Сам логотип */
 .wl-logo {
-  width: 110px;
-  height: 110px;
+  width: 120px;
+  height: 120px;
   object-fit: contain;
-  filter: drop-shadow(0 8px 24px rgba(100, 140, 255, 0.35));
-  animation: wlLogoPulse 4s ease-in-out infinite;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 210, 90, 0.75);
+  padding: 0;
+  flex-shrink: 0;
+
+  box-shadow:
+    inset 0 0 24px rgba(255, 210, 90, 0.18),
+    0 0 0 4px rgba(0, 0, 0, 0.35),
+    0 0 24px 6px rgba(255, 210, 90, 0.32),
+    0 10px 28px 6px rgba(0, 0, 0, 0.55);
+
+  animation: logoBreath 3.6s ease-in-out infinite;
+  transition: transform 0.25s ease;
+  will-change: transform, box-shadow;
 }
+
+.wl-logo:active {
+  transform: scale(0.96);
+  animation-play-state: paused;
+}
+
+@keyframes logoBreath {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow:
+      inset 0 0 24px rgba(255, 210, 90, 0.18),
+      0 0 0 4px rgba(0, 0, 0, 0.35),
+      0 0 24px 6px rgba(255, 210, 90, 0.32),
+      0 10px 28px 6px rgba(0, 0, 0, 0.55);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow:
+      inset 0 0 30px rgba(255, 210, 90, 0.28),
+      0 0 0 4px rgba(0, 0, 0, 0.35),
+      0 0 34px 10px rgba(255, 210, 90, 0.55),
+      0 10px 28px 6px rgba(0, 0, 0, 0.55);
+  }
+}
+
+/* Отражение под логотипом */
+.wl-logo-wrap::after {
+  content: '';
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 210, 90, 0.5) 0%,
+    rgba(255, 210, 90, 0.15) 40%,
+    transparent 75%
+  );
+  filter: blur(5px);
+  pointer-events: none;
+  animation: logoShadow 3.6s ease-in-out infinite;
+  z-index: -1;
+}
+
+@keyframes logoShadow {
+  0%, 100% {
+    opacity: 0.55;
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.15);
+  }
+}
+
 @keyframes wlLogoPulse {
   0%, 100% { transform: scale(1) translateY(0); }
   50%      { transform: scale(1.04) translateY(-4px); }
@@ -1839,15 +1916,24 @@
 
 /* Адаптив */
 @media (max-width: 380px) {
-  .wl-logo { width: 88px; height: 88px; }
-  .wl-title { font-size: 28px; letter-spacing: 3px; }
-  .wl-sub { font-size: 12px; }
-  .wl-actions { max-width: 280px; gap: 8px; }
-  .wl-btn { padding: 10px 14px; gap: 10px; }
-  .wl-btn-ico { font-size: 20px; width: 28px; }
-  .wl-btn-main { font-size: 14px; }
-  .wl-topbar { top: 10px; right: 10px; }
-  .wl-ico { width: 34px; height: 34px; font-size: 16px; }
+  .wl-logo {
+    width: 96px;
+    height: 96px;
+    border-radius: 20px;
+    border-width: 1.5px;
+  }
+  .wl-logo-wrap::after {
+    width: 70px;
+    bottom: -14px;
+  }
+}
+
+@media (min-width: 640px) {
+  .wl-logo {
+    width: 140px;
+    height: 140px;
+    border-radius: 28px;
+  }
 }
 
 /* Планшет / десктоп — чуть больше */
