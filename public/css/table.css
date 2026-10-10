@@ -1327,3 +1327,170 @@
   .lb-logo { width: 48px; height: 48px; }
   .lb-code { font-size: 18px; }
 }
+
+/* ==================== 📝 ОКНО СОЗДАНИЯ ИГРЫ ==================== */
+.cr-page {
+  position: absolute; inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(160deg, #0a0a1a 0%, #151528 100%);
+  overflow: hidden;
+}
+
+/* Sticky header */
+.cr-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: 48px 1fr 48px;
+  align-items: center;
+  padding: 10px 12px;
+  background: rgba(10, 10, 26, 0.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.cr-back {
+  width: 40px; height: 40px;
+  background: rgba(255,255,255,0.08);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.cr-back:active { background: rgba(255,255,255,0.16); }
+.cr-title {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cr-header-spacer { width: 40px; }
+
+/* Область скролла */
+.cr-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Секции */
+.cr-section {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.cr-sec-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #b8b8c8;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+/* Поле имени */
+.cr-input {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 15px;
+  font-family: inherit;
+  color: #fff;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.cr-input:focus {
+  border-color: rgba(100, 180, 255, 0.7);
+  box-shadow: 0 0 0 3px rgba(100, 180, 255, 0.15);
+}
+.cr-input::placeholder { color: #666; }
+
+/* Sticky footer */
+.cr-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  background: linear-gradient(0deg, rgba(10,10,26,0.98) 70%, rgba(10,10,26,0));
+}
+.cr-create {
+  width: 100%;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #2a9a3a, #4dc95d);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(77, 201, 93, 0.35);
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.cr-create:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 2px 8px rgba(77, 201, 93, 0.3);
+}
+.cr-create:disabled,
+.cr-create.disabled {
+  background: rgba(255,255,255,0.1);
+  color: #666;
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 0.6;
+}
+
+.cr-footer-spacer {
+  height: 8px;
+}
+
+/* Адаптив */
+@media (max-width: 380px) {
+  .cr-section { padding: 10px; border-radius: 12px; }
+  .cr-sec-title { font-size: 11px; margin-bottom: 8px; }
+  .cr-input { padding: 10px 12px; font-size: 14px; }
+  .cr-create { padding: 14px; font-size: 15px; }
+  .cr-back { width: 36px; height: 36px; font-size: 18px; }
+}
+
+/* Убеждаемся что в тёмной теме фон совпадает */
+[data-theme="neon"] .cr-page {
+  background: linear-gradient(160deg, #0a0a1a 0%, #1a0a2a 100%);
+}
+[data-theme="paper"] .cr-page {
+  background: linear-gradient(160deg, #f5f0e0 0%, #e8e0cc 100%);
+}
+[data-theme="paper"] .cr-section {
+  background: rgba(255,255,255,0.7);
+  border-color: rgba(0,0,0,0.1);
+}
+[data-theme="paper"] .cr-sec-title { color: #333; }
+[data-theme="paper"] .cr-title { color: #111; }
+[data-theme="paper"] .cr-input {
+  background: #fff;
+  color: #111;
+  border-color: rgba(0,0,0,0.15);
+}
+[data-theme="paper"] .cr-back {
+  background: rgba(0,0,0,0.08);
+  color: #111;
+}
+[data-theme="paper"] .cr-header {
+  background: rgba(245, 240, 224, 0.95);
+  border-bottom-color: rgba(0,0,0,0.1);
+}
+[data-theme="paper"] .cr-footer {
+  background: linear-gradient(0deg, rgba(232,224,204,0.98) 70%, rgba(232,224,204,0));
+}

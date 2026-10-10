@@ -76,57 +76,105 @@ export function renderCreate(app, navigate) {
   const showBackSection = (deckStyle === 'figures' || deckStyle === 'simple' || deckStyle === 'alt3');
 
   app.innerHTML = `
-    <div class="lobby">
-      <h2 style="text-align:center;">${t('create.title')}</h2>
-      <label>${t('create.yourName')}</label>
-      <input id="name" placeholder="${t('create.namePlaceholder')}" value="${savedName}">
-      <label>${t('create.avatar')}</label>
-      ${renderAvatarPicker()}
-
-      <label>${t('mode.title')}</label>
-      <div class="mode-grid" id="modePick">
-        <div class="mode-card ${pickedMode==='beginner'?'sel':''}" data-mode="beginner">
-          <div class="mode-title">🌱 ${t('mode.beginner')}</div>
-          <div class="mode-hint">${t('mode.beginnerHint')}</div>
-        </div>
-        <div class="mode-card ${pickedMode==='veteran'?'sel':''}" data-mode="veteran">
-          <div class="mode-title">🎖 ${t('mode.veteran')}</div>
-          <div class="mode-hint">${t('mode.veteranHint')}</div>
-        </div>
+    <div class="cr-page">
+      <div class="cr-header">
+        <button class="cr-back" id="backBtn" aria-label="Back">←</button>
+        <div class="cr-title">${t('create.title')}</div>
+        <div class="cr-header-spacer"></div>
       </div>
 
-      <label>${t('create.deckStyle')}</label>
-      <div class="choice-row deck-row" id="deckPick">${styles}</div>
+      <div class="cr-body">
 
-      <div id="backSection" style="${showBackSection ? '' : 'display:none'}">
-        <label>${t('create.backColor')}</label>
-        <div class="choice-row" id="backPick">${backs}</div>
+        <!-- 👤 Профиль -->
+        <section class="cr-section">
+          <div class="cr-sec-title">👤 ${t('create.yourName')}</div>
+          <input id="name" class="cr-input"
+                 placeholder="${t('create.namePlaceholder')}"
+                 value="${savedName}"
+                 maxlength="20"
+                 autocomplete="off">
+          <div class="cr-sec-title" style="margin-top:14px;">${t('create.avatar')}</div>
+          ${renderAvatarPicker()}
+        </section>
+
+        <!-- 🌱 Режим -->
+        <section class="cr-section">
+          <div class="cr-sec-title">🌱 ${t('mode.title')}</div>
+          <div class="mode-grid" id="modePick">
+            <div class="mode-card ${pickedMode==='beginner'?'sel':''}" data-mode="beginner">
+              <div class="mode-title">🌱 ${t('mode.beginner')}</div>
+              <div class="mode-hint">${t('mode.beginnerHint')}</div>
+            </div>
+            <div class="mode-card ${pickedMode==='veteran'?'sel':''}" data-mode="veteran">
+              <div class="mode-title">🎖 ${t('mode.veteran')}</div>
+              <div class="mode-hint">${t('mode.veteranHint')}</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 🎴 Колода -->
+        <section class="cr-section">
+          <div class="cr-sec-title">🎴 ${t('create.deckStyle')}</div>
+          <div class="choice-row deck-row" id="deckPick">${styles}</div>
+
+          <div id="backSection" style="${showBackSection ? '' : 'display:none'}">
+            <div class="cr-sec-title" style="margin-top:14px;">${t('create.backColor')}</div>
+            <div class="choice-row" id="backPick">${backs}</div>
+          </div>
+        </section>
+
+        <!-- 🎯 Документы -->
+        <section class="cr-section">
+          <div class="cr-sec-title">🎯 ${t('create.docSteps')}</div>
+          <div class="docset-grid" id="docsetPick">
+            <div class="docset-card ${pickedDocSet==='classic'?'sel':''}" data-docset="classic">
+              <div class="docset-name">${t('create.docClassic')}</div>
+              <div class="docset-steps">${stepsHtml(classicSteps)}</div>
+              <div class="docset-desc">${t('create.docClassicDesc')}</div>
+            </div>
+            <div class="docset-card ${pickedDocSet==='short'?'sel':''}" data-docset="short">
+              <div class="docset-name">${t('create.docShort')}</div>
+              <div class="docset-steps">${stepsHtml(shortSteps)}</div>
+              <div class="docset-desc">${t('create.docShortDesc')}</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 🎨 Тема стола -->
+        <section class="cr-section">
+          <div class="cr-sec-title">🎨 ${t('create.tableTheme')}</div>
+          <div class="theme-grid" id="themePick">${themesHtml}</div>
+        </section>
+
+        <div class="err" id="err"></div>
+
+        <!-- Нижний отступ под sticky кнопку -->
+        <div class="cr-footer-spacer"></div>
       </div>
 
-      <label>${t('create.docSteps')}</label>
-      <div class="docset-grid" id="docsetPick">
-        <div class="docset-card ${pickedDocSet==='classic'?'sel':''}" data-docset="classic">
-          <div class="docset-name">${t('create.docClassic')}</div>
-          <div class="docset-steps">${stepsHtml(classicSteps)}</div>
-          <div class="docset-desc">${t('create.docClassicDesc')}</div>
-        </div>
-        <div class="docset-card ${pickedDocSet==='short'?'sel':''}" data-docset="short">
-          <div class="docset-name">${t('create.docShort')}</div>
-          <div class="docset-steps">${stepsHtml(shortSteps)}</div>
-          <div class="docset-desc">${t('create.docShortDesc')}</div>
-        </div>
+      <!-- Sticky footer -->
+      <div class="cr-footer">
+        <button id="createBtn" class="cr-create" disabled>
+          ${t('create.createRoom')}
+        </button>
       </div>
-
-      <label>${t('create.tableTheme')}</label>
-      <div class="theme-grid" id="themePick">${themesHtml}</div>
-      <button id="createBtn" style="padding:16px; margin-top:12px;">${t('create.createRoom')}</button>
-      <button id="backBtn" style="background:#95a5a6; color:#000;">${t('common.back')}</button>
-      <div class="err" id="err"></div>
     </div>`;
 
   let pickedDeck = deckStyle, pickedBack = backColor;
 
   bindAvatarPicker();
+
+  // Валидация имени
+  const nameInput = document.getElementById('name');
+  const createBtn = document.getElementById('createBtn');
+
+  function validateName() {
+    const ok = (nameInput.value || '').trim().length > 0;
+    createBtn.disabled = !ok;
+    createBtn.classList.toggle('disabled', !ok);
+  }
+  nameInput.addEventListener('input', validateName);
+  validateName();
 
   document.getElementById('modePick').onclick = e => {
     const el = e.target.closest('[data-mode]'); if (!el) return;
@@ -164,8 +212,8 @@ export function renderCreate(app, navigate) {
 
   document.getElementById('backBtn').onclick = () => navigate('welcome');
 
-  document.getElementById('createBtn').onclick = () => {
-    const name = document.getElementById('name').value.trim() || t('common.player');
+  createBtn.onclick = () => {
+    const name = nameInput.value.trim() || t('common.player');
     const finalAvatar = getFinalAvatar();
 
     const opts = {
