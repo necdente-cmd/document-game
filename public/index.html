@@ -13,26 +13,29 @@
 </head>
 <body>
 
-<!-- 🎬 SPLASH: падающие карты → сбор в колоду → название -->
+<!-- 🎬 SPLASH: 4 масти из углов → центр → БУМ → логотип -->
 <div id="splash" class="splash">
-  <div class="splash-inner">
 
-    <div class="splash-ranks" id="splashRanks">
-      <div class="sr" style="--i:0; --r:-8deg">A<span class="suit black">♠</span></div>
-      <div class="sr" style="--i:1; --r:5deg">K<span class="suit red">♥</span></div>
-      <div class="sr" style="--i:2; --r:-3deg">Q<span class="suit red">♦</span></div>
-      <div class="sr" style="--i:3; --r:9deg">J<span class="suit black">♣</span></div>
-      <div class="sr" style="--i:4; --r:-5deg" data-rank="10">10<span class="suit black">♠</span></div>
-      <div class="sr" style="--i:5; --r:6deg">9<span class="suit red">♥</span></div>
-      <div class="sr" style="--i:6; --r:-7deg">8<span class="suit red">♦</span></div>
-      <div class="sr" style="--i:7; --r:4deg">7<span class="suit black">♣</span></div>
-      <div class="sr" style="--i:8; --r:-2deg">6<span class="suit black">♠</span></div>
-    </div>
+  <!-- 4 масти по углам -->
+  <div class="splash-suits">
+    <div class="suit s-tl">♠</div>
+    <div class="suit s-tr">♥</div>
+    <div class="suit s-bl">♦</div>
+    <div class="suit s-br">♣</div>
+  </div>
 
+  <!-- Взрыв -->
+  <div class="splash-boom" id="splashBoom">
+    <div class="splash-flash"></div>
+  </div>
+
+  <!-- Логотип + название -->
+  <div class="splash-content">
+    <img src="/logo.png" class="splash-logo" alt="Документ">
     <div class="splash-title">Документ</div>
     <div class="splash-sub">Карточная игра · 2×2</div>
-
   </div>
+
 </div>
 
 <div id="app"></div>
