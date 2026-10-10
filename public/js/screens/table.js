@@ -352,7 +352,6 @@ function renderLobby(s, meP, isHost) {
     const meMark = isMe ? `<span class="slot-me">${t('lobby.you')}</span>` : '';
     const picked = state.swapPick === player?.id;
 
-    // Тапабельно только если все 4 набрались + хост
     const clickable = (allReady && isHost && player) ? 'so-clickable' : '';
 
     return `
@@ -367,7 +366,6 @@ function renderLobby(s, meP, isHost) {
 
   return `
     <div class="lobby">
-      <!-- Верхняя панель: флажки + выход -->
       <div class="lobby-topbar">
         <div class="lobby-langs">
           <button class="lang-btn ${curLang === 'ru' ? 'active' : ''}" data-lang="ru" title="Русский">🇷🇺</button>
@@ -378,12 +376,10 @@ function renderLobby(s, meP, isHost) {
         </button>
       </div>
 
-      <!-- Лого + код -->
       <img src="/logo.png" class="lobby-logo" alt="Документ">
       <div class="waiting-label">${t('lobby.roomCode')}</div>
       <button class="waiting-code" id="roomCode" title="${t('lobby.copyCode')}">${esc(s.id)}</button>
 
-      <!-- 🎯 Единый блок: 2 команды + слоты -->
       <div class="lobby-seats ${allReady && isHost ? 'interactive' : ''}">
         <div class="lobby-team team-a">
           <div class="team-header">★ ${t('lobby.teamA')}</div>
@@ -397,24 +393,20 @@ function renderLobby(s, meP, isHost) {
         </div>
       </div>
 
-      <!-- Подсказка расстановки -->
       ${allReady && isHost ? `
         <div class="seat-hint">${t('lobby.seating')} ${t('lobby.seatingHint')}</div>
       ` : ''}
 
-      <!-- Большая кнопка бота -->
       ${isHost && !allReady ? `
         <button class="lobby-addbot-btn" id="addGeniusBtn">
           ${t('lobby.botAvatar')} ${t('lobby.addBot')}
         </button>
       ` : ''}
 
-      <!-- Статус -->
       <div class="waiting-status">
         ${playersCount} / ${maxP} ${t('lobby.players')} ${!allReady ? '<span class="dots"><span>.</span><span>.</span><span>.</span></span>' : ''}
       </div>
 
-      <!-- Кнопка старта -->
       ${isHost && allReady
         ? `<button class="start-big" id="startBtn">${t('lobby.startGame')}</button>`
         : !isHost ? `<div class="waiting-hint">${t('lobby.waitingHost')}</div>` : ''}
@@ -434,6 +426,100 @@ export function renderTable(app, navigate) {
   loadMode();
   const veteran = isVeteran();
 
+  const mySeat = s.mySeat;
+  const myTeam = s.myTeam;
+  const myDoc = s.docs[myTeam];
+  const oppDoc = s.docs[1 - myTeam];
+  const meP = s.players.find(p => p.seat === mySeat);
+
+  // ==================== 🏠 ЛОББИ ====================
+  if (s.phase === 'lobby') {
+    app.innerHTML = `
+      <div class="table lobby-mode" id="table">
+        ${renderLobby(s, meP, meP?.isHost)}
+      </div>
+    `;
+
+    const swipeEl = document.getElementById('swipeIcons');
+    if (swipeEl) swipeEl.classList.remove('show');
+    const trigEl = document.getElementById('swipeTrigger');
+    if (trigEl) trigEl.classList.add('hidden');
+
+    const g = id => document.getElementById(id);
+
+    const roomCodeEl = g('roomCode');
+    if (roomCodeEl) {
+      roomCodeEl.onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(s.id);
+          toastOk(t('toast.codeCopied') + ': ' + s.id);
+        } catch {
+          toastErr(t('toast.copyFailed'));
+        }
+      };
+    }
+
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.onclick = () => { playSound('button'); setLang(btn.dataset.lang); };
+    });
+
+    const leaveBtn = g('leaveLobbyBtn');
+    if (leaveBtn) leaveBtn.onclick = () => {
+      playSound('button');
+      socket.emit('leaveRoom');
+      setTimeout(() => { try { window.location.reload(); } catch {} }, 300);
+    };
+
+    const agb = g('addGeniusBtn');
+    if (agb) agb.onclick = () => { playSound('button'); socket.emit('addBot'); };
+
+    const st = g('startBtn');
+    if (st) st.onclick = () => { playSound('button'); socket.emit('startGame'); };
+
+    if (meP?.isHost && s.players.length === s.opts.maxPlayers) {
+      document.querySelectorAll('.team-slot[data-player-id]').forEach(el => {
+        el.onclick = () => {
+          const playerId = el.dataset.playerId;
+          if (!playerId) return;
+          if (!state.swapPick) {
+            state.swapPick = playerId;
+            playSound('button');
+            renderTable(app, navigate);
+            return;
+          }
+          if (state.swapPick === playerId) {
+            state.swapPick = null;
+            playSound('button');
+            renderTable(app, navigate);
+            return;
+          }
+          const p1 = s.players.find(p => p.id === state.swapPick);
+          const p2 = s.players.find(p => p.id === playerId);
+          if (!p1 || !p2) return;
+          const sorted = s.players.slice().sort((a,b) => a.seat - b.seat);
+          const order = sorted.map(p => p.id);
+          order[p1.seat] = p2.id;
+          order[p2.seat] = p1.id;
+          state.swapPick = null;
+          playSound('falsh');
+          socket.emit('setSeatOrder', { order });
+        };
+      });
+    } else {
+      state.swapPick = null;
+    }
+
+    if (!window.__langChangeBound) {
+      window.__langChangeBound = true;
+      window.addEventListener('lang-change', () => {
+        if (document.getElementById('table')) renderTable(app, navigate);
+      });
+    }
+
+    return;
+  }
+
+  // ==================== ИГРА ====================
   if (s.phase === 'playing' || s.phase === 'roundEnd') {
     preloadDeck(s.opts?.deckStyle || 'figures');
   }
@@ -442,11 +528,6 @@ export function renderTable(app, navigate) {
   applyTheme(s.opts.theme);
   setupSwipe();
 
-  const mySeat = s.mySeat;
-  const myTeam = s.myTeam;
-  const myDoc = s.docs[myTeam];
-  const oppDoc = s.docs[1 - myTeam];
-  const meP = s.players.find(p => p.seat === mySeat);
   const iAmOut = meP?.out;
   const isMyTurn = s.turnSeat === mySeat;
   const canDefend = s.field && s.field.defender === mySeat;
@@ -494,9 +575,6 @@ export function renderTable(app, navigate) {
       if (!canBeatAny) canAskMore = true;
     }
   }
-
-  // ==================== ЛОББИ ====================
-  const lobbyBar = (s.phase === 'lobby') ? renderLobby(s, meP, meP?.isHost) : '';
 
   let passNotice = '';
   if (s.field && !s.pendingPass && !s.pendingSwap) {
@@ -666,7 +744,6 @@ export function renderTable(app, navigate) {
 
   app.innerHTML = `
     <div class="table ${myTurnNow ? 'my-turn' : ''} ${iAmDefending ? 'my-defend' : ''}" id="table">
-      ${lobbyBar}
       ${passNotice}
       ${scoreCorner}
       ${deckArea}
@@ -745,74 +822,8 @@ export function renderTable(app, navigate) {
     };
   }
 
-  // Копирование кода
-  const roomCodeEl = g('roomCode');
-  if (roomCodeEl) {
-    roomCodeEl.onclick = async () => {
-      try {
-        await navigator.clipboard.writeText(s.id);
-        toastOk(t('toast.codeCopied') + ': ' + s.id);
-      } catch {
-        toastErr(t('toast.copyFailed'));
-      }
-    };
-  }
-
-  // Переключение языка
-  document.querySelectorAll('.lang-btn').forEach(btn => {
-    btn.onclick = () => {
-      playSound('button');
-      setLang(btn.dataset.lang);
-    };
-  });
-
-  // 🚪 Выход (без confirm, с reload)
-  const leaveBtn = g('leaveLobbyBtn');
-  if (leaveBtn) leaveBtn.onclick = () => {
-    playSound('button');
-    socket.emit('leaveRoom');
-    setTimeout(() => {
-      try { window.location.reload(); } catch {}
-    }, 300);
-  };
-
-  // 🎯 Тап-расстановка (только если все 4 + хост)
-  if (meP?.isHost && s.phase === 'lobby' && s.players.length === s.opts.maxPlayers) {
-    document.querySelectorAll('.team-slot[data-player-id]').forEach(el => {
-      el.onclick = () => {
-        const playerId = el.dataset.playerId;
-        if (!playerId) return;
-        if (!state.swapPick) {
-          state.swapPick = playerId;
-          playSound('button');
-          renderTable(app, navigate);
-          return;
-        }
-        if (state.swapPick === playerId) {
-          state.swapPick = null;
-          playSound('button');
-          renderTable(app, navigate);
-          return;
-        }
-        const p1 = s.players.find(p => p.id === state.swapPick);
-        const p2 = s.players.find(p => p.id === playerId);
-        if (!p1 || !p2) return;
-        const sorted = s.players.slice().sort((a,b) => a.seat - b.seat);
-        const order = sorted.map(p => p.id);
-        order[p1.seat] = p2.id;
-        order[p2.seat] = p1.id;
-        state.swapPick = null;
-        playSound('falsh');
-        socket.emit('setSeatOrder', { order });
-      };
-    });
-  } else {
-    state.swapPick = null;
-  }
-
   const st = g('startBtn'); if (st) st.onclick = () => { playSound('button'); socket.emit('startGame'); };
 
-  // 🤖 Добавить бота
   const agb = g('addGeniusBtn');
   if (agb) agb.onclick = () => { playSound('button'); socket.emit('addBot'); };
 
@@ -865,15 +876,6 @@ export function renderTable(app, navigate) {
   if (!window.__voiceSpeakingBound) {
     window.__voiceSpeakingBound = true;
     window.addEventListener('voice-speaking-change', () => {
-      if (document.getElementById('table')) {
-        renderTable(app, navigate);
-      }
-    });
-  }
-
-  if (!window.__langChangeBound) {
-    window.__langChangeBound = true;
-    window.addEventListener('lang-change', () => {
       if (document.getElementById('table')) {
         renderTable(app, navigate);
       }
