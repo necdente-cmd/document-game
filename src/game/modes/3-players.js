@@ -28,37 +28,45 @@ function samePair(a, b) {
 /**
  * После БИТО в 3p.
  *
- * @param {object} r          — комната
- * @param {object} defender   — игрок-защитник
- * @param {number} defenderSlot — слот, в котором защищался
- * @param {number} attackerSeat — seat атакующего (того, кто атаковал до бито)
+ * Порядок проверок:
+ *  1. Если защитник вышел → играет партнёр ИЗ СЛОТА ВЫШЕДШЕГО,
+ *     цель по циклу. Контратака/дуэль НЕ применяются.
+ *  2. Если защитник в игре:
+ *     a. дуэль завершена → атакует из слота защиты, цель по циклу
+ *     b. дуэль не завершена → контратака на того, кто атаковал
  */
 export function afterBito(r, defender, defenderSlot, attackerSeat) {
-  let turnPlayer = defender;
   let fromSlot = defenderSlot != null ? defenderSlot : defender.seat;
 
-  // Пара игроков, которые только что участвовали в дуэли
-  const currentPair = attackerSeat != null ? [attackerSeat, defender.seat] : null;
-  const duelDone = currentPair && samePair(currentPair, r.lastDuelPair);
-
-  // Если защитник вышел — играет партнёр из слота вышедшего
+  // === 1. ЗАЩИТНИК ВЫШЕЛ ===
   if (defender.out) {
     const partnerSeat = partnerOf(defender.seat);
     const partner = r.players[partnerSeat];
-    if (partner && !partner.out) {
-      turnPlayer = partner;
-      fromSlot = defender.seat;
-    } else {
+    if (!partner || partner.out) {
       return null;
     }
+    // Партнёр играет за вышедшего. Дуэль обнуляем (партнёр не участвовал).
+    r.lastDuelPair = null;
+    const nextSlot = nextActiveSlot(r, fromSlot, partner.seat);
+    return {
+      turnSeat: partner.seat,
+      attackerSlot: fromSlot,        // ← слот вышедшего (не свой!)
+      targetSlot: nextSlot,
+      targetSeat: nextSlot != null ? playerAtSlot(r, nextSlot).seat : null,
+      isContrAttack: false,
+    };
   }
 
+  // === 2. ЗАЩИТНИК В ИГРЕ ===
+  const currentPair = attackerSeat != null ? [attackerSeat, defender.seat] : null;
+  const duelDone = currentPair && samePair(currentPair, r.lastDuelPair);
+
   if (duelDone) {
-    // 🔒 Дуэль завершена — защитник НЕ контратакует. Ход по циклу от слота защиты.
+    // Дуэль завершена — атакует из слота защиты, цель по циклу
     r.lastDuelPair = null;
-    const nextSlot = nextActiveSlot(r, fromSlot, turnPlayer.seat);
+    const nextSlot = nextActiveSlot(r, fromSlot, defender.seat);
     return {
-      turnSeat: turnPlayer.seat,
+      turnSeat: defender.seat,
       attackerSlot: fromSlot,
       targetSlot: nextSlot,
       targetSeat: nextSlot != null ? playerAtSlot(r, nextSlot).seat : null,
@@ -66,12 +74,12 @@ export function afterBito(r, defender, defenderSlot, attackerSeat) {
     };
   }
 
-  // ⚔ Контратака — атакуем НАПРЯМУЮ того, кто только что атаковал.
+  // Контратака — бьёт того, кто только что атаковал
   r.lastDuelPair = currentPair ? [...currentPair] : null;
   return {
-    turnSeat: turnPlayer.seat,
+    turnSeat: defender.seat,
     attackerSlot: fromSlot,
-    targetSlot: attackerSeat,        // слот = seat атакующего (в 4-местной сетке)
+    targetSlot: attackerSeat,
     targetSeat: attackerSeat,
     isContrAttack: true,
   };
