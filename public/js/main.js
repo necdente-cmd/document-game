@@ -83,11 +83,10 @@ window.addEventListener('lang-change-requested', () => {
 });
 
 // ====================================================================
-// 🎬 SPLASH v5 — лого → название → 4 масти → свечение (4.2 сек)
+// 🎬 SPLASH v6 — лого → название → 4 масти → плавный переход (4 сек)
 // ====================================================================
-const SPLASH_DURATION = 4200;
+const SPLASH_DURATION = 4000;
 
-// Web Audio
 let _audioCtx = null;
 function getAudioCtx() {
   if (_audioCtx) return _audioCtx;
@@ -141,27 +140,6 @@ function playClick(freq = 900) {
   } catch {}
 }
 
-// Финальный "воosh"
-function playWhoosh() {
-  const ctx = getAudioCtx();
-  if (!ctx) return;
-  if (ctx.state === 'suspended') ctx.resume().catch(() => {});
-  try {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(400, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(1400, ctx.currentTime + 0.6);
-    gain.gain.setValueAtTime(0.001, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.07, ctx.currentTime + 0.1);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.7);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.75);
-  } catch {}
-}
-
 function vibrate(pattern) {
   try {
     if (navigator.vibrate) navigator.vibrate(pattern);
@@ -173,7 +151,7 @@ function hideSplash() {
   if (!sp || sp.__hidden) return;
   sp.__hidden = true;
   sp.classList.add('hide');
-  setTimeout(() => { try { sp.remove(); } catch {} }, 700);
+  setTimeout(() => { try { sp.remove(); } catch {} }, 900);
 }
 
 function initSplash() {
@@ -184,42 +162,31 @@ function initSplash() {
   if (shownSplash) { hideSplash(); return; }
   sessionStorage.setItem('splashShown', '1');
 
-  // Тап-пропуск
   const onTap = () => hideSplash();
   sp.addEventListener('click', onTap, { once: true });
   sp.addEventListener('touchstart', onTap, { once: true, passive: true });
 
-  // 0.0с — появление логотипа
+  // 0.1с — появление логотипа
   setTimeout(() => {
     playTing();
     vibrate(20);
   }, 100);
 
-  // 1.0-2.0с — падают 4 масти
+  // 1.0-1.5с — падают 4 масти
   [0, 1, 2, 3].forEach(i => {
-    const t = 1000 + i * 150 + 500; // падение = старт + 500мс длительность
+    const t = 1000 + i * 150 + 500;
     setTimeout(() => {
       playClick(720 + i * 80);
       vibrate(12);
     }, t);
   });
 
-  // 2.6с — свечение + whoosh
-  setTimeout(() => {
-    playWhoosh();
-    vibrate([40, 30, 100]);
-    const flash = document.getElementById('splashFlash');
-    if (flash) flash.classList.add('show');
-    if (sp) sp.classList.add('glow');
-  }, 2600);
-
-  // 4.2с — скрытие
+  // 4с — плавное скрытие
   setTimeout(hideSplash, SPLASH_DURATION);
 }
 
 initSplash();
 
-// === TUTORIAL ===
 function maybeShowTutorialFirstTime() {
   if (!shouldShowTutorial()) return;
   const shownSplash = sessionStorage.getItem('splashShown');
