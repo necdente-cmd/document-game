@@ -316,12 +316,10 @@ function renderSpectatorView(app, navigate) {
 
   const docs = s.docs || [];
   const trump = s.trumpSuit || '—';
-  const sim = s.simulation || {};
-  const modeTag = sim.mode3p ? ' · 3p' : '';
 
   app.innerHTML = `
     <div class="table spectator" id="table">
-      <div class="spectator-label">🎬 Наблюдатель${modeTag}${sim.maxGames ? ` · партия ${sim.gamesPlayed + 1}/${sim.maxGames}` : ''}</div>
+      <div class="spectator-label">🎬 Наблюдатель</div>
       <div class="score-corner">${s.roundWins[0]} : ${s.roundWins[1]}</div>
       <div class="spectator-info">
         Козырь: ${esc(trump)} · Док A: ${esc(docs[0] || '—')} · Док B: ${esc(docs[1] || '—')}
@@ -337,7 +335,6 @@ export function renderTable(app, navigate) {
   const s = state.server;
   if (!s) return;
 
-  // 🎬 Режим наблюдателя
   if (s.mySeat === -1) {
     renderSpectatorView(app, navigate);
     return;
@@ -416,7 +413,7 @@ export function renderTable(app, navigate) {
     const emptySlots = Math.max(0, maxP - playersCount);
 
     const playerCards = s.players.map(p => {
-      const botBadge = p.isBot ? `<div class="wp-bot">🧠 BOT</div>` : '';
+      const botBadge = p.isBot ? `<div class="wp-bot">${t('lobby.botAvatar')} ${t('lobby.botBadge')}</div>` : '';
       return `
       <div class="wp-card ${p.isHost?'host':''} ${p.isBot?'bot':''}">
         <div class="wp-avatar">${avatarHtml(getAvatar(p.seat))}</div>
@@ -473,16 +470,10 @@ export function renderTable(app, navigate) {
           ? `<button class="start-big" id="startBtn">${t('lobby.startGame')}</button>`
           : isHost ? `<div class="waiting-hint">${t('lobby.waitingPlayers')}</div>`
           : `<div class="waiting-hint">${t('lobby.waitingHost')}</div>`}
-        ${isHost ? `
+        ${isHost && playersCount < maxP ? `
           <div class="lobby-bot-buttons">
-  ${playersCount < maxP ? `
-    <button class="bot-btn bot-btn-genius" id="addGeniusBtn">🧠 + Genius</button>
-    <button class="bot-btn bot-btn-fill" id="fillBotsBtn">4 бота, старт</button>
-  ` : ''}
-  <button class="bot-btn bot-btn-sim" id="simulateBtn">🎬 Симуляция 4p</button>
-  <button class="bot-btn bot-btn-sim" id="simulate3pBtn">🎬 Тест 3p</button>
-  <button class="bot-btn bot-btn-sim" id="simulateCascadeBtn">🎬 Каскад 4p→3p→2p</button>
-</div>` : ''}
+            <button class="bot-btn bot-btn-genius" id="addGeniusBtn">${t('lobby.botAvatar')} ${t('lobby.addBot')}</button>
+          </div>` : ''}
       </div>`;
   }
 
@@ -502,7 +493,7 @@ export function renderTable(app, navigate) {
   const seats = s.players.filter(p => p.seat !== mySeat).map(p => {
     const isThisInPassed = passedSeats.includes(p.seat);
     const offlineBadge = !p.connected ? `<div class="badge-off">⚠ ${t('state.offline')}</div>` : '';
-    const botBadge = p.isBot ? `<div class="badge-bot">🧠</div>` : '';
+    const botBadge = p.isBot ? `<div class="badge-bot">${t('lobby.botAvatar')}</div>` : '';
     const posArr = ['bottom','left','top','right'];
     const pos = posArr[((p.seat - mySeat + 4) % 4)] || 'top';
     const st = playerState(s, p.seat);
@@ -780,28 +771,9 @@ export function renderTable(app, navigate) {
 
   const st = g('startBtn'); if (st) st.onclick = () => { playSound('button'); socket.emit('startGame'); };
 
-  // 🧠 Кнопки ботов
+  // 🤖 Добавить бота
   const agb = g('addGeniusBtn');
   if (agb) agb.onclick = () => { playSound('button'); socket.emit('addBot'); };
-  const fbb = g('fillBotsBtn');
-  if (fbb) fbb.onclick = () => { playSound('button'); socket.emit('fillBots', { start: true }); };
-  const sbb = g('simulateBtn');
-  if (sbb) sbb.onclick = () => {
-    playSound('button');
-    const games = parseInt(prompt('Сколько партий 4p?', '2'), 10) || 2;
-    socket.emit('simulateGame', { games });
-  };
-  const s3b = g('simulate3pBtn');
-  if (s3b) s3b.onclick = () => {
-    playSound('button');
-    const games = parseInt(prompt('Сколько партий 3p?', '2'), 10) || 2;
-    socket.emit('simulate3p', { games });
-  };
-    const scb = g('simulateCascadeBtn');
-  if (scb) scb.onclick = () => {
-    playSound('button');
-    socket.emit('simulateCascade');
-  };
 
   const pu = g('pickUpBtn');   if (pu) pu.onclick = () => { playSound('button'); socket.emit('pickUp'); state.defendTarget = null; };
   const th = g('throwBtn');    if (th) th.onclick = () => { playSound('button'); socket.emit('throwDocs'); };
@@ -852,6 +824,16 @@ export function renderTable(app, navigate) {
   if (!window.__voiceSpeakingBound) {
     window.__voiceSpeakingBound = true;
     window.addEventListener('voice-speaking-change', () => {
+      if (document.getElementById('table')) {
+        renderTable(app, navigate);
+      }
+    });
+  }
+
+  // 🌐 Перерисовка при смене языка
+  if (!window.__langChangeBound) {
+    window.__langChangeBound = true;
+    window.addEventListener('lang-change', () => {
       if (document.getElementById('table')) {
         renderTable(app, navigate);
       }

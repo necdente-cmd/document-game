@@ -76,6 +76,9 @@ const RU = {
   'lobby.host': 'Хост',
   'lobby.waitingSlot': 'Ждём…',
   'lobby.codeCopied': 'Код скопирован: ',
+  'lobby.addBot': 'Добавить бота',
+  'lobby.botBadge': 'БОТ',
+  'lobby.botAvatar': '🤖',
 
   // ===== positions =====
   'pos.A1': 'A1',
@@ -383,6 +386,9 @@ const KY = {
   'lobby.host': 'Хост',
   'lobby.waitingSlot': 'Күтүп жатабыз…',
   'lobby.codeCopied': 'Код көчүрүлдү:',
+  'lobby.addBot': 'Бот кошуу',
+  'lobby.botBadge': 'БОТ',
+  'lobby.botAvatar': '🤖',
 
   'state.beat': 'чабып жатат',
   'state.think': 'ойлонуп жатат',
