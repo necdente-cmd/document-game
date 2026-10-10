@@ -4,38 +4,129 @@ import { toggleMusic, isMusicOn } from '../music.js';
 import { playSound } from '../sound.js';
 import { t } from '../i18n.js';
 import { createLangButton } from '../ui/lang-switch.js';
+import { socket } from '../socket.js';
+
+function getSavedMe() {
+  try { return JSON.parse(localStorage.getItem('me') || 'null'); }
+  catch { return null; }
+}
 
 export function renderWelcome(app, navigate) {
   const musicOn = isMusicOn();
+  const savedMe = getSavedMe();
+  const hasRoom = !!(savedMe && savedMe.roomId && savedMe.id);
+
+  // Фоновые карты (декоративные)
+  const floatCards = `
+    <div class="wl-float wl-f1">♠</div>
+    <div class="wl-float wl-f2">♥</div>
+    <div class="wl-float wl-f3">♦</div>
+    <div class="wl-float wl-f4">♣</div>
+    <div class="wl-float wl-f5">A</div>
+    <div class="wl-float wl-f6">K</div>
+  `;
 
   app.innerHTML = `
-    <div class="lobby" style="justify-content:center; min-height:100dvh; position:relative;">
-      <div style="position:absolute; top:14px; right:14px; display:flex; gap:8px;">
-        <button id="btnLang"    class="icon-btn" title="Язык / Тил"></button>
-        <button id="btnMusic"   class="icon-btn ${musicOn?'active':''}" title="${musicOn ? t('welcome.musicOn') : t('welcome.musicOff')}">${musicOn ? '🎵' : '🔇'}</button>
-        <button id="btnMail"    class="icon-btn" title="${t('mail.title')}">✉️</button>
-        <button id="btnProfile" class="icon-btn" title="${t('profile.title')}">🧑</button>
+    <div class="wl-page">
+      <div class="wl-bg">${floatCards}</div>
+
+      <!-- Верхняя панель иконок -->
+      <div class="wl-topbar">
+        <button id="btnLang"    class="wl-ico" title="Язык / Тил"></button>
+        <button id="btnMusic"   class="wl-ico ${musicOn?'on':''}" title="${musicOn ? t('welcome.musicOn') : t('welcome.musicOff')}">${musicOn ? '🎵' : '🔇'}</button>
+        <button id="btnMail"    class="wl-ico" title="${t('mail.title')}">✉️</button>
+        <button id="btnProfile" class="wl-ico" title="${t('profile.title')}">🧑</button>
       </div>
 
-      <h2 class="welcome-title">🃏 ${t('welcome.title')}</h2>
-      <div class="welcome-sub">${t('welcome.subtitle')}</div>
+      <!-- Логотип -->
+      <div class="wl-logo-wrap">
+        <img src="/logo.png" class="wl-logo" alt="Документ">
+      </div>
+      <div class="wl-title">${t('welcome.title')}</div>
+      <div class="wl-sub">${t('welcome.subtitle')}</div>
 
-      <button id="goCreate" class="welcome-btn primary">${t('welcome.createGame')}</button>
-      <button id="goJoin"   class="welcome-btn secondary">${t('welcome.joinByCode')}</button>
-      <button id="goTutorial" class="welcome-btn tertiary">${t('welcome.howToPlay')}</button>
+      <!-- Кнопки -->
+      <div class="wl-actions">
+        ${hasRoom ? `
+          <button id="goContinue" class="wl-btn wl-btn-continue">
+            <span class="wl-btn-ico">▶</span>
+            <span class="wl-btn-body">
+              <span class="wl-btn-main">Продолжить</span>
+              <span class="wl-btn-sub">${savedMe.roomId}</span>
+            </span>
+          </button>
+        ` : ''}
 
-      <div class="welcome-footer">
-        <span class="welcome-friends">${t('welcome.friends')}</span>
-        <span class="welcome-author" id="authorBtn" title="О разработчике">${t('welcome.author')}</span>
+        <button id="goCreate" class="wl-btn wl-btn-primary">
+          <span class="wl-btn-ico">🎮</span>
+          <span class="wl-btn-body">
+            <span class="wl-btn-main">${t('welcome.createGame')}</span>
+          </span>
+        </button>
+
+        <button id="goJoin" class="wl-btn wl-btn-secondary">
+          <span class="wl-btn-ico">🔗</span>
+          <span class="wl-btn-body">
+            <span class="wl-btn-main">${t('welcome.joinByCode')}</span>
+          </span>
+        </button>
+
+        <button id="goTutorial" class="wl-btn wl-btn-tertiary">
+          <span class="wl-btn-ico">📚</span>
+          <span class="wl-btn-body">
+            <span class="wl-btn-main">${t('welcome.howToPlay')}</span>
+          </span>
+        </button>
+      </div>
+
+      <!-- Нижний колонтитул -->
+      <div class="wl-footer">
+        <button id="goFriends" class="wl-footer-btn">${t('welcome.friends')}</button>
+        <button id="authorBtn" class="wl-footer-btn wl-footer-author">${t('welcome.author')}</button>
       </div>
     </div>
   `;
+
+  // === Кнопки ===
+  const continueBtn = document.getElementById('goContinue');
+  if (continueBtn) {
+    continueBtn.onclick = () => {
+      playSound('button');
+      // Пробуем переподключиться к сохранённой комнате
+      const me = getSavedMe();
+      if (!me) return navigate('welcome');
+      socket.emit('joinRoom', {
+        roomId: me.roomId,
+        name: me.name,
+        playerId: me.id,
+        persistentId: null,
+      }, (r) => {
+        if (r && r.ok) {
+          navigate('table');
+        } else {
+          // Комната недоступна — чистим и остаёмся
+          try { localStorage.removeItem('me'); } catch {}
+          alert('Комната больше недоступна');
+          renderWelcome(app, navigate);
+        }
+      });
+    };
+  }
 
   document.getElementById('goCreate').onclick   = () => { playSound('button'); navigate('create'); };
   document.getElementById('goJoin').onclick     = () => { playSound('button'); navigate('join'); };
   document.getElementById('goTutorial').onclick = () => { playSound('button'); showRules(); };
   document.getElementById('btnMail').onclick    = () => { playSound('button'); showMail(); };
   document.getElementById('btnProfile').onclick = () => { playSound('button'); showProfile(); };
+
+  const friendsBtn = document.getElementById('goFriends');
+  if (friendsBtn) {
+    friendsBtn.onclick = () => {
+      playSound('button');
+      // TODO: экран друзей. Пока — тост/заглушка
+      alert('👥 Друзья — раздел в разработке');
+    };
+  }
 
   // 🌐 Кнопка языка
   const langContainer = document.getElementById('btnLang');
@@ -45,22 +136,24 @@ export function renderWelcome(app, navigate) {
     langContainer.onclick = newLangBtn.onclick;
   }
 
+  // 🎵 Музыка
   const musicBtn = document.getElementById('btnMusic');
   if (musicBtn) {
     musicBtn.onclick = () => {
       playSound('button');
       const on = toggleMusic();
       musicBtn.textContent = on ? '🎵' : '🔇';
-      musicBtn.classList.toggle('active', on);
+      musicBtn.classList.toggle('on', on);
     };
   }
 
+  // 🧑 Автор
   const authorBtn = document.getElementById('authorBtn');
   if (authorBtn) {
     authorBtn.onclick = () => showAboutDev();
   }
 
-  // 📧 Обновляем бейдж непрочитанных писем
+  // 📧 Бейдж писем
   updateMailBadge();
 }
 
