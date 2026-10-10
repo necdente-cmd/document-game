@@ -48,6 +48,7 @@ export function newRoom(opts = {}) {
     log: [],
     lastAttacker: null,
     lastTarget: null,
+    lastDuelPair: null,              // 🆕 пара последней дуэли (3p)
     forcedTarget: null,
     forcedAttackerSlot: null,
     teamPairLastSlot: [null, null],

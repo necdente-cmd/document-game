@@ -16,6 +16,7 @@ export function startRound(r, starterSeat = 0) {
   r.pendingFalsh = null;
   r.lastAttacker = null;
   r.lastTarget = null;
+  r.lastDuelPair = null;             // 🆕 сброс дуэли
   r.forcedTarget = null;
   r.forcedAttackerSlot = null;
   r.teamPairLastSlot = [null, null];

@@ -7,8 +7,8 @@ export function getAttackerSlot(r, playerSeat) {
   return playerSeat;
 }
 
-// После БИТО: если защитник вышел — атакует его партнёр (из слота вышедшего)
-export function afterBito(r, defender, defenderSlot) {
+// В 4p дуэль не применяется — просто следующий по часовой от слота защиты
+export function afterBito(r, defender, defenderSlot, attackerSeat) {
   let turnPlayer = defender;
   let fromSlot = defenderSlot != null ? defenderSlot : defender.seat;
 
@@ -17,7 +17,6 @@ export function afterBito(r, defender, defenderSlot) {
     const partner = r.players[partnerSeat];
     if (partner && !partner.out) {
       turnPlayer = partner;
-      // партнёр играет в слоте вышедшего
       fromSlot = defender.seat;
     } else {
       return null;
@@ -30,6 +29,7 @@ export function afterBito(r, defender, defenderSlot) {
     attackerSlot: fromSlot,
     targetSlot: nextSlot,
     targetSeat: nextSlot != null ? playerAtSlot(r, nextSlot).seat : null,
+    isContrAttack: false,
   };
 }
 

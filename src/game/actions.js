@@ -1,4 +1,4 @@
-import { MAX_ATTACK, EMOJIS, SWAP_TIMEOUT_MS } from '../constants.js';
+import { MAX_ATTACK, EMOJIS, SWAP_TIMEOUT_MS, LADDERS } from '../constants.js';
 import {
   isKozir, beats, partnerOf, bothPartnersPassed, teamOf,
   playerAtSlot, nextActiveSlot,
@@ -80,16 +80,21 @@ export function registerGameHandlers(io, socket, ctx) {
       }
     }
 
+    const ladder = LADDERS[r.opts.docSet];
+    const myDocIdx = ladder.indexOf(myDoc);
+    const defDocIdx = ladder.indexOf(defenderDoc);
+    const canForceDoc = myDocIdx > defDocIdx;
+
     for (const id of cardIds) {
       const c = p.hand.find(x => x.id === id);
       if (!c) return err('Карты нет в руке');
       if (c.r === myDoc) return err(`Своим документом (${myDoc}) нельзя`);
       if (!isFirstAttack) {
-        const isForced = (c.r === defenderDoc);
+        const isForced = canForceDoc && (c.r === defenderDoc);
         if (!isForced && !ranksOnTable.has(c.r)) {
           const allowed = [...ranksOnTable];
-          const extra = (defenderDoc !== myDoc && !ranksOnTable.has(defenderDoc))
-            ? ` или ${defenderDoc}` : '';
+          const extra = (canForceDoc && !ranksOnTable.has(defenderDoc))
+            ? ` или ${defenderDoc} (навязанный)` : '';
           return err(`Можно подкидывать только: ${allowed.join(', ')}${extra}`);
         }
       }
@@ -175,7 +180,6 @@ export function registerGameHandlers(io, socket, ctx) {
 
   // ==================== ПОДНЯТЬ ====================
   function performPickup(r, defender, attackerSeat, defenderSeat) {
-    const attackerSlotSaved = r.field.attackerSlot;
     for (const e of r.field.cards) {
       defender.hand.push(e.card);
       if (e.beatenBy) defender.hand.push(e.beatenBy);
@@ -248,7 +252,7 @@ export function registerGameHandlers(io, socket, ctx) {
     if (p.hand.length === 0) p.out = true;
 
     const mode = getMode(r);
-    const next = mode.afterBito(r, p, defenderSlot);
+    const next = mode.afterBito(r, p, defenderSlot, attackerSeat);
 
     if (!next) {
       log(r, `${p.name}: «Бито!» (никого не осталось)`);
@@ -257,14 +261,16 @@ export function registerGameHandlers(io, socket, ctx) {
     }
 
     r.turnSeat = next.turnSeat;
+    r.forcedAttackerSlot = next.attackerSlot;
     r.forcedTarget = next.targetSlot;
     r.teamPairLastSlot[teamOf(next.turnSeat)] = next.attackerSlot;
     if (next.targetSlot != null) {
       r.teamLastTargetSlot[teamOf(next.turnSeat)] = next.targetSlot;
     }
 
+    const contrInfo = next.isContrAttack ? ' (контратака)' : '';
     drawTo(r, attackerSeat);
-    log(r, `${p.name}: «Бито!» Ход у ${r.players[r.turnSeat].name}`);
+    log(r, `${p.name}: «Бито!» Ход у ${r.players[r.turnSeat].name}${contrInfo}`);
     if (checkTeamExitWin(r)) return broadcast(r);
     broadcast(r);
   });
@@ -302,6 +308,7 @@ export function registerGameHandlers(io, socket, ctx) {
     r.forcedTarget = nextActiveSlot(r, requester.seat, partner.seat);
     r.lastAttacker = null;
     r.lastTarget = null;
+    r.lastDuelPair = null;
 
     if (checkTeamExitWin(r)) return broadcast(r);
     broadcast(r);
@@ -407,8 +414,9 @@ export function registerGameHandlers(io, socket, ctx) {
     r.swapUsedByTeam[fromPlayer.team] = true;
     r.pendingSwap = null;
     r.turnSeat = toPlayer.seat;
-    r.forcedAttackerSlot = fromPlayer.seat;
-    r.forcedTarget = nextActiveSlot(r, fromPlayer.seat, toPlayer.seat);
+    r.forcedAttackerSlot = toPlayer.seat;
+    r.forcedTarget = nextActiveSlot(r, toPlayer.seat, toPlayer.seat);
+    r.lastDuelPair = null;
     log(r, `${fromPlayer.name} ↔ ${toPlayer.name} — своп завершён`);
     if (checkTeamExitWin(r)) return broadcast(r);
     broadcast(r);
