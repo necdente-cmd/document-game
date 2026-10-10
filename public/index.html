@@ -13,28 +13,46 @@
 </head>
 <body>
 
-<!-- 🎬 SPLASH: 4 масти из углов → центр → БУМ → логотип -->
+<!-- 🎬 SPLASH: логотип → название → 4 масти → свечение → меню -->
 <div id="splash" class="splash">
 
-  <!-- 4 масти по углам -->
-  <div class="splash-suits">
-    <div class="suit s-tl">♠</div>
-    <div class="suit s-tr">♥</div>
-    <div class="suit s-bl">♦</div>
-    <div class="suit s-br">♣</div>
+  <!-- Фон — плавающие символы (как в welcome) -->
+  <div class="splash-bg">
+    <div class="splash-float sf1">♠</div>
+    <div class="splash-float sf2">♥</div>
+    <div class="splash-float sf3">♦</div>
+    <div class="splash-float sf4">♣</div>
+    <div class="splash-float sf5">A</div>
+    <div class="splash-float sf6">K</div>
   </div>
 
-  <!-- Взрыв -->
-  <div class="splash-boom" id="splashBoom">
-    <div class="splash-flash"></div>
-  </div>
-
-  <!-- Логотип + название -->
+  <!-- Контент -->
   <div class="splash-content">
-    <img src="/logo.png" class="splash-logo" alt="Документ">
-    <div class="splash-title">Документ</div>
+
+    <!-- Логотип -->
+    <div class="splash-logo-wrap">
+      <div class="splash-logo-glow"></div>
+      <img src="/logo.png" class="splash-logo" alt="Документ">
+    </div>
+
+    <!-- Название -->
+    <div class="splash-title">ДОКУМЕНТ</div>
+
+    <!-- 4 масти под названием -->
+    <div class="splash-suits">
+      <div class="suit-inline si-1">♠</div>
+      <div class="suit-inline si-2">♥</div>
+      <div class="suit-inline si-3">♦</div>
+      <div class="suit-inline si-4">♣</div>
+    </div>
+
+    <!-- Подпись -->
     <div class="splash-sub">Карточная игра · 2×2</div>
+
   </div>
+
+  <!-- Вспышка свечения в финале -->
+  <div class="splash-flash" id="splashFlash"></div>
 
 </div>
 
