@@ -153,7 +153,7 @@ button, input, select, textarea {
 #app.fade-out { opacity: 0; }
 #app.fade-in  { opacity: 0; transition: none; }
 
-/* ==================== SPLASH (приветствие) ==================== */
+/* ==================== SPLASH (приветствие v3) ==================== */
 .splash {
   position: fixed;
   inset: 0;
@@ -162,9 +162,9 @@ button, input, select, textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: opacity .6s ease-out;
-  pointer-events: none;
+  transition: opacity .55s ease-out;
   overflow: hidden;
+  cursor: pointer;
 }
 .splash.hide { opacity: 0; }
 
@@ -172,6 +172,113 @@ button, input, select, textarea {
   text-align: center;
   position: relative;
   padding: 20px;
+  width: 100%;
+  max-width: 500px;
+}
+
+/* === Контейнер для падающих карт === */
+.splash-ranks {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 10px;
+  height: 78px;
+  margin-bottom: 36px;
+  min-height: 78px;
+}
+
+/* === Карта === */
+.sr {
+  width: 54px;
+  height: 78px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-family: var(--font-title, 'Playfair', serif);
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+  color: #ffe066;
+  background: linear-gradient(160deg, #1a1a35 0%, #0f0f22 100%);
+  border: 2px solid rgba(255, 210, 90, 0.65);
+  border-radius: 8px;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.55),
+    inset 0 0 18px rgba(255, 210, 90, 0.15);
+  text-shadow: 0 2px 8px rgba(255, 210, 90, 0.55);
+
+  opacity: 0;
+  will-change: transform, opacity;
+
+  animation-name: srFall, srStack;
+  animation-duration: 0.95s, 0.55s;
+  animation-timing-function: cubic-bezier(.25,.9,.35,1.15), cubic-bezier(.5,0,.6,1);
+  animation-fill-mode: forwards, forwards;
+  animation-delay:
+    calc(var(--i) * 90ms),
+    calc(1500ms + var(--i) * 25ms);
+}
+
+.sr[data-rank="10"] {
+  font-size: 20px;
+  letter-spacing: -1px;
+}
+
+.sr .suit {
+  font-size: 0.75em;
+  margin-left: 1px;
+  font-weight: 900;
+}
+.sr .suit.black { color: #eeeeee; }
+.sr .suit.red   { color: #ff5252; }
+
+@keyframes srFall {
+  0% {
+    opacity: 0;
+    transform: translateY(-100vh) rotate(-180deg) scale(1.4);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(12px) rotate(0deg) scale(1);
+  }
+  72% {
+    transform: translateY(-6px) rotate(0deg) scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes srStack {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(calc((4 - var(--i)) * 64px)) rotate(var(--r, 0deg)) scale(0.9);
+  }
+}
+
+.splash-ranks.blast .sr {
+  animation: srBlast 0.45s ease-out forwards;
+  animation-delay: calc(var(--i) * 15ms);
+}
+@keyframes srBlast {
+  0% {
+    opacity: 1;
+    transform: translateX(calc((4 - var(--i)) * 64px)) rotate(var(--r, 0deg)) scale(0.9);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(calc((4 - var(--i)) * 64px)) rotate(var(--r, 0deg)) scale(0.3);
+  }
 }
 
 .splash-title {
@@ -180,55 +287,59 @@ button, input, select, textarea {
   font-weight: 900;
   color: #f1c40f;
   letter-spacing: 4px;
-  text-shadow: 0 0 28px rgba(241,196,15,.55);
+  text-shadow:
+    0 0 28px rgba(241,196,15,.55),
+    0 0 60px rgba(241,196,15,.25);
   opacity: 0;
-  animation: titleIn .65s cubic-bezier(.22,.9,.35,1) 0ms forwards;
+  animation: titleIn .7s cubic-bezier(.22,.9,.35,1) 2350ms forwards;
   will-change: transform, opacity, filter;
 }
+
 @keyframes titleIn {
-  0%   { opacity: 0; transform: scale(.35); filter: blur(14px); }
+  0%   { opacity: 0; transform: scale(.4); filter: blur(14px); }
   60%  { opacity: 1; filter: blur(0); }
   100% { opacity: 1; transform: scale(1); filter: blur(0); }
 }
 
-.splash-emojis {
-  display: flex;
-  justify-content: center;
-  gap: 16px;
-  margin-top: 14px;
-  margin-bottom: 10px;
-  height: 54px;
-  align-items: center;
-  position: relative;
-}
-.splash-emojis .se {
-  font-size: 42px;
-  line-height: 1;
-  display: inline-block;
-  opacity: 0;
-  transform: translateY(-300px) rotate(-40deg) scale(.5);
-  animation: emojiFall .68s cubic-bezier(.34,1.56,.64,1) forwards;
-  animation-delay: calc(500ms + var(--i) * 110ms);
-  filter: drop-shadow(0 6px 14px rgba(0,0,0,.55));
-  will-change: transform, opacity;
-}
-@keyframes emojiFall {
-  0%   { opacity: 0; transform: translateY(-300px) rotate(-40deg) scale(.5); }
-  50%  { opacity: 1; }
-  72%  { transform: translateY(8px) rotate(8deg) scale(1.18); }
-  100% { opacity: 1; transform: translateY(0) rotate(0) scale(1); }
-}
-
 .splash-sub {
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   color: #9ac6b6;
-  margin-top: 8px;
+  margin-top: 10px;
   letter-spacing: 3px;
   text-transform: uppercase;
   opacity: 0;
-  animation: subIn .6s ease-out 1500ms forwards;
+  animation: subIn .6s ease-out 2850ms forwards;
+}
+
+@keyframes subIn {
+  0%   { opacity: 0; transform: translateY(10px); }
+  100% { opacity: .85; transform: translateY(0); }
+}
+
+@media (max-width: 420px) {
+  .splash-ranks { gap: 6px; height: 60px; min-height: 60px; margin-bottom: 28px; }
+  .sr {
+    width: 42px;
+    height: 60px;
+    font-size: 22px;
+    border-radius: 6px;
+  }
+  .sr[data-rank="10"] { font-size: 15px; }
+  .splash-title { font-size: 38px; letter-spacing: 3px; }
+  .splash-sub { font-size: 11px; letter-spacing: 2px; }
+}
+
+@media (max-width: 360px) {
+  .splash-ranks { gap: 4px; height: 48px; min-height: 48px; }
+  .sr {
+    width: 34px;
+    height: 48px;
+    font-size: 18px;
+  }
+  .sr[data-rank="10"] { font-size: 12px; }
+  .splash-title { font-size: 32px; letter-spacing: 2px; }
 }
 @keyframes subIn {
   0%   { opacity: 0; transform: translateY(10px); }
