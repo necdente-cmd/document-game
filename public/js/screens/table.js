@@ -291,6 +291,78 @@ function sortHand(hand, myDoc, trumpSuit) {
   return arr;
 }
 
+// ==================== 🧪 ДИАГНОСТИКА VOICE ====================
+function showVoiceDebug() {
+  const el = document.createElement('div');
+  el.className = 'simple-modal';
+  el.style.zIndex = 99999;
+  el.innerHTML = `
+    <div class="simple-modal-inner" style="max-width:600px; font-family:monospace; font-size:12px;">
+      <h3 style="font-family:inherit;">🧪 Диагностика голосового чата</h3>
+      <div id="debugContent" style="max-height:70vh; overflow-y:auto; background:#000; color:#0f0; padding:12px; border-radius:8px; line-height:1.5; white-space:pre-wrap; word-break:break-all;"></div>
+      <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="simple-modal-close-btn" id="debugRestart" style="background:#e67e22; color:#fff;">🔄 Перезапустить голос</button>
+        <button class="simple-modal-close-btn" id="debugCopy" style="background:#3498db; color:#fff;">📋 Копировать</button>
+        <button class="simple-modal-close-btn" id="debugClose">Закрыть</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(el);
+  el.onclick = (e) => { if (e.target === el) el.remove(); };
+  document.getElementById('debugClose').onclick = () => el.remove();
+  document.getElementById('debugCopy').onclick = () => {
+    const text = document.getElementById('debugContent').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      document.getElementById('debugCopy').textContent = '✅ Скопировано';
+      setTimeout(() => document.getElementById('debugCopy').textContent = '📋 Копировать', 1500);
+    });
+  };
+  document.getElementById('debugRestart').onclick = async () => {
+    if (!confirm('Перезапустить голосовой чат?')) return;
+    const btn = document.getElementById('debugRestart');
+    btn.textContent = '⏳ Перезапуск…';
+    try {
+      await restartVoice();
+      btn.textContent = '✅ Готово';
+      setTimeout(() => { el.remove(); }, 1000);
+    } catch (e) {
+      btn.textContent = '❌ Ошибка';
+    }
+  };
+
+  let info = '=== ДИАГНОСТИКА VOICE ===\n';
+  info += 'Time: ' + new Date().toLocaleTimeString() + '\n\n';
+  info += '=== MIC STATE ===\n';
+  info += 'state.micOn: ' + (state.micOn ? '✅' : '❌') + '\n';
+  info += 'state.voiceActive: ' + (state.voiceActive ? '✅' : '❌') + '\n';
+  info += 'streamIsLive: ' + (streamIsLivePublic() ? '✅' : '❌') + '\n\n';
+  info += '=== SOCKET ===\n';
+  info += 'Connected: ' + (window.socket?.connected ? '✅' : '❌') + '\n';
+  info += 'Socket ID: ' + (window.socket?.id || '—') + '\n';
+  info += 'Me ID: ' + (state.me?.id || '—') + '\n';
+  info += 'Room: ' + (state.me?.roomId || '—') + '\n\n';
+  info += '=== PLAYERS ===\n';
+  if (state.server?.players) {
+    state.server.players.forEach(p => {
+      info += `  ${p.name} (seat ${p.seat}) voiceEnabled: ${p.voiceEnabled ? '✅' : '❌'}\n`;
+    });
+  } else { info += '  — нет данных\n'; }
+  info += '\n=== ACTIVE PEERS ===\n';
+  const peersDebug = getVoiceDebugInfo();
+  if (peersDebug.length === 0) info += '  — нет активных соединений\n';
+  else peersDebug.forEach(p => {
+    info += `  ${p.id}: ICE=${p.ice}, Conn=${p.conn}, Signal=${p.signal}\n`;
+  });
+  info += '\n=== AUDIO ELEMENTS ===\n';
+  const audios = getAudioElements();
+  if (audios.length === 0) info += '  — нет audio элементов\n';
+  else audios.forEach(a => {
+    info += `  ${a.id}: paused=${a.paused} muted=${a.muted} vol=${a.volume} hasSrc=${a.hasSrc} tracks=${a.srcTracks}\n`;
+  });
+
+  document.getElementById('debugContent').textContent = info;
+}
+
 // ==================== 🎬 SPECTATOR ====================
 function renderSpectatorView(app, navigate) {
   const s = state.server;
@@ -331,7 +403,7 @@ function renderSpectatorView(app, navigate) {
   `;
 }
 
-// ==================== 🏠 ЛОББИ v4 ====================
+// ==================== 🏠 ЛОББИ ====================
 function renderLobby(s, meP, isHost) {
   const playersCount = s.players.length;
   const maxP = s.opts.maxPlayers;
@@ -483,17 +555,17 @@ export function renderTable(app, navigate) {
     }
   }
 
-  // ==================== 🏠 ЛОББИ: РАННИЙ ВЫХОД ====================
-  if (s.phase === 'lobby') {
-    const lobbyBar = renderLobby(s, meP, meP?.isHost);
+  // ==================== ЛОББИ ====================
+  const lobbyBar = (s.phase === 'lobby') ? renderLobby(s, meP, meP?.isHost) : '';
 
+  // 🏠 В ЛОББИ — только лобби
+  if (s.phase === 'lobby') {
     app.innerHTML = `
       <div class="table lobby-mode" id="table">
         ${lobbyBar}
       </div>
     `;
 
-    // Убираем игровые элементы
     const swipeEl = document.getElementById('swipeIcons');
     if (swipeEl) swipeEl.classList.remove('show');
     const trigEl = document.getElementById('swipeTrigger');
@@ -501,7 +573,6 @@ export function renderTable(app, navigate) {
 
     const g = id => document.getElementById(id);
 
-    // Копирование кода
     const roomCodeEl = g('roomCode');
     if (roomCodeEl) {
       roomCodeEl.onclick = async () => {
@@ -514,36 +585,23 @@ export function renderTable(app, navigate) {
       };
     }
 
-    // Языки
     document.querySelectorAll('.lb-lang').forEach(btn => {
       btn.onclick = () => { playSound('button'); setLang(btn.dataset.lang); };
     });
 
-    // 🚪 Выход из лобби (с очисткой сессии)
     const leaveBtn = g('leaveLobbyBtn');
     if (leaveBtn) leaveBtn.onclick = () => {
       playSound('button');
-      // 1. Сообщаем серверу что уходим
-      try { socket.emit('leaveRoom'); } catch {}
-      // 2. Чистим сохранённую сессию — иначе клиент вернёт в ту же комнату
-      try { localStorage.removeItem('me'); } catch {}
-      try { saveMe(null); } catch {}
-      // 3. Перезагружаем на главную
-      setTimeout(() => {
-        try { window.location.href = '/'; } catch {}
-        try { window.location.reload(); } catch {}
-      }, 250);
+      socket.emit('leaveRoom');
+      setTimeout(() => { try { window.location.reload(); } catch {} }, 300);
     };
 
-    // Добавить бота
     const agb = g('addGeniusBtn');
     if (agb) agb.onclick = () => { playSound('button'); socket.emit('addBot'); };
 
-    // Старт
     const st = g('startBtn');
     if (st) st.onclick = () => { playSound('button'); socket.emit('startGame'); };
 
-    // Тап-обмен слотами (когда все 4 + хост)
     if (meP?.isHost && s.players.length === s.opts.maxPlayers) {
       document.querySelectorAll('.lb-slot[data-player-id]').forEach(el => {
         el.onclick = () => {
@@ -584,10 +642,8 @@ export function renderTable(app, navigate) {
       });
     }
 
-    return; // ⛔ Игровой стол не рендерим
+    return;
   }
-
-  // ==================== ФАЗА ИГРЫ ====================
 
   let passNotice = '';
   if (s.field && !s.pendingPass && !s.pendingSwap) {
@@ -837,6 +893,9 @@ export function renderTable(app, navigate) {
 
   const st = g('startBtn'); if (st) st.onclick = () => { playSound('button'); socket.emit('startGame'); };
 
+  const agb = g('addGeniusBtn');
+  if (agb) agb.onclick = () => { playSound('button'); socket.emit('addBot'); };
+
   const pu = g('pickUpBtn');   if (pu) pu.onclick = () => { playSound('button'); socket.emit('pickUp'); state.defendTarget = null; };
   const th = g('throwBtn');    if (th) th.onclick = () => { playSound('button'); socket.emit('throwDocs'); };
   const si = g('swapInitBtn'); if (si) si.onclick = () => { playSound('button'); socket.emit('swapInitiate'); };
@@ -993,5 +1052,6 @@ function bindSwipeIconHandlers(app, navigate) {
   if (debugBtn) debugBtn.onclick = () => {
     playSound('button');
     hideSwipeIcons();
+    showVoiceDebug();
   };
 }
