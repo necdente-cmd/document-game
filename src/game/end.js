@@ -9,13 +9,13 @@ export function winByThrow(r, team, winnerSeat) {
 
   const ladder = LADDERS[r.opts.docSet];
 
-  // 🔧 Победа → +1 ступень. Чемпион = тот, кто ПОСЛЕ победы на Т (последней ступени).
-  r.teamStep[team]++;
-  if (r.teamStep[team] >= ladder.length - 1) {
-    r.teamStep[team] = ladder.length - 1;
+  // 🏆 Чемпион = команда УЖЕ на последней ступени (Т) И выиграла кон.
+  // Значит: дойти до Т (5-я победа для classic, 3-я для short),
+  // затем выиграть ЕЩЁ РАЗ (6-я / 4-я победа).
+  if (r.teamStep[team] === ladder.length - 1) {
     r.phase = 'gameEnd';
     r.winnerTeam = team;
-    log(r, `🏆 Команда ${team ? 'B' : 'A'} — ЧЕМПИОН! (ступень ${ladder[r.teamStep[team]]})`);
+    log(r, `🏆 Команда ${team ? 'B' : 'A'} — ЧЕМПИОН! (на ступени ${ladder[r.teamStep[team]]})`);
     for (const p of r.players.filter(p => p.team === team)) {
       if (p.persistentId) {
         incrementStat(p.persistentId, 'rounds_won');
@@ -27,6 +27,8 @@ export function winByThrow(r, team, winnerSeat) {
     return;
   }
 
+  // Обычная победа → +1 ступень
+  r.teamStep[team]++;
   r.phase = 'roundEnd';
   r.pendingStart = { winningTeam: team };
   log(r, `Команда ${team ? 'B' : 'A'} выиграла кон. Счёт ${r.roundWins[0]}:${r.roundWins[1]} (ступень ${ladder[r.teamStep[team]]})`);
