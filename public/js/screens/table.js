@@ -797,6 +797,11 @@ export function renderTable(app, navigate) {
     const games = parseInt(prompt('Сколько партий 3p?', '2'), 10) || 2;
     socket.emit('simulate3p', { games });
   };
+    const scb = g('simulateCascadeBtn');
+  if (scb) scb.onclick = () => {
+    playSound('button');
+    socket.emit('simulateCascade');
+  };
 
   const pu = g('pickUpBtn');   if (pu) pu.onclick = () => { playSound('button'); socket.emit('pickUp'); state.defendTarget = null; };
   const th = g('throwBtn');    if (th) th.onclick = () => { playSound('button'); socket.emit('throwDocs'); };
