@@ -16,10 +16,18 @@ const BOT_NAMES = [
   'Соке', 'Куке', 'Ули',  'Токо',
 ];
 
+// 🎬 Профили для симуляции: чередуем агрессивный/тихий
+const SIM_PROFILE_ROTATION = ['aggressive', 'cautious', 'aggressive', 'cautious'];
+
 export function isBot(p) { return !!(p && p.isBot); }
 
-export function createBotPlayer(index) {
-  const profile = getProfileByKey(SIM_PROFILE_KEY);
+export function createBotPlayer(index, profileKey = null) {
+  // Если явно не задан профиль — берём из ротации симуляции
+  let key = profileKey;
+  if (!key) {
+    key = SIM_PROFILE_ROTATION[(index - 1) % SIM_PROFILE_ROTATION.length];
+  }
+  const profile = getProfileByKey(key);
   const name = BOT_NAMES[(index - 1) % BOT_NAMES.length];
   return {
     id: 'bot_' + uid(),
@@ -32,12 +40,12 @@ export function createBotPlayer(index) {
   };
 }
 
-export function addBotToRoom(io, room, broadcast) {
+export function addBotToRoom(io, room, broadcast, profileKey = null) {
   if (room.phase !== 'lobby' && room.phase !== 'gameEnd') return null;
   if (room.players.length >= room.opts.maxPlayers) return null;
 
   const n = room.players.filter(p => p.isBot).length + 1;
-  const bot = createBotPlayer(n);
+  const bot = createBotPlayer(n, profileKey);
   bot.seat = room.players.length;
   bot.team = bot.seat % 2;
   room.players.push(bot);
@@ -106,55 +114,96 @@ function applyDecisions(room, bot, decisions) {
 }
 
 // =====================================================================
-// 🔧 3p-режим: после каждого startRound снова выбиваем seat 0
+// 🔧 3p/2p-режим: выбиваем игроков согласно cascadePlan
 // =====================================================================
-function apply3pForceOut(room) {
-  if (!room._simulation?.mode3p) return;
-  const victim = room.players.find(p => p.seat === 0);
-  if (victim) {
-    victim.out = true;
-    victim.hand = [];
+function applyForcedOuts(room) {
+  const sim = room._simulation;
+  if (!sim) return;
+
+  // Одиночный 3p-режим
+  if (sim.mode3p) {
+    const victim = room.players.find(p => p.seat === 0);
+    if (victim) {
+      victim.out = true;
+      victim.hand = [];
+    }
+    if (room.turnSeat === 0) room.turnSeat = 2;
+    return;
   }
-  if (room.turnSeat === 0) room.turnSeat = 2;
+
+  // Каскадный режим: применяем ВСЕ планы до текущего кона
+  if (sim.cascade && sim.cascadePlan) {
+    for (const step of sim.cascadePlan) {
+      if (sim.roundsPlayed >= step.afterRound) {
+        for (const seat of step.forceOut) {
+          const victim = room.players.find(p => p.seat === seat);
+          if (victim && !victim.out) {
+            victim.out = true;
+            victim.hand = [];
+            rlog(room, `⚡ Каскад: ${victim.name} (seat ${seat}) выбит → режим ${4 - seat - 1}p`);
+          }
+        }
+      }
+    }
+    // turnSeat не может быть на вышедшем
+    const cur = room.players[room.turnSeat];
+    if (cur && cur.out) {
+      for (let i = 1; i <= 3; i++) {
+        const s = (room.turnSeat + i) % 4;
+        if (room.players[s] && !room.players[s].out) {
+          room.turnSeat = s;
+          break;
+        }
+      }
+    }
+  }
 }
 
 // =====================================================================
 // 🎬 АВТОСТАРТ НОВОГО КОНА
-// 🔧 ФИКС Bug C: победившая команда выбирает ЛЮБОГО бота (включая out)
 // =====================================================================
 function autoStartRound(io, room, broadcast) {
   const team = room.pendingStart?.winningTeam;
   if (team == null) {
     rlog(room, `⚠ Нет pendingStart для автостарта`);
     startRound(room, 0);
-    apply3pForceOut(room);
+    applyForcedOuts(room);
     broadcast(room);
     return;
   }
 
-  // 🔧 БЕЗ !p.out — победившая команда выбирает любого бота
   const teamBots = room.players.filter(p => p.team === team && p.isBot);
   if (!teamBots.length) {
     rlog(room, `⚠ Нет бота в команде ${team}, fallback → seat 0`);
     startRound(room, 0);
-    apply3pForceOut(room);
+    applyForcedOuts(room);
     broadcast(room);
     return;
   }
 
-  // Приоритет: активным игрокам, иначе любым
+  // Приоритет: активным, иначе любым
   const activeBots = teamBots.filter(p => !p.out);
   const pool = activeBots.length ? activeBots : teamBots;
   const bot = pool[(Math.random() * pool.length) | 0];
 
   let starterSeat = bot.seat;
 
-  // В 3p нельзя стартовать с вышедшего seat 0
-  if (room._simulation?.mode3p && starterSeat === 0) starterSeat = 2;
+  // Нельзя стартовать с вышедшего — сдвигаем
+  const sim = room._simulation;
+  if (sim?.mode3p && starterSeat === 0) starterSeat = 2;
+  if (sim?.cascade) {
+    const starter = room.players[starterSeat];
+    if (!starter || starter.out) {
+      // Ищем активного в той же команде, иначе любого активного
+      const sameTeam = room.players.find(p => p.team === team && !p.out);
+      const anyActive = room.players.find(p => !p.out);
+      starterSeat = (sameTeam || anyActive)?.seat ?? 0;
+    }
+  }
 
   rlog(room, `🎬 Автостарт кона (выбирает ${bot.name} из команды ${team === 0 ? 'A' : 'B'}, seat ${starterSeat})`);
   startRound(room, starterSeat);
-  apply3pForceOut(room);
+  applyForcedOuts(room);
   broadcast(room);
 }
 
@@ -188,12 +237,20 @@ function handleGameEnd(io, room, broadcast) {
     room.gameStartTime = Date.now();
     room.winnerTeam = null;
     rlog(room, `🎬 Партия #${sim.gamesPlayed + 1} стартует`);
-
-    const starterSeat = sim.mode3p ? 2 : 0;
-    startRound(room, starterSeat);
-    apply3pForceOut(room);
+    startRound(room, 0);
+    applyForcedOuts(room);
     broadcast(room);
   }, INTER_GAME_DELAY);
+}
+
+// =====================================================================
+// 🎬 ХУК: вызывается в end.js через winByThrow → r.phase = 'roundEnd'
+// Считаем завершённые коны для каскада
+// =====================================================================
+function bumpRoundCounter(room) {
+  const sim = room._simulation;
+  if (!sim?.cascade) return;
+  sim.roundsPlayed++;
 }
 
 function peekPendingBot(room) {
@@ -201,7 +258,6 @@ function peekPendingBot(room) {
 
   if (room.phase === 'roundEnd' && room.pendingStart) {
     const team = room.pendingStart.winningTeam;
-    // 🔧 БЕЗ !p.out
     const bot = room.players.find(p => p.team === team && p.isBot);
     if (bot) return bot;
     return null;
@@ -347,6 +403,11 @@ function findActingBot(room) {
 
 export function onRoomChange(io, room, broadcast) {
   if (room._botTimer) { clearTimeout(room._botTimer); room._botTimer = null; }
+
+  // Считаем коны для каскада (roundEnd → увеличиваем счётчик)
+  if (room.phase === 'roundEnd' && room.pendingStart) {
+    bumpRoundCounter(room);
+  }
 
   if (room.phase === 'gameEnd' && room._simulation) {
     handleGameEnd(io, room, broadcast);

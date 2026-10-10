@@ -311,14 +311,14 @@ export function setupHandlers(io, broadcast) {
     });
 
     // БОТЫ
-    socket.on('addBot', () => {
+    socket.on('addBot', ({ profile } = {}) => {
       const r = rooms.get(rid); if (!r) return;
       if (r.hostId !== pid) return err('Только хост');
       if (r.phase !== 'lobby') return err('Только в лобби');
       if (r.players.length >= r.opts.maxPlayers) return err('Комната заполнена');
-      const bot = addBotToRoom(io, r, broadcast);
+      const bot = addBotToRoom(io, r, broadcast, profile);
       if (!bot) return;
-      log(r, `Добавлен ${bot.name}`);
+      log(r, `Добавлен ${bot.name} [${bot.botProfile.key}]`);
       broadcast(r);
     });
 
@@ -329,7 +329,7 @@ export function setupHandlers(io, broadcast) {
       while (r.players.length < r.opts.maxPlayers) {
         const bot = addBotToRoom(io, r, broadcast);
         if (!bot) break;
-        log(r, `Добавлен ${bot.name}`);
+        log(r, `Добавлен ${bot.name} [${bot.botProfile.key}]`);
       }
       if (start && r.players.length === r.opts.maxPlayers) {
         r.teamStep = [0, 0];
@@ -377,13 +377,13 @@ export function setupHandlers(io, broadcast) {
         r.winnerTeam = null;
         r._simulation = { gamesPlayed: 0, maxGames };
         log(r, `🎬 Симуляция 4p: ${maxGames} партий. Лог: ${logPath || 'только консоль'}`);
-        log(r, `Участники: ${r.players.map(p => p.name).join(', ')}`);
+        log(r, `Участники: ${r.players.map(p => `${p.name}[${p.botProfile.key}]`).join(', ')}`);
         startRound(r, 0);
       }
       broadcast(r);
     });
 
-    // 🎬 СИМУЛЯЦИЯ 3p: 4 бота, seat 0 принудительно выходит
+    // 🎬 СИМУЛЯЦИЯ 3p
     socket.on('simulate3p', ({ games } = {}) => {
       const r = rooms.get(rid); if (!r) return;
       if (r.hostId !== pid) return err('Только хост');
@@ -416,21 +416,63 @@ export function setupHandlers(io, broadcast) {
         r.gameStartTime = Date.now();
         r.winnerTeam = null;
         r._simulation = { gamesPlayed: 0, maxGames, mode3p: true };
-
         log(r, `🎬 Симуляция 3p: ${maxGames} партий. Лог: ${logPath || 'только консоль'}`);
-        log(r, `Участники: ${r.players.map(p => p.name).join(', ')}`);
+        log(r, `Участники: ${r.players.map(p => `${p.name}[${p.botProfile.key}]`).join(', ')}`);
 
-        // Стартуем с seat 2 (партнёр будущей жертвы)
         startRound(r, 2);
-
-        // Принудительно выбиваем seat 0
         const victim = r.players.find(p => p.seat === 0);
         if (victim) {
           victim.out = true;
           victim.hand = [];
           log(r, `⚡ 3p-режим: ${victim.name} (seat 0) принудительно вышел`);
         }
-        // turnSeat уже = 2 (передан в startRound)
+      }
+      broadcast(r);
+    });
+
+    // 🎬 КАСКАДНАЯ СИМУЛЯЦИЯ: 4p → 3p → 2p в одной партии
+    socket.on('simulateCascade', () => {
+      const r = rooms.get(rid); if (!r) return;
+      if (r.hostId !== pid) return err('Только хост');
+      if (r.phase !== 'lobby') return err('Только в лобби');
+
+      const host = r.players.find(p => p.id === pid);
+      if (!host) return err('Хост не найден');
+
+      r.spectators = r.spectators || [];
+      if (!r.spectators.some(s => s.id === pid)) {
+        r.spectators.push({ id: pid, name: host.name });
+      }
+      r.players = [];
+      r.hostId = null;
+
+      const logPath = startSimulationLog(r);
+
+      while (r.players.length < r.opts.maxPlayers) {
+        const bot = addBotToRoom(io, r, broadcast);
+        if (!bot) break;
+      }
+
+      if (r.players.length === r.opts.maxPlayers) {
+        r.teamStep = [0, 0];
+        r.roundWins = [0, 0];
+        r.roundHistory = [];
+        r.playerStats = [0, 0, 0, 0];
+        r.gameStartTime = Date.now();
+        r.winnerTeam = null;
+        r._simulation = {
+          gamesPlayed: 0,
+          maxGames: 1,
+          cascade: true,
+          roundsPlayed: 0,
+          cascadePlan: [
+            { afterRound: 2, forceOut: [0] },   // после 2-го кона → 3p
+            { afterRound: 4, forceOut: [1] },   // после 4-го кона → 2p
+          ],
+        };
+        log(r, `🎬 КАСКАДНАЯ СИМУЛЯЦИЯ 4p→3p→2p. Лог: ${logPath || 'только консоль'}`);
+        log(r, `Участники: ${r.players.map(p => `${p.name}[${p.botProfile.key}]`).join(', ')}`);
+        startRound(r, 0);
       }
       broadcast(r);
     });

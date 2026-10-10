@@ -475,13 +475,14 @@ export function renderTable(app, navigate) {
           : `<div class="waiting-hint">${t('lobby.waitingHost')}</div>`}
         ${isHost ? `
           <div class="lobby-bot-buttons">
-            ${playersCount < maxP ? `
-              <button class="bot-btn bot-btn-genius" id="addGeniusBtn">🧠 + Genius</button>
-              <button class="bot-btn bot-btn-fill" id="fillBotsBtn">4 бота, старт</button>
-            ` : ''}
-            <button class="bot-btn bot-btn-sim" id="simulateBtn">🎬 Симуляция 4p</button>
-            <button class="bot-btn bot-btn-sim" id="simulate3pBtn">🎬 Тест 3p</button>
-          </div>` : ''}
+  ${playersCount < maxP ? `
+    <button class="bot-btn bot-btn-genius" id="addGeniusBtn">🧠 + Genius</button>
+    <button class="bot-btn bot-btn-fill" id="fillBotsBtn">4 бота, старт</button>
+  ` : ''}
+  <button class="bot-btn bot-btn-sim" id="simulateBtn">🎬 Симуляция 4p</button>
+  <button class="bot-btn bot-btn-sim" id="simulate3pBtn">🎬 Тест 3p</button>
+  <button class="bot-btn bot-btn-sim" id="simulateCascadeBtn">🎬 Каскад 4p→3p→2p</button>
+</div>` : ''}
       </div>`;
   }
 
