@@ -519,12 +519,20 @@ export function renderTable(app, navigate) {
       btn.onclick = () => { playSound('button'); setLang(btn.dataset.lang); };
     });
 
-    // Выход
+    // 🚪 Выход из лобби (с очисткой сессии)
     const leaveBtn = g('leaveLobbyBtn');
     if (leaveBtn) leaveBtn.onclick = () => {
       playSound('button');
-      socket.emit('leaveRoom');
-      setTimeout(() => { try { window.location.reload(); } catch {} }, 300);
+      // 1. Сообщаем серверу что уходим
+      try { socket.emit('leaveRoom'); } catch {}
+      // 2. Чистим сохранённую сессию — иначе клиент вернёт в ту же комнату
+      try { localStorage.removeItem('me'); } catch {}
+      try { saveMe(null); } catch {}
+      // 3. Перезагружаем на главную
+      setTimeout(() => {
+        try { window.location.href = '/'; } catch {}
+        try { window.location.reload(); } catch {}
+      }, 250);
     };
 
     // Добавить бота
