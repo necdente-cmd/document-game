@@ -1893,3 +1893,201 @@
   .wl-btn { padding: 14px 18px; font-size: 16px; }
   .wl-btn-main { font-size: 16px; }
 }
+
+/* ==================== 🚪 ЭКРАН ВХОДА (JOIN v2) ==================== */
+.jn-page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(80, 100, 200, 0.2) 0%, transparent 60%),
+    linear-gradient(160deg, #0a0a1a 0%, #15152e 50%, #0a0a1a 100%);
+  overflow: hidden;
+}
+
+/* Заголовок */
+.jn-header {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  padding: 12px 14px;
+  gap: 8px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+.jn-back {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.15s;
+  padding: 0;
+}
+.jn-back:active { background: rgba(255,255,255,0.16); }
+.jn-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  text-align: center;
+  letter-spacing: 0.5px;
+  margin: 0;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+.jn-header-spacer { width: 40px; }
+
+/* Скролл-область */
+.jn-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  -webkit-overflow-scrolling: touch;
+  max-width: 480px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Секции */
+.jn-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: wlFadeUp 0.45s cubic-bezier(.2,.8,.3,1) backwards;
+}
+.jn-section:nth-child(1) { animation-delay: 60ms; }
+.jn-section:nth-child(2) { animation-delay: 140ms; }
+.jn-section:nth-child(3) { animation-delay: 220ms; }
+.jn-section:nth-child(4) { animation-delay: 300ms; }
+
+.jn-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #8a8a9a;
+  padding-left: 4px;
+}
+
+/* Инпуты */
+.jn-input {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 15px;
+  font-family: inherit;
+  color: #fff;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  box-sizing: border-box;
+}
+.jn-input:focus {
+  background: rgba(0,0,0,0.45);
+  border-color: rgba(100, 180, 255, 0.7);
+  box-shadow: 0 0 0 3px rgba(100, 180, 255, 0.15);
+}
+.jn-input::placeholder { color: #5a5a6a; }
+
+/* Код-инпут — крупный */
+.jn-input-code {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 8px;
+  padding-left: 20px;
+  padding-right: 20px;
+  text-transform: uppercase;
+  font-family: 'Courier New', monospace;
+  color: #4dd9ff;
+}
+.jn-input-code::placeholder {
+  font-size: 20px;
+  letter-spacing: 4px;
+  color: #3a4a5a;
+}
+.jn-input-code:focus {
+  border-color: rgba(77, 217, 255, 0.7);
+  box-shadow: 0 0 0 3px rgba(77, 217, 255, 0.15);
+}
+
+/* Ошибка */
+.jn-err {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ff6b6b;
+  text-align: center;
+  min-height: 20px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.jn-err.show {
+  opacity: 1;
+  background: rgba(231, 76, 60, 0.15);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+/* Sticky футер */
+.jn-footer {
+  flex-shrink: 0;
+  padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+  background: linear-gradient(0deg, rgba(10,10,26,0.98) 70%, rgba(10,10,26,0));
+  z-index: 10;
+}
+.jn-btn {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 20px;
+  font-size: 16px;
+  font-weight: 800;
+  font-family: inherit;
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.15s;
+}
+.jn-btn:active {
+  transform: translateY(1px);
+}
+.jn-btn-primary {
+  background: linear-gradient(135deg, #2a6d9a, #4da5d9);
+  box-shadow: 0 4px 16px rgba(77, 165, 217, 0.4);
+}
+.jn-btn-primary:active {
+  box-shadow: 0 2px 8px rgba(77, 165, 217, 0.3);
+}
+.jn-btn-ico { font-size: 20px; }
+.jn-btn-text { font-size: 16px; font-weight: 800; }
+
+/* Адаптив */
+@media (max-width: 380px) {
+  .jn-title { font-size: 16px; }
+  .jn-body { padding: 8px 12px 16px; gap: 12px; }
+  .jn-input { padding: 12px 14px; font-size: 14px; }
+  .jn-input-code { font-size: 24px; letter-spacing: 6px; }
+  .jn-btn { padding: 14px 16px; font-size: 15px; }
+}
