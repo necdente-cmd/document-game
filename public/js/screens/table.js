@@ -1,4 +1,4 @@
-import { state, saveMe, applyTheme, playerState, getAvatar, avatarHtml, savePrefs, isVeteran, loadMode } from '../state.js';
+import { state, saveMe, applyTheme, playerState, getAvatar, avatarHtml, savePrefs, isVeteran, loadMode, loadOpts } from '../state.js';
 import { socket, forceRefresh } from '../socket.js';
 import { cardHtml, backPath, esc, renderHandFan, beatsUI, cardPath } from '../card.js';
 import { buildOverlays, bindOverlays } from '../ui/overlays.js';
@@ -494,6 +494,14 @@ export function renderTable(app, navigate) {
   loadMode();
   const veteran = isVeteran();
 
+  // 📐 ФИКС БАГА 1: всегда применяем ЛИЧНЫЙ масштаб, не комнаты
+  try {
+    const _opts = loadOpts();
+    if (_opts && _opts.scale) {
+      document.documentElement.dataset.scale = _opts.scale;
+    }
+  } catch {}
+
   if (s.phase === 'playing' || s.phase === 'roundEnd') {
     preloadDeck(s.opts?.deckStyle || 'figures');
   }
@@ -558,7 +566,6 @@ export function renderTable(app, navigate) {
   // ==================== ЛОББИ ====================
   const lobbyBar = (s.phase === 'lobby') ? renderLobby(s, meP, meP?.isHost) : '';
 
-  // 🏠 В ЛОББИ — только лобби
   if (s.phase === 'lobby') {
     app.innerHTML = `
       <div class="table lobby-mode" id="table">
@@ -710,6 +717,12 @@ export function renderTable(app, navigate) {
     }
   }
 
+  // 📌 ФИКС БАГА 2: определяем какие карты НОВЫЕ (только что появились)
+  const prevFieldIds = window.__prevFieldIds instanceof Set ? window.__prevFieldIds : new Set();
+  const currentFieldIds = new Set(s.field ? s.field.cards.map(e => e.card.id) : []);
+  const isNewFieldCard = (cardId) => !prevFieldIds.has(cardId);
+  window.__prevFieldIds = currentFieldIds;
+
   const fieldHtml = s.field
     ? s.field.cards.map(e => {
         const canBeTarget = canDefend && !e.beatenBy && e.card.r !== myDoc && !e.isForced;
@@ -717,6 +730,8 @@ export function renderTable(app, navigate) {
         if (canBeTarget) cls.push('tappable');
         if (e.isForced) cls.push('forced');
         if (state.defendTarget === e.card.id) cls.push('selected-target');
+        // анимация появления только для НОВЫХ карт
+        if (isNewFieldCard(e.card.id)) cls.push('new-card');
         return `<div class="${cls.join(' ')}" data-field-card="${e.card.id}">
           ${cardHtml(e.card)}
           ${e.beatenBy ? cardHtml(e.beatenBy, { cls:'beaten' }) : ''}
@@ -774,22 +789,25 @@ export function renderTable(app, navigate) {
     trumpSuit: s.trumpSuit,
   });
 
+  // 📌 ФИКС БАГА 3b: не показываем подсказки в режиме ветерана
   let hintText = '';
-  if (waitingForSeat !== undefined) {
-    hintText = t(veteran ? 'hint.waitingSeatShort' : 'hint.waitingSeat');
-  } else if (canDefend && defenderGaveUp && !bothPassed) {
-    hintText = '⏳ Ждём пас атакующих…';
-  } else if (canDefend && !bothPassed && !s.pendingPass && !s.pendingSwap) {
-    const hasMyDoc = s.field.cards.some(x => !x.beatenBy && x.card.r === myDoc && !x.isForced);
-    if (hasMyDoc) hintText = t(veteran ? 'hint.hasYourDocShort' : 'hint.hasYourDoc');
-    else if (state.defendTarget) hintText = t(veteran ? 'hint.pullCardShort' : 'hint.pullCard');
-    else hintText = t(veteran ? 'hint.tapEnemyCardShort' : 'hint.tapEnemyCard');
-  } else if (canDefend && bothPassed) {
-    hintText = t(veteran ? 'hint.decideBitoShort' : 'hint.decideBito');
-  } else if (isAttacker || isPartnerOfAttacker) {
-    hintText = t(veteran ? 'hint.pullToFieldShort' : 'hint.pullToField');
-  } else if (isMyTurn) {
-    hintText = t(veteran ? 'hint.yourTurnShort' : 'hint.yourTurn');
+  if (!veteran) {
+    if (waitingForSeat !== undefined) {
+      hintText = t('hint.waitingSeat');
+    } else if (canDefend && defenderGaveUp && !bothPassed) {
+      hintText = '⏳ Ждём пас атакующих…';
+    } else if (canDefend && !bothPassed && !s.pendingPass && !s.pendingSwap) {
+      const hasMyDoc = s.field.cards.some(x => !x.beatenBy && x.card.r === myDoc && !x.isForced);
+      if (hasMyDoc) hintText = t('hint.hasYourDoc');
+      else if (state.defendTarget) hintText = t('hint.pullCard');
+      else hintText = t('hint.tapEnemyCard');
+    } else if (canDefend && bothPassed) {
+      hintText = t('hint.decideBito');
+    } else if (isAttacker || isPartnerOfAttacker) {
+      hintText = t('hint.pullToField');
+    } else if (isMyTurn) {
+      hintText = t('hint.yourTurn');
+    }
   }
 
   const now = Date.now();
@@ -1021,19 +1039,25 @@ function bindSwipeIconHandlers(app, navigate) {
   const chatBtn = document.getElementById('chatBtn');
   if (chatBtn) chatBtn.onclick = () => { hideSwipeIcons(); openChat(); };
 
+  // 📌 ФИКС БАГА 3a: показываем доки как простые строки, БЕЗ esc()
   const infoBtn = document.getElementById('infoBtn');
   if (infoBtn) infoBtn.onclick = () => {
     playSound('button'); hideSwipeIcons();
     infoOpen = !infoOpen;
     if (infoOpen) {
       const s = state.server;
+      const myTeam = s.myTeam;
+      const myDoc = String((s.docs && s.docs[myTeam]) || '—');
+      const oppDoc = String((s.docs && s.docs[1 - myTeam]) || '—');
       const el = document.createElement('div');
       el.className = 'info-modal';
       el.id = 'infoModal';
       el.innerHTML = `
         <div class="info-modal-inner">
           <h3>${t('info.title')}</h3>
-          <div class="info-row"><span>${t('info.trump')}</span><b>${esc(s.trumpSuit || '—')}</b></div>
+          <div class="info-row"><span>${t('info.trump')}</span><b>${s.trumpSuit || '—'}</b></div>
+          <div class="info-row"><span>${t('info.myDoc')}</span><b>${myDoc}</b></div>
+          <div class="info-row"><span>${t('info.oppDoc')}</span><b>${oppDoc}</b></div>
           <div class="info-row"><span>${t('info.score')}</span><b>${s.roundWins[0]} : ${s.roundWins[1]}</b></div>
           <button class="info-modal-close" id="infoClose">${t('common.close')}</button>
         </div>
