@@ -324,15 +324,14 @@
   position: absolute;
   top: 48%; left: 50%;
   transform: translate(-50%, -50%);
-  display: flex;
-  flex-wrap: wrap;
-  gap: calc(40px * var(--scale));
+  display: grid;
+  grid-template-columns: repeat(2, calc(var(--card-w) * 0.9));
+  gap: calc(20px * var(--scale)) calc(40px * var(--scale));
   justify-content: center;
   align-content: center;
   align-items: center;
   z-index: 5;
   padding: 4px;
-  width: calc(var(--card-w) * 2.7 + 80px);
   max-width: 94vw;
   box-sizing: border-box;
 }
