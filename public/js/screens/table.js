@@ -22,6 +22,16 @@ let infoOpen = false;
 let iconsVisible = false;
 let iconsTimer = null;
 
+// 🎴 6 режимов сортировки
+const SORT_MODES = [
+  { key: 'std',   name: 'Стандарт (A↓)' },
+  { key: 'suit',  name: 'По мастям ♠♥♦♣' },
+  { key: 'trump', name: 'Козыри вперёд' },
+  { key: 'asc',   name: 'По возрастанию (6↑)' },
+  { key: 'cheap', name: 'Дешёвые вперёд (для атаки)' },
+  { key: 'docs',  name: 'Доки отдельно' },
+];
+
 function preloadDeck(style) {
   const key = '__preload_' + (style || 'figures');
   if (window[key]) return;
@@ -262,29 +272,74 @@ function setupSwipe() {
   }, true);
 }
 
+// ==================== 🎴 6 РЕЖИМОВ СОРТИРОВКИ ====================
 function sortHand(hand, myDoc, trumpSuit) {
   const RV = { '6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14 };
   const SO = { '♠':0, '♥':1, '♦':2, '♣':3 };
   const arr = [...hand];
   const isDoc = c => c.r === myDoc;
   const isKoz = c => c.s === trumpSuit;
+  const mode = SORT_MODES[sortMode]?.key || 'std';
+
   arr.sort((a, b) => {
     const aD = isDoc(a), bD = isDoc(b);
-    if (aD && !bD) return -1;
-    if (!aD && bD) return 1;
-    if (aD && bD) return SO[a.s] - SO[b.s];
-    if (sortMode === 0) {
+    const aK = isKoz(a), bK = isKoz(b);
+
+    // 0. Стандарт: доки вперёд → по убыванию ранга → по мастям
+    if (mode === 'std') {
+      if (aD && !bD) return -1;
+      if (!aD && bD) return 1;
+      if (aD && bD) return SO[a.s] - SO[b.s];
       if (RV[b.r] !== RV[a.r]) return RV[b.r] - RV[a.r];
       return SO[a.s] - SO[b.s];
     }
-    if (sortMode === 1) {
+
+    // 1. По мастям ♠♥♦♣, внутри ↑
+    if (mode === 'suit') {
+      if (aD && !bD) return -1;
+      if (!aD && bD) return 1;
+      if (aD && bD) return SO[a.s] - SO[b.s];
       if (SO[a.s] !== SO[b.s]) return SO[a.s] - SO[b.s];
       return RV[a.r] - RV[b.r];
     }
-    const aK = isKoz(a), bK = isKoz(b);
-    if (aK && !bK) return -1;
-    if (!aK && bK) return 1;
-    return RV[a.r] - RV[b.r];
+
+    // 2. Козыри вперёд → по убыванию ранга
+    if (mode === 'trump') {
+      if (aD && !bD) return -1;
+      if (!aD && bD) return 1;
+      if (aD && bD) return SO[a.s] - SO[b.s];
+      if (aK && !bK) return -1;
+      if (!aK && bK) return 1;
+      if (RV[b.r] !== RV[a.r]) return RV[b.r] - RV[a.r];
+      return SO[a.s] - SO[b.s];
+    }
+
+    // 3. По возрастанию (6→A)
+    if (mode === 'asc') {
+      if (aD && !bD) return -1;
+      if (!aD && bD) return 1;
+      if (aD && bD) return SO[a.s] - SO[b.s];
+      if (RV[a.r] !== RV[b.r]) return RV[a.r] - RV[b.r];
+      return SO[a.s] - SO[b.s];
+    }
+
+    // 4. Дешёвые вперёд (для атаки): некозырные младшие → некозырные старшие → козыри
+    if (mode === 'cheap') {
+      if (aK !== bK) return aK ? 1 : -1;
+      if (RV[a.r] !== RV[b.r]) return RV[a.r] - RV[b.r];
+      return SO[a.s] - SO[b.s];
+    }
+
+    // 5. Доки отдельно: доки сверху → остальные по мастям ♠♥♦♣
+    if (mode === 'docs') {
+      if (aD && !bD) return -1;
+      if (!aD && bD) return 1;
+      if (aD && bD) return SO[a.s] - SO[b.s];
+      if (SO[a.s] !== SO[b.s]) return SO[a.s] - SO[b.s];
+      return RV[a.r] - RV[b.r];
+    }
+
+    return 0;
   });
   return arr;
 }
@@ -676,17 +731,20 @@ export function renderTable(app, navigate) {
     return;
   }
 
+  // 🆕 В ветеран-режиме — не показываем ВСЕ passNotice
   let passNotice = '';
-  if (s.field && !s.pendingPass && !s.pendingSwap) {
-    if (bothPassed) passNotice = `<div class="pass-notice">${t('notice.bothPassed')}</div>`;
-    else if (attackerPassed && !partnerOutV && !partnerPassed)
-      passNotice = `<div class="pass-notice info">${t('notice.attackerPassed')}</div>`;
-    else if (partnerPassed && !attackerOut && !attackerPassed)
-      passNotice = `<div class="pass-notice info">${t('notice.partnerPassed')}</div>`;
-  }
-  if (waitingForSeat !== undefined) {
-    const wname = s.players.find(p => p.seat === waitingForSeat)?.name || '?';
-    passNotice = `<div class="pass-notice wait">${t('notice.waitingSeat', { name: wname })}</div>`;
+  if (!veteran) {
+    if (s.field && !s.pendingPass && !s.pendingSwap) {
+      if (bothPassed) passNotice = `<div class="pass-notice">${t('notice.bothPassed')}</div>`;
+      else if (attackerPassed && !partnerOutV && !partnerPassed)
+        passNotice = `<div class="pass-notice info">${t('notice.attackerPassed')}</div>`;
+      else if (partnerPassed && !attackerOut && !attackerPassed)
+        passNotice = `<div class="pass-notice info">${t('notice.partnerPassed')}</div>`;
+    }
+    if (waitingForSeat !== undefined) {
+      const wname = s.players.find(p => p.seat === waitingForSeat)?.name || '?';
+      passNotice = `<div class="pass-notice wait">${t('notice.waitingSeat', { name: wname })}</div>`;
+    }
   }
 
   const seats = s.players.filter(p => p.seat !== mySeat).map(p => {
@@ -853,7 +911,6 @@ export function renderTable(app, navigate) {
   app.innerHTML = `
     <!-- 🆕 TOP-BAR -->
     <div class="top-bar" id="topBar">
-      <!-- Слева: info + карты -->
       <button class="tb-btn" id="tbInfoBtn" title="${t('info.title')}">📊</button>
       <div class="tb-item" title="${handCount} ${parityTitle}">
         <span class="tb-ico">🎴</span>
@@ -863,7 +920,6 @@ export function renderTable(app, navigate) {
 
       <div class="tb-spacer"></div>
 
-      <!-- Справа: доки + счёт + настройки -->
       <div class="tb-item" title="${t('info.myDoc')} / ${t('info.oppDoc')}">
         <span class="tb-ico">🎯</span>
         <span class="tb-doc tb-my">${myDoc || '—'}</span>
@@ -1040,10 +1096,14 @@ function bindSwipeIconHandlers(app, navigate) {
     setTimeout(hideSwipeIcons, 300);
   };
 
+  // 🎴 6 режимов сортировки
   const sortBtn = document.getElementById('sortBtn');
   if (sortBtn) sortBtn.onclick = () => {
-    playSound('button'); hideSwipeIcons();
-    sortMode = (sortMode + 1) % 3;
+    playSound('button');
+    hideSwipeIcons();
+    sortMode = (sortMode + 1) % SORT_MODES.length;
+    const modeName = SORT_MODES[sortMode].name;
+    toastInfo(`↕️ ${modeName}`);
     renderTable(app, navigate);
   };
 
