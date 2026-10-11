@@ -365,8 +365,8 @@
 
 /* ==================== БИТАЯ КАРТА ==================== */
 .slot .card.beaten {
-  top: calc(-11px * var(--scale));
-  left: calc(26px * var(--scale));
+  top: calc(-10px * var(--scale));
+  left: calc(22px * var(--scale));
   transform: rotate(5deg);
   z-index: 2;
   --glow: 46, 204, 113;
