@@ -175,10 +175,8 @@ function ensureSwipeIcons() {
     el.innerHTML = `
       <button class="icon-btn" id="refreshBtn" title="Refresh">🔄</button>
       <button class="icon-btn" id="sortBtn" title="Sort">↕️</button>
-      <button class="icon-btn" id="calcBtn" title="Расчёт карт">🧮</button>
       <button class="icon-btn" id="emojiToggle" title="Emoji">😀</button>
       <button class="icon-btn" id="chatBtn" title="${t('chat.title')}">💬</button>
-      <button class="icon-btn ${infoOpen?'active':''}" id="infoBtn" title="${t('info.title')}">📊</button>
       <button class="icon-btn" id="debugBtn" title="Диагностика">🧪</button>
     `;
     document.body.appendChild(el);
@@ -239,7 +237,7 @@ function setupSwipe() {
     if (e.target.closest('.chat-panel')) return;
     if (e.target.closest('.info-modal')) return;
     if (e.target.closest('.swipe-trigger')) return;
-    if (e.target.closest('.settings-btn')) return;
+    if (e.target.closest('.top-bar')) return;
     const x = e.touches[0].clientX;
     if (x < 40) { startX = x; started = true; }
   }, { passive: true });
@@ -289,6 +287,32 @@ function sortHand(hand, myDoc, trumpSuit) {
     return RV[a.r] - RV[b.r];
   });
   return arr;
+}
+
+// ==================== 📊 INFO MODAL ====================
+function showInfoModal() {
+  const s = state.server;
+  if (!s) return;
+  const myTeam = s.myTeam;
+  const myDoc = String((s.docs && s.docs[myTeam]) || '—');
+  const oppDoc = String((s.docs && s.docs[1 - myTeam]) || '—');
+  const el = document.createElement('div');
+  el.className = 'info-modal';
+  el.id = 'infoModal';
+  el.innerHTML = `
+    <div class="info-modal-inner">
+      <h3>${t('info.title')}</h3>
+      <div class="info-row"><span>${t('info.trump')}</span><b>${s.trumpSuit || '—'}</b></div>
+      <div class="info-row"><span>${t('info.myDoc')}</span><b>${myDoc}</b></div>
+      <div class="info-row"><span>${t('info.oppDoc')}</span><b>${oppDoc}</b></div>
+      <div class="info-row"><span>${t('info.score')}</span><b>${s.roundWins[0]} : ${s.roundWins[1]}</b></div>
+      <button class="info-modal-close" id="infoClose">${t('common.close')}</button>
+    </div>
+  `;
+  document.body.appendChild(el);
+  const close = () => el.remove();
+  el.onclick = (e) => { if (e.target === el) close(); };
+  document.getElementById('infoClose').onclick = close;
 }
 
 // ==================== 🧪 ДИАГНОСТИКА VOICE ====================
@@ -821,37 +845,36 @@ export function renderTable(app, navigate) {
 
   const overlays = buildOverlays();
 
-  // 🆕 Top-bar данные
   const handCount = s.myHand.length;
   const isEven = handCount > 0 && handCount % 2 === 0;
   const parityIcon = handCount === 0 ? '—' : (isEven ? '✅' : '❌');
   const parityTitle = handCount === 0 ? '' : (isEven ? 'чёт' : 'нечёт');
 
   app.innerHTML = `
-    <!-- 🆕 TOP-BAR: счёт, доки, рука -->
+    <!-- 🆕 TOP-BAR -->
     <div class="top-bar" id="topBar">
-      <button class="tb-btn" id="settingsBtn" title="${t('settings.title')}">⚙️</button>
-
-      <div class="tb-item" id="tbDocs" title="${t('info.myDoc')} / ${t('info.oppDoc')}">
-        <span class="tb-ico">🎯</span>
-        <span class="tb-doc tb-my">${myDoc || '—'}</span>
-        <span class="tb-sep">·</span>
-        <span class="tb-doc tb-opp">${oppDoc || '—'}</span>
-      </div>
-
-      <div class="tb-item tb-score-item" title="${t('info.score')}">
-        <span class="tb-ico">🏆</span>
-        <span class="tb-score"><b>${s.roundWins[myTeam]}</b> : <b>${s.roundWins[1 - myTeam]}</b></span>
-      </div>
-
-      <div class="tb-item" title="${t('info.handCount') || 'Рука'}: ${handCount} ${parityTitle}">
+      <!-- Слева: info + карты -->
+      <button class="tb-btn" id="tbInfoBtn" title="${t('info.title')}">📊</button>
+      <div class="tb-item" title="${handCount} ${parityTitle}">
         <span class="tb-ico">🎴</span>
         <span class="tb-hand">${handCount}</span>
         <span class="tb-parity">${parityIcon}</span>
       </div>
 
       <div class="tb-spacer"></div>
-      <button class="tb-btn" id="tbInfoBtn" title="${t('info.title')}">📊</button>
+
+      <!-- Справа: доки + счёт + настройки -->
+      <div class="tb-item" title="${t('info.myDoc')} / ${t('info.oppDoc')}">
+        <span class="tb-ico">🎯</span>
+        <span class="tb-doc tb-my">${myDoc || '—'}</span>
+        <span class="tb-sep">·</span>
+        <span class="tb-doc tb-opp">${oppDoc || '—'}</span>
+      </div>
+      <div class="tb-item" title="${t('info.score')}">
+        <span class="tb-ico">🏆</span>
+        <span class="tb-score"><b>${s.roundWins[myTeam]}</b> : <b>${s.roundWins[1 - myTeam]}</b></span>
+      </div>
+      <button class="tb-btn" id="settingsBtn" title="${t('settings.title')}">⚙️</button>
     </div>
 
     <div class="table ${myTurnNow ? 'my-turn' : ''} ${iAmDefending ? 'my-defend' : ''}" id="table">
@@ -930,13 +953,10 @@ export function renderTable(app, navigate) {
     };
   }
 
-  // 🆕 top-bar обработчики
   const tbInfo = g('tbInfoBtn');
   if (tbInfo) tbInfo.onclick = () => {
     playSound('button');
-    // Тот же вызов что и infoBtn в свайпе
-    const infoBtnSwipe = g('infoBtn');
-    if (infoBtnSwipe) infoBtnSwipe.click();
+    showInfoModal();
   };
 
   const st = g('startBtn'); if (st) st.onclick = () => { playSound('button'); socket.emit('startGame'); };
@@ -1027,15 +1047,6 @@ function bindSwipeIconHandlers(app, navigate) {
     renderTable(app, navigate);
   };
 
-  const calcBtn = document.getElementById('calcBtn');
-  if (calcBtn) calcBtn.onclick = () => {
-    playSound('button');
-    hideSwipeIcons();
-    const count = state.server?.myHand?.length || 0;
-    const isEven = count % 2 === 0;
-    toastInfo(t(isEven ? 'calc.even' : 'calc.odd', { n: count }));
-  };
-
   const emojiToggle = document.getElementById('emojiToggle');
   if (emojiToggle) emojiToggle.onclick = () => {
     playSound('button'); hideSwipeIcons();
@@ -1068,38 +1079,6 @@ function bindSwipeIconHandlers(app, navigate) {
 
   const chatBtn = document.getElementById('chatBtn');
   if (chatBtn) chatBtn.onclick = () => { hideSwipeIcons(); openChat(); };
-
-  const infoBtn = document.getElementById('infoBtn');
-  if (infoBtn) infoBtn.onclick = () => {
-    playSound('button'); hideSwipeIcons();
-    infoOpen = !infoOpen;
-    if (infoOpen) {
-      const s = state.server;
-      const myTeam = s.myTeam;
-      const myDoc = String((s.docs && s.docs[myTeam]) || '—');
-      const oppDoc = String((s.docs && s.docs[1 - myTeam]) || '—');
-      const el = document.createElement('div');
-      el.className = 'info-modal';
-      el.id = 'infoModal';
-      el.innerHTML = `
-        <div class="info-modal-inner">
-          <h3>${t('info.title')}</h3>
-          <div class="info-row"><span>${t('info.trump')}</span><b>${s.trumpSuit || '—'}</b></div>
-          <div class="info-row"><span>${t('info.myDoc')}</span><b>${myDoc}</b></div>
-          <div class="info-row"><span>${t('info.oppDoc')}</span><b>${oppDoc}</b></div>
-          <div class="info-row"><span>${t('info.score')}</span><b>${s.roundWins[0]} : ${s.roundWins[1]}</b></div>
-          <button class="info-modal-close" id="infoClose">${t('common.close')}</button>
-        </div>
-      `;
-      document.body.appendChild(el);
-      const close = () => { el.remove(); infoOpen = false; };
-      el.onclick = (e) => { if (e.target === el) close(); };
-      document.getElementById('infoClose').onclick = close;
-    } else {
-      const m = document.getElementById('infoModal');
-      if (m) m.remove();
-    }
-  };
 
   const debugBtn = document.getElementById('debugBtn');
   if (debugBtn) debugBtn.onclick = () => {
