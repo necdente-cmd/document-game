@@ -2,14 +2,13 @@ import { state, saveMe, applyTheme, playerState, getAvatar, avatarHtml, savePref
 import { socket, forceRefresh } from '../socket.js';
 import { cardHtml, backPath, esc, renderHandFan, beatsUI, cardPath } from '../card.js';
 import { buildOverlays, bindOverlays } from '../ui/overlays.js';
-import { maybeShowChampion } from '../ui/champion.js';
+import { maybeShowChampion, maybeShowRoundWin } from '../ui/champion.js';
 import { showHistory } from '../ui/history.js';
 import { openSettings } from '../ui/settings.js';
 import { openChat } from '../ui/chat.js';
 import { initDrag } from '../drag.js';
 import { EMOJIS } from '../emojis.js';
 import { playSound } from '../sound.js';
-import { maybeShowChampion, maybeShowRoundWin } from '../ui/champion.js';
 import { toastErr, toastOk, toastInfo } from '../ui/toast.js';
 import {
   enableVoice, disableVoice, setMicOn, unlockAudio,
