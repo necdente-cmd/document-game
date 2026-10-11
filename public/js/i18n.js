@@ -85,6 +85,8 @@ const RU = {
   'lobby.leaveConfirm': 'Покинуть комнату?',
   'lobby.emptySlot': 'Пусто',
   'lobby.communication': 'Связь',
+    'lobby.addBot': 'Добавить бота',
+  'lobby.removeBot': 'Удалить бота',
 
   // ===== positions =====
   'pos.A1': 'A1',
@@ -404,6 +406,8 @@ const KY = {
   'lobby.leaveConfirm': 'Бөлмөдөн чыгасызбы?',
   'lobby.emptySlot': 'Бош',
   'lobby.communication': 'Байланыш',
+    'lobby.addBot': 'Бот кошуу',
+  'lobby.removeBot': 'Ботту өчүрүү',
 
   'state.beat': 'чабып жатат',
   'state.think': 'ойлонуп жатат',

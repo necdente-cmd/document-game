@@ -2232,3 +2232,107 @@
     border-radius: 16px;
   }
 }
+
+/* ==================== 🗑 КНОПКИ БОТОВ (в две колонки) ==================== */
+.lb-bot-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 460px;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+.lb-bot-row .lb-bot-btn {
+  flex: 1;
+  width: auto;
+  margin-top: 0;
+  min-width: 0;
+}
+.lb-bot-btn-remove {
+  background: linear-gradient(135deg, #7a2020, #b84a4a) !important;
+  border-color: #e07070 !important;
+  box-shadow: 0 4px 12px rgba(184, 74, 74, 0.4) !important;
+}
+.lb-bot-btn-remove:active {
+  background: linear-gradient(135deg, #8a2828, #c85a5a) !important;
+}
+
+/* ==================== 🎤😀 ПРАВАЯ ПАНЕЛЬ ИКОНОК ==================== */
+.swipe-icons-right {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translate(100%, -50%);
+  transition: transform .25s ease-out;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 10px;
+  background: rgba(0, 0, 0, .9);
+  border-top-left-radius: 16px;
+  border-bottom-left-radius: 16px;
+  z-index: 300;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, .7);
+  width: fit-content;
+  pointer-events: auto;
+}
+.swipe-icons-right.show { transform: translate(0, -50%); }
+.swipe-icons-right .icon-btn {
+  width: calc(46px * var(--scale));
+  height: calc(46px * var(--scale));
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, .12);
+  color: #fff;
+  font-size: calc(22px * var(--scale));
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .5);
+  padding: 0;
+  transition: transform .12s, background .12s;
+}
+.swipe-icons-right .icon-btn:active {
+  transform: scale(.9);
+  background: rgba(255, 255, 255, .25);
+}
+.swipe-icons-right .icon-btn.active {
+  background: var(--acc);
+  color: #000;
+}
+.swipe-icons-right .icon-btn.voice-on {
+  background: #2ecc71 !important;
+  color: #000 !important;
+  box-shadow: 0 0 12px rgba(46, 204, 113, .6);
+}
+.swipe-icons-right .icon-btn.voice-muted {
+  background: #e74c3c !important;
+  color: #fff !important;
+}
+
+.swipe-trigger-right {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 64px;
+  background: rgba(0, 0, 0, .7);
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+  border: none;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  z-index: 299;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, .5);
+  transition: background .15s;
+}
+.swipe-trigger-right:active { background: rgba(0, 0, 0, .9); }
+.swipe-trigger-right.hidden { display: none; }

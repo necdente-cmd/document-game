@@ -45,11 +45,17 @@ export async function showReaction(seat, emoji) {
   const cp = REACTION_CODE[emoji];
   if (!cp) return;
 
-  // 📍 Старт — аватар игрока (или рука для своей реакции)
+  // 📍 Старт — аватар игрока (в игре или в лобби), иначе рука/центр
   let startRect;
-  const avatarEl = document.querySelector(`.seat[data-seat="${seat}"] .avatar`);
-  if (avatarEl) {
-    startRect = avatarEl.getBoundingClientRect();
+  const seatAvatar = document.querySelector(`.seat[data-seat="${seat}"] .avatar`);
+  const lobbyAvatar = document.querySelector(`.lb-slot[data-seat="${seat}"] .lb-av`);
+  const lobbySlot = document.querySelector(`.lb-slot[data-seat="${seat}"]`);
+  if (seatAvatar) {
+    startRect = seatAvatar.getBoundingClientRect();
+  } else if (lobbyAvatar) {
+    startRect = lobbyAvatar.getBoundingClientRect();
+  } else if (lobbySlot) {
+    startRect = lobbySlot.getBoundingClientRect();
   } else {
     const hand = document.getElementById('hand');
     startRect = hand

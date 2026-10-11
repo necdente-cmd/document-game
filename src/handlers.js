@@ -322,6 +322,23 @@ export function setupHandlers(io, broadcast) {
       broadcast(r);
     });
 
+    // 🗑 УДАЛЕНИЕ БОТА (удаляет последнего добавленного)
+    socket.on('removeBot', () => {
+      const r = rooms.get(rid); if (!r) return;
+      if (r.hostId !== pid) return err('Только хост');
+      if (r.phase !== 'lobby') return err('Только в лобби');
+
+      const bots = r.players.filter(p => p.isBot);
+      if (!bots.length) return err('В комнате нет ботов');
+
+      const bot = bots[bots.length - 1];
+      r.players = r.players.filter(p => p.id !== bot.id);
+      r.players.forEach((x, i) => { x.seat = i; x.team = i % 2; });
+
+      log(r, `🗑 Удалён ${bot.name}`);
+      broadcast(r);
+    });
+
     socket.on('fillBots', ({ start } = {}) => {
       const r = rooms.get(rid); if (!r) return;
       if (r.hostId !== pid) return err('Только хост');
