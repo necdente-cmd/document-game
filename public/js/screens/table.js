@@ -124,17 +124,38 @@ function captureFieldForFly() {
   });
 }
 
+// 🎬 Уведомление по центру стола (бито / поднятие)
+function showCenterNotice(text, type) {
+  const tableEl = document.getElementById('table');
+  if (!tableEl) return;
+  const el = document.createElement('div');
+  el.className = `center-notice center-notice-${type}`;
+  el.textContent = text;
+  tableEl.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('fade-out');
+    setTimeout(() => el.remove(), 400);
+  }, 1000);
+}
+
 function playPendingFieldFly() {
   const fly = state.pendingFieldFly;
   if (!fly) return;
   state.pendingFieldFly = null;
   if (!fly.positions || !fly.positions.length) return;
+
+  const s = state.server;
+  const defenderName = (s && s.players && s.players.find(p => p.seat === fly.defenderSeat)?.name) || '';
+
   const tableEl = document.getElementById('table');
   const tableRect = tableEl
     ? tableEl.getBoundingClientRect()
     : { right: window.innerWidth, left: 0, top: 0, bottom: window.innerHeight };
+
   let targetCx, targetCy, rot;
+
   if (fly.type === 'pickup') {
+    // 🃏 Карты летят к аватару защитника
     const defEl = document.querySelector(`.seat[data-seat="${fly.defenderSeat}"] .avatar`);
     const r = defEl ? defEl.getBoundingClientRect() : null;
     if (r) {
@@ -145,11 +166,26 @@ function playPendingFieldFly() {
       targetCy = tableRect.top + 100;
     }
     rot = -15;
+
+    // Уведомление по центру стола
+    showCenterNotice(t('notice.pickup', { name: defenderName }), 'pickup');
+
+    // Вспышка на аватаре защитника
+    const seatEl = document.querySelector(`.seat[data-seat="${fly.defenderSeat}"]`);
+    if (seatEl) {
+      seatEl.classList.add('seat-pickup-flash');
+      setTimeout(() => seatEl.classList.remove('seat-pickup-flash'), 1100);
+    }
   } else {
+    // 🗑 Бито — в правый верх (медленно, чтобы все увидели)
     targetCx = tableRect.right + 80;
     targetCy = tableRect.top + 80;
     rot = 25;
+
+    // Уведомление по центру стола
+    showCenterNotice(t('notice.bito', { name: defenderName }), 'bito');
   }
+
   fly.positions.forEach((p, i) => {
     const img = document.createElement('img');
     img.src = p.src;
@@ -161,18 +197,18 @@ function playPendingFieldFly() {
       pointer-events: none;
       border-radius: 6px;
       box-shadow: 0 6px 16px rgba(0,0,0,.5);
-      transition: all 0.55s cubic-bezier(.4,0,.5,1);
-      transition-delay: ${i * 30}ms;
+      transition: all 1.0s cubic-bezier(.4,0,.5,1);
+      transition-delay: ${i * 70}ms;
       will-change: transform, opacity;
     `;
     document.body.appendChild(img);
     requestAnimationFrame(() => {
       const dx = targetCx - (p.left + p.w / 2);
       const dy = targetCy - (p.top  + p.h / 2);
-      img.style.transform = `translate(${dx}px, ${dy}px) scale(0.35) rotate(${rot}deg)`;
+      img.style.transform = `translate(${dx}px, ${dy}px) scale(0.25) rotate(${rot}deg)`;
       img.style.opacity = '0';
     });
-    setTimeout(() => img.remove(), 1000 + i * 30);
+    setTimeout(() => img.remove(), 1400 + i * 70);
   });
 }
 
@@ -285,7 +321,6 @@ function sortHand(hand, myDoc, trumpSuit) {
     const aD = isDoc(a), bD = isDoc(b);
     const aK = isKoz(a), bK = isKoz(b);
 
-    // 0. Стандарт: доки вперёд → по убыванию ранга → по мастям
     if (mode === 'std') {
       if (aD && !bD) return -1;
       if (!aD && bD) return 1;
@@ -294,7 +329,6 @@ function sortHand(hand, myDoc, trumpSuit) {
       return SO[a.s] - SO[b.s];
     }
 
-    // 1. По мастям ♠♥♦♣, внутри ↑
     if (mode === 'suit') {
       if (aD && !bD) return -1;
       if (!aD && bD) return 1;
@@ -303,7 +337,6 @@ function sortHand(hand, myDoc, trumpSuit) {
       return RV[a.r] - RV[b.r];
     }
 
-    // 2. Козыри вперёд → по убыванию ранга
     if (mode === 'trump') {
       if (aD && !bD) return -1;
       if (!aD && bD) return 1;
@@ -314,7 +347,6 @@ function sortHand(hand, myDoc, trumpSuit) {
       return SO[a.s] - SO[b.s];
     }
 
-    // 3. По возрастанию (6→A)
     if (mode === 'asc') {
       if (aD && !bD) return -1;
       if (!aD && bD) return 1;
@@ -323,14 +355,12 @@ function sortHand(hand, myDoc, trumpSuit) {
       return SO[a.s] - SO[b.s];
     }
 
-    // 4. Дешёвые вперёд (для атаки): некозырные младшие → некозырные старшие → козыри
     if (mode === 'cheap') {
       if (aK !== bK) return aK ? 1 : -1;
       if (RV[a.r] !== RV[b.r]) return RV[a.r] - RV[b.r];
       return SO[a.s] - SO[b.s];
     }
 
-    // 5. Доки отдельно: доки сверху → остальные по мастям ♠♥♦♣
     if (mode === 'docs') {
       if (aD && !bD) return -1;
       if (!aD && bD) return 1;
@@ -817,7 +847,7 @@ export function renderTable(app, navigate) {
           ${e.beatenBy ? cardHtml(e.beatenBy, { cls:'beaten' }) : ''}
         </div>`;
       }).join('')
-    : `<div style="opacity:.5">—</div>`;
+    : '';
 
   const onlyDocsNow = s.myHand.length > 0 && s.myHand.every(c => c.r === myDoc);
   const allBeaten = s.field && s.field.cards.length > 0 && s.field.cards.every(x => x.beatenBy);
@@ -934,12 +964,13 @@ export function renderTable(app, navigate) {
     </div>
 
     <div class="table ${myTurnNow ? 'my-turn' : ''} ${iAmDefending ? 'my-defend' : ''}" id="table">
+      <img src="/logo.png" class="field-watermark" alt="">
+
       ${passNotice}
       ${deckArea}
 
       ${seats}
       <div class="center">
-        ${!s.field ? `<img src="/logo.png" class="field-watermark" alt="">` : ''}
         ${fieldHtml}
       </div>
 
@@ -1096,7 +1127,6 @@ function bindSwipeIconHandlers(app, navigate) {
     setTimeout(hideSwipeIcons, 300);
   };
 
-  // 🎴 6 режимов сортировки
   const sortBtn = document.getElementById('sortBtn');
   if (sortBtn) sortBtn.onclick = () => {
     playSound('button');

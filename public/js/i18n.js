@@ -112,6 +112,8 @@ const RU = {
   'notice.attackerPassed': '⏳ Атакующий пасанул — ждём партнёра',
   'notice.partnerPassed': '⏳ Партнёр пасанул — ждём атакующего',
   'notice.waitingSeat': '⏳ Ждём {name} — отошёл',
+  'notice.pickup': '{name} поднял карты',
+  'notice.bito': '{name} сделал бито',
 
   // ===== hints =====
   'hint.waitingSeat': '⏳ Ждём игрока — скоро вернётся',
@@ -419,6 +421,8 @@ const KY = {
   'notice.attackerPassed': '⏳ Чабуулчу жок деди — өнөктү күтүп жатабыз',
   'notice.partnerPassed': '⏳ Өнөктөш жок деди — чабуулчуну күтүп жатабыз',
   'notice.waitingSeat': '⏳ {name} күтүп жатабыз — убактылуу жок',
+  'notice.pickup': '{name} көтөрдү',
+  'notice.bito': '{name} кетирди',
 
   'hint.waitingSeat': '⏳ Оюнчуну күтүп жатабыз — жакында келет',
   'hint.hasYourDoc': '⚠ Столдо сиздин документ — баарын көтөрүү керек',
