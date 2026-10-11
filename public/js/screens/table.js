@@ -494,7 +494,7 @@ export function renderTable(app, navigate) {
   loadMode();
   const veteran = isVeteran();
 
-  // 📐 ФИКС БАГА 1: всегда применяем ЛИЧНЫЙ масштаб, не комнаты
+  // 📐 Всегда применяем ЛИЧНЫЙ масштаб
   try {
     const _opts = loadOpts();
     if (_opts && _opts.scale) {
@@ -717,7 +717,6 @@ export function renderTable(app, navigate) {
     }
   }
 
-  // 📌 ФИКС БАГА 2: определяем какие карты НОВЫЕ (только что появились)
   const prevFieldIds = window.__prevFieldIds instanceof Set ? window.__prevFieldIds : new Set();
   const currentFieldIds = new Set(s.field ? s.field.cards.map(e => e.card.id) : []);
   const isNewFieldCard = (cardId) => !prevFieldIds.has(cardId);
@@ -730,7 +729,6 @@ export function renderTable(app, navigate) {
         if (canBeTarget) cls.push('tappable');
         if (e.isForced) cls.push('forced');
         if (state.defendTarget === e.card.id) cls.push('selected-target');
-        // анимация появления только для НОВЫХ карт
         if (isNewFieldCard(e.card.id)) cls.push('new-card');
         return `<div class="${cls.join(' ')}" data-field-card="${e.card.id}">
           ${cardHtml(e.card)}
@@ -789,7 +787,6 @@ export function renderTable(app, navigate) {
     trumpSuit: s.trumpSuit,
   });
 
-  // 📌 ФИКС БАГА 3b: не показываем подсказки в режиме ветерана
   let hintText = '';
   if (!veteran) {
     if (waitingForSeat !== undefined) {
@@ -824,18 +821,42 @@ export function renderTable(app, navigate) {
 
   const overlays = buildOverlays();
 
-  const showScore = isPlaying || s.phase === 'roundEnd';
-  const scoreCorner = showScore
-    ? `<div class="score-corner">${s.roundWins[myTeam]} : ${s.roundWins[1 - myTeam]}</div>`
-    : '';
+  // 🆕 Top-bar данные
+  const handCount = s.myHand.length;
+  const isEven = handCount > 0 && handCount % 2 === 0;
+  const parityIcon = handCount === 0 ? '—' : (isEven ? '✅' : '❌');
+  const parityTitle = handCount === 0 ? '' : (isEven ? 'чёт' : 'нечёт');
 
   app.innerHTML = `
+    <!-- 🆕 TOP-BAR: счёт, доки, рука -->
+    <div class="top-bar" id="topBar">
+      <button class="tb-btn" id="settingsBtn" title="${t('settings.title')}">⚙️</button>
+
+      <div class="tb-item" id="tbDocs" title="${t('info.myDoc')} / ${t('info.oppDoc')}">
+        <span class="tb-ico">🎯</span>
+        <span class="tb-doc tb-my">${myDoc || '—'}</span>
+        <span class="tb-sep">·</span>
+        <span class="tb-doc tb-opp">${oppDoc || '—'}</span>
+      </div>
+
+      <div class="tb-item tb-score-item" title="${t('info.score')}">
+        <span class="tb-ico">🏆</span>
+        <span class="tb-score"><b>${s.roundWins[myTeam]}</b> : <b>${s.roundWins[1 - myTeam]}</b></span>
+      </div>
+
+      <div class="tb-item" title="${t('info.handCount') || 'Рука'}: ${handCount} ${parityTitle}">
+        <span class="tb-ico">🎴</span>
+        <span class="tb-hand">${handCount}</span>
+        <span class="tb-parity">${parityIcon}</span>
+      </div>
+
+      <div class="tb-spacer"></div>
+      <button class="tb-btn" id="tbInfoBtn" title="${t('info.title')}">📊</button>
+    </div>
+
     <div class="table ${myTurnNow ? 'my-turn' : ''} ${iAmDefending ? 'my-defend' : ''}" id="table">
       ${passNotice}
-      ${scoreCorner}
       ${deckArea}
-
-      <button class="settings-btn" id="settingsBtn" title="${t('settings.title')}">⚙️</button>
 
       ${seats}
       <div class="center">
@@ -908,6 +929,15 @@ export function renderTable(app, navigate) {
       }
     };
   }
+
+  // 🆕 top-bar обработчики
+  const tbInfo = g('tbInfoBtn');
+  if (tbInfo) tbInfo.onclick = () => {
+    playSound('button');
+    // Тот же вызов что и infoBtn в свайпе
+    const infoBtnSwipe = g('infoBtn');
+    if (infoBtnSwipe) infoBtnSwipe.click();
+  };
 
   const st = g('startBtn'); if (st) st.onclick = () => { playSound('button'); socket.emit('startGame'); };
 
@@ -1039,7 +1069,6 @@ function bindSwipeIconHandlers(app, navigate) {
   const chatBtn = document.getElementById('chatBtn');
   if (chatBtn) chatBtn.onclick = () => { hideSwipeIcons(); openChat(); };
 
-  // 📌 ФИКС БАГА 3a: показываем доки как простые строки, БЕЗ esc()
   const infoBtn = document.getElementById('infoBtn');
   if (infoBtn) infoBtn.onclick = () => {
     playSound('button'); hideSwipeIcons();

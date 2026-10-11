@@ -441,21 +441,96 @@
 }
 
 /* ==================== НАСТРОЙКА ==================== */
-.settings-btn {
-  position: absolute;
-  top: 0; right: 0;
-  width: calc(40px * var(--scale));
-  height: calc(40px * var(--scale));
-  border-radius: 0 0 0 calc(10px * var(--scale));
-  background: rgba(0,0,0,.7);
-  color: #fff;
-  border: none;
-  font-size: calc(20px * var(--scale));
-  cursor: pointer;
-  z-index: 20;
-  display: flex; align-items: center; justify-content: center;
+/* ==================== 🆕 TOP-BAR ==================== */
+.top-bar {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 6px;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: 50;
+  min-height: 42px;
+  box-sizing: border-box;
 }
-[data-theme="paper"] .settings-btn { background: rgba(0,0,0,.2); color: #333; }
+[data-theme="paper"] .top-bar {
+  background: rgba(0, 0, 0, 0.08);
+  border-bottom-color: rgba(0, 0, 0, 0.1);
+}
+
+.tb-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: #fff;
+  font-size: 17px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.tb-btn:active { background: rgba(255, 255, 255, 0.18); }
+[data-theme="paper"] .tb-btn { color: #333; }
+
+.tb-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 7px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+[data-theme="paper"] .tb-item { color: #333; }
+
+.tb-ico {
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.tb-doc {
+  font-family: var(--font-title, 'Playfair', serif);
+  font-weight: 900;
+  font-size: 13px;
+}
+.tb-my { color: #f1c40f; }
+.tb-opp { color: #ff6b6b; }
+.tb-sep { opacity: 0.5; font-weight: 400; }
+
+.tb-score {
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+.tb-score b { color: #f1c40f; }
+
+.tb-hand {
+  font-weight: 800;
+  color: #4da5d9;
+}
+.tb-parity { font-size: 11px; }
+
+.tb-spacer { flex: 1; min-width: 4px; }
+
+/* На узких экранах — скрываем некоторые элементы */
+@media (max-width: 380px) {
+  .tb-item { padding: 2px 5px; font-size: 11px; gap: 2px; }
+  .tb-ico { font-size: 11px; }
+  .tb-doc, .tb-score { font-size: 12px; }
+  .tb-btn { width: 30px; height: 30px; font-size: 15px; }
+  .top-bar { padding: 4px 4px; min-height: 38px; }
+}
 
 .actions {
   display: flex; gap: 6px;
@@ -1179,7 +1254,6 @@
 .table.lobby-mode .seat,
 .table.lobby-mode .center,
 .table.lobby-mode .deck-area,
-.table.lobby-mode .score-corner,
 .table.lobby-mode .settings-btn,
 .table.lobby-mode .field-watermark,
 .table.lobby-mode .pass-notice,
