@@ -259,6 +259,7 @@ const RU = {
   'ov.start.title': '🏆 Вы выиграли кон! Кто зайдёт в следующем?',
   'ov.start.me': 'Я ({name})',
   'ov.start.partner': 'Партнёр ({name})',
+  'ov.roundWon.title': '🎉 Раунд {n} — победа!',
 
   // ===== toasts =====
   'toast.codeCopied': 'Код скопирован',
@@ -550,6 +551,7 @@ const KY = {
   'ov.start.title': '🏆 Сиз кон уттуңуз! Кийинкиге ким кирет?',
   'ov.start.me': 'Мен ({name})',
   'ov.start.partner': 'Өнөктөш ({name})',
+  'ov.roundWon.title': '🎉 {n}-кон — жеңиш!',
 
   'toast.codeCopied': 'Код көчүрүлдү',
   'toast.copyFailed': 'Көчүрүү мүмкүн болбоду',

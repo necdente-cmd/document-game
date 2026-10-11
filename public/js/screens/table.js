@@ -9,6 +9,7 @@ import { openChat } from '../ui/chat.js';
 import { initDrag } from '../drag.js';
 import { EMOJIS } from '../emojis.js';
 import { playSound } from '../sound.js';
+import { maybeShowChampion, maybeShowRoundWin } from '../ui/champion.js';
 import { toastErr, toastOk, toastInfo } from '../ui/toast.js';
 import {
   enableVoice, disableVoice, setMicOn, unlockAudio,
@@ -1094,6 +1095,7 @@ export function renderTable(app, navigate) {
   if (sb) sb.onclick = () => { playSound('button'); openSettings(() => renderTable(app, navigate)); };
 
   bindOverlays();
+  maybeShowRoundWin();
   maybeShowChampion(navigate);
   import('../ui/chat.js').then(m => m.updateChatBadge?.());
 

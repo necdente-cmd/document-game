@@ -1,4 +1,4 @@
-import { state, saveMe } from '../state.js';
+import { state, saveMe, getAvatar, avatarHtml } from '../state.js';
 import { socket } from '../socket.js';
 import { esc } from '../card.js';
 import { t } from '../i18n.js';
@@ -112,18 +112,73 @@ function startFireworks(canvas, durationMs = 8000) {
   frame();
 }
 
+// ==================== 🎉 ПОБЕДА КОНА (для всех, 2.5с) ====================
+export function maybeShowRoundWin() {
+  const s = state.server;
+  const existing = document.getElementById('roundWinOverlay');
+
+  if (!s || s.phase !== 'roundEnd' || !s.pendingStart) {
+    if (existing) existing.remove();
+    return;
+  }
+
+  const roundKey = (s.roundHistory?.length || 0) + ':' + s.pendingStart.winningTeam;
+  if (window.__roundWinShownKey === roundKey) return;
+  window.__roundWinShownKey = roundKey;
+
+  if (existing) existing.remove();
+
+  const winTeam = s.pendingStart.winningTeam;
+  const teamLabel = winTeam === 0 ? t('lobby.teamA') : t('lobby.teamB');
+  const roundNum = (s.roundHistory?.length || 0) + 1;
+
+  const ov = document.createElement('div');
+  ov.className = 'round-win-overlay';
+  ov.id = 'roundWinOverlay';
+  ov.innerHTML = `
+    <div class="rw-inner">
+      <div class="rw-emoji">🎉</div>
+      <div class="rw-title">${t('ov.roundWon.title', { n: roundNum })}</div>
+      <div class="rw-team">${esc(teamLabel)}</div>
+      <div class="rw-score">${s.roundWins[0]} : ${s.roundWins[1]}</div>
+    </div>
+  `;
+  document.body.appendChild(ov);
+
+  setTimeout(() => {
+    ov.classList.add('fade-out');
+    setTimeout(() => ov.remove(), 550);
+  }, 2500);
+}
+
+// ==================== 🏆 ЧЕМПИОН ====================
 export function maybeShowChampion(navigate) {
   const s = state.server;
   if (!s || s.phase !== 'gameEnd' || s.winnerTeam == null) return;
   if (document.getElementById('champOverlay')) return;
 
   const winTeam = s.winnerTeam;
-  const winners = s.players.filter(p => p.team === winTeam).map(p => p.name).join(t('common.and'));
-  const minutes = s.gameStartTime ? Math.round((Date.now() - s.gameStartTime) / 60000) : 0;
-  const stats = s.playerStats || [0,0,0,0];
-  const bestScore = Math.max(...stats);
+  const winners = s.players.filter(p => p.team === winTeam);
+
+  const totalSec = s.gameStartTime ? Math.max(0, Math.floor((Date.now() - s.gameStartTime) / 1000)) : 0;
+  const mm = Math.floor(totalSec / 60);
+  const ss = totalSec % 60;
+  const timeStr = `${mm}:${String(ss).padStart(2, '0')}`;
+
+  const stats = s.playerStats || [0, 0, 0, 0];
+  const bestScore = stats.length ? Math.max(...stats) : 0;
   const bestSeats = stats.map((v, i) => v === bestScore ? i : -1).filter(i => i >= 0);
-  const bestNames = bestSeats.map(i => s.players.find(p => p.seat === i)?.name).filter(Boolean).join(', ');
+  const bestNames = bestSeats
+    .map(i => s.players.find(p => p.seat === i)?.name)
+    .filter(Boolean)
+    .join(', ');
+
+  const avatarsHtml = winners.map(p => `
+    <div class="champ-av">
+      <div>${avatarHtml(getAvatar(p.seat))}</div>
+      <span class="champ-av-name">${esc(p.name)}</span>
+    </div>
+  `).join('');
 
   const el = document.createElement('div');
   el.className = 'champ-overlay';
@@ -131,17 +186,32 @@ export function maybeShowChampion(navigate) {
   el.innerHTML = `
     <canvas id="fireworksCanvas" class="fireworks-canvas"></canvas>
     <div class="champ-content">
+      <div class="champ-trophy">🏆</div>
       <div class="champ-title">${t('champion.title', { team: winTeam ? 'B' : 'A' })}</div>
-      <div class="champ-names">${esc(winners)}</div>
-      <div class="champ-stats">
-        ${t('champion.score')}: ${s.roundWins[0]} : ${s.roundWins[1]}<br>
-        ${t('champion.time')}: ~${minutes} ${t('common.min')}<br>
-        ${t('champion.rounds')}: ${(s.roundHistory || []).length}
+
+      <div class="champ-avatars">${avatarsHtml}</div>
+
+      <div class="champ-tiles">
+        <div class="champ-tile">
+          <div class="champ-tile-ico">🎯</div>
+          <div class="champ-tile-val">${s.roundWins[0]} : ${s.roundWins[1]}</div>
+          <div class="champ-tile-lbl">${t('champion.score')}</div>
+        </div>
+        <div class="champ-tile">
+          <div class="champ-tile-ico">⏱️</div>
+          <div class="champ-tile-val">${timeStr}</div>
+          <div class="champ-tile-lbl">${t('champion.time')}</div>
+        </div>
       </div>
-      <div class="champ-best">${t('champion.best')}: ${esc(bestNames || '—')} (${bestScore} ${t('champion.roundsShort')})</div>
+
+      <div class="champ-best">
+        ${t('champion.best')}: <b>${esc(bestNames || '—')}</b>
+        (${bestScore} ${t('champion.roundsShort')})
+      </div>
+
       <div class="champ-buttons">
-        <button id="playAgainBtn" style="background:#f1c40f; color:#000;">${t('champion.playAgain')}</button>
-        <button id="exitMenuBtn" style="background:#95a5a6; color:#000;">${t('champion.exitMenu')}</button>
+        <button id="playAgainBtn" class="champ-btn-primary">${t('champion.playAgain')}</button>
+        <button id="exitMenuBtn" class="champ-btn-secondary">${t('champion.exitMenu')}</button>
       </div>
     </div>
   `;
@@ -150,7 +220,10 @@ export function maybeShowChampion(navigate) {
   const canvas = document.getElementById('fireworksCanvas');
   if (canvas) startFireworks(canvas, 12000);
 
-  document.getElementById('playAgainBtn').onclick = () => { el.remove(); socket.emit('restartGame'); };
+  document.getElementById('playAgainBtn').onclick = () => {
+    el.remove();
+    socket.emit('restartGame');
+  };
   document.getElementById('exitMenuBtn').onclick = () => {
     el.remove();
     socket.emit('leaveRoom');
