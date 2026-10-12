@@ -2976,3 +2976,499 @@
   .tb-btn { width: 34px; height: 34px; font-size: 16px; }
   .lb-status::after { letter-spacing: 3px; }
 }
+
+/* ============================================================
+   🎨 POLISH v4 — Анимации + Подсказки + Мобильная + Темы
+   ============================================================ */
+
+/* ---------- 🎬 Оверлеи: плавное появление/исчезновение ---------- */
+.overlay {
+  animation: overlayIn .32s cubic-bezier(.2,.9,.3,1.2);
+}
+@keyframes overlayIn {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(.85) translateY(10px); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1) translateY(0); }
+}
+
+/* Модалки — центрированные (info, simple-modal, champ) */
+.info-modal,
+.simple-modal {
+  animation: modalBackdropIn .25s ease-out;
+}
+.info-modal-inner,
+.simple-modal-inner {
+  animation: modalInnerIn .32s cubic-bezier(.2,.9,.3,1.2);
+}
+@keyframes modalBackdropIn {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes modalInnerIn {
+  0%   { opacity: 0; transform: scale(.88) translateY(12px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ---------- 💥 RIPPLE-ЭФФЕКТ на кнопках ---------- */
+.icon-btn,
+.tb-btn,
+.action-center,
+.extra-actions button,
+.lb-btn,
+.lb-leave,
+.lb-lang,
+.lb-code,
+.lb-start,
+.b1, .b2, .b3, .b4, .b5,
+.ov-buttons button,
+.info-modal-close,
+.simple-modal-close-btn,
+.champ-buttons button,
+.tut-btn,
+.emoji-bar button {
+  position: relative;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.icon-btn::after,
+.tb-btn::after,
+.action-center::after,
+.extra-actions button::after,
+.lb-btn::after,
+.lb-start::after,
+.ov-buttons button::after,
+.info-modal-close::after,
+.simple-modal-close-btn::after,
+.champ-buttons button::after,
+.tut-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--rx, 50%) var(--ry, 50%),
+    rgba(255,255,255,.35) 0%,
+    rgba(255,255,255,.2) 30%,
+    transparent 70%);
+  opacity: 0;
+  transition: opacity .4s ease-out;
+  pointer-events: none;
+}
+
+/* Ripple на active — короткая вспышка в точке нажатия */
+.icon-btn:active::after,
+.tb-btn:active::after,
+.action-center:active::after,
+.extra-actions button:active::after,
+.lb-btn:active::after,
+.lb-start:active::after,
+.ov-buttons button:active::after,
+.info-modal-close:active::after,
+.simple-modal-close-btn:active::after,
+.champ-buttons button:active::after,
+.tut-btn:active::after {
+  opacity: 1;
+  transition: opacity 0s;
+}
+
+/* ---------- 💡 ПОДСКАЗКИ: крупнее, контрастнее ---------- */
+.hint {
+  font-size: calc(13px * var(--scale));
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg,
+    rgba(241,196,15,.92) 0%,
+    rgba(230,126,34,.92) 100%);
+  padding: 6px 16px;
+  border-radius: 12px;
+  box-shadow:
+    0 4px 14px rgba(241,196,15,.4),
+    inset 0 -2px 4px rgba(0,0,0,.15);
+  text-shadow: 0 1px 2px rgba(0,0,0,.35);
+  letter-spacing: .3px;
+  max-width: 92vw;
+  margin: 0 auto;
+  animation: hintPop .35s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes hintPop {
+  0%   { opacity: 0; transform: translateY(6px) scale(.9); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.hint.hiding {
+  opacity: 0;
+  transform: translateY(8px) scale(.95);
+  transition: opacity .4s ease-out, transform .4s ease-out;
+}
+
+/* В paper-теме — тёмный текст на светлой плашке */
+[data-theme="paper"] .hint {
+  color: #333;
+  background: linear-gradient(135deg, #f7d154 0%, #e8b734 100%);
+  text-shadow: 0 1px 2px rgba(255,255,255,.5);
+}
+
+/* В neon-теме — циан */
+[data-theme="neon"] .hint {
+  background: linear-gradient(135deg, rgba(0,229,255,.92) 0%, rgba(0,150,200,.92) 100%);
+  color: #001a20;
+  box-shadow:
+    0 4px 18px rgba(0,229,255,.6),
+    0 0 24px rgba(0,229,255,.35),
+    inset 0 -2px 4px rgba(0,0,0,.15);
+  text-shadow: none;
+}
+
+/* ---------- 🎬 PULSE на активных кнопках ---------- */
+.action-center:not(:active) {
+  animation: actionBtnPulse 2.4s ease-in-out infinite;
+}
+@keyframes actionBtnPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.025); }
+}
+
+.extra-actions button:not(:active) {
+  animation: extraBtnPulse 2.6s ease-in-out infinite;
+}
+@keyframes extraBtnPulse {
+  0%, 100% { transform: translateY(0); box-shadow: 0 6px 24px rgba(0,0,0,.5), inset 0 -4px 8px rgba(0,0,0,.2); }
+  50%      { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,.6), inset 0 -4px 8px rgba(0,0,0,.2); }
+}
+
+/* ---------- 🎬 Кнопка «БИТО» — сильнее пульс (важное действие) ---------- */
+.extra-actions .b1 {
+  animation: bitoPulse 1.8s ease-in-out infinite;
+}
+@keyframes bitoPulse {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 6px 24px rgba(46,204,113,.45), inset 0 -4px 8px rgba(0,0,0,.2);
+  }
+  50% {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 30px rgba(46,204,113,.85), 0 0 20px rgba(46,204,113,.5), inset 0 -4px 8px rgba(0,0,0,.2);
+  }
+}
+
+/* ---------- 📱 МОБИЛЬНАЯ: safe-area для iPhone ---------- */
+.bottom-bar {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.actions {
+  padding-bottom: calc(2px + env(safe-area-inset-bottom, 0));
+}
+
+/* ---------- 📱 Портретная ориентация — приоритет ---------- */
+@media (orientation: portrait) and (max-width: 500px) {
+  .center {
+    top: 46%;
+    grid-template-columns: repeat(2, calc(var(--card-w) * 0.85));
+    gap: calc(18px * var(--scale)) calc(34px * var(--scale));
+  }
+  .slot {
+    width: calc(var(--card-w) * 0.85);
+    height: calc(var(--card-h) * 0.85);
+  }
+  .seat.left,
+  .seat.right {
+    top: calc(160px * var(--scale));
+  }
+}
+
+/* ---------- 📱 Ландшафтная ориентация — компактнее ---------- */
+@media (orientation: landscape) and (max-height: 500px) {
+  .top-bar {
+    min-height: 36px;
+    padding: 3px 6px;
+  }
+  .tb-btn { width: 32px; height: 32px; font-size: 15px; }
+  .tb-item { padding: 3px 8px; font-size: 11px; }
+  .seat {
+    padding: 4px 8px;
+    min-width: 70px;
+  }
+  .seat .avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+  }
+  .hint {
+    font-size: 11px;
+    padding: 4px 12px;
+  }
+}
+
+/* ---------- 📱 Свайпы не конфликтуют с drag карт ---------- */
+.hand {
+  touch-action: none;
+}
+.hand .card {
+  touch-action: none;
+}
+/* Клики по пустой части стола не блокируют свайп */
+.table {
+  touch-action: pan-y;
+}
+
+/* ---------- 🌈 ТЕМА NEON: свечение карт ---------- */
+[data-theme="neon"] .hand .card {
+  filter:
+    drop-shadow(0 0 6px rgba(0,229,255,.35))
+    drop-shadow(0 2px 4px rgba(0,0,0,.5));
+}
+[data-theme="neon"] .hand .card:hover,
+[data-theme="neon"] .hand .card:active {
+  filter:
+    drop-shadow(0 12px 22px rgba(0,0,0,.65))
+    drop-shadow(0 0 18px rgba(0,229,255,.9))
+    drop-shadow(0 0 36px rgba(0,229,255,.5));
+}
+[data-theme="neon"] .center .card {
+  filter:
+    drop-shadow(0 6px 14px rgba(0,0,0,.6))
+    drop-shadow(0 0 8px rgba(0,229,255,.35));
+}
+[data-theme="neon"] .slot.tappable .card:first-child {
+  outline: 3px dashed rgba(0,229,255,.85);
+  box-shadow: 0 0 18px rgba(0,229,255,.6);
+}
+[data-theme="neon"] .card.can-beat::after {
+  border-color: #00e5ff;
+  box-shadow:
+    0 0 14px rgba(0,229,255,.9),
+    0 0 28px rgba(0,229,255,.55),
+    inset 0 0 12px rgba(0,229,255,.4);
+}
+[data-theme="neon"] .seat.active {
+  outline-color: #00e5ff;
+  box-shadow: 0 0 28px rgba(0,229,255,.85), inset 0 0 14px rgba(0,229,255,.2);
+  animation: neonSeatPulse 1.5s ease-in-out infinite;
+}
+@keyframes neonSeatPulse {
+  0%, 100% { box-shadow: 0 0 22px rgba(0,229,255,.55), inset 0 0 10px rgba(0,229,255,.15); }
+  50%      { box-shadow: 0 0 40px rgba(0,229,255,1), inset 0 0 18px rgba(0,229,255,.35); }
+}
+[data-theme="neon"] .table.my-turn .bottom-bar .hand {
+  animation: neonTurnPulse 2s ease-in-out infinite;
+}
+@keyframes neonTurnPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,229,255,0); }
+  50%      { box-shadow: 0 0 32px 8px rgba(0,229,255,.65); }
+}
+
+/* ---------- 🌈 ТЕМА PAPER: заменить ярко-жёлтый на мягкий бежевый ---------- */
+[data-theme="paper"] {
+  --acc: #8b6914;        /* было #b8860b — темнее, спокойнее */
+  --felt: #e8dcc0;       /* остаётся */
+  --felt-light: #f2e9d5; /* мягче */
+  --felt-dark: #d4c4a0;
+}
+
+[data-theme="paper"] .table {
+  box-shadow:
+    inset 0 0 120px 15px rgba(120, 90, 50, .15),
+    0 4px 20px rgba(0,0,0,.35);
+}
+
+[data-theme="paper"] .top-bar {
+  background: rgba(245, 240, 224, .92);
+  border-bottom-color: rgba(0,0,0,.08);
+  color: #333;
+}
+
+[data-theme="paper"] .seat {
+  background: rgba(255,255,255,.85);
+  color: #333;
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+}
+[data-theme="paper"] .seat.active {
+  background: rgba(255, 250, 240, .95);
+  outline-color: #8b6914;
+  box-shadow: 0 0 20px rgba(139, 105, 20, .35);
+}
+[data-theme="paper"] .seat .name {
+  color: #222;
+}
+[data-theme="paper"] .seat.is-partner .name {
+  color: #8b6914;
+}
+[data-theme="paper"] .seat.is-enemy .name {
+  color: #b83030;
+}
+
+[data-theme="paper"] .action-center.b1 {
+  background: radial-gradient(circle at 40% 40%, #e8c94a 0%, #c9a42e 100%);
+}
+[data-theme="paper"] .action-center.b3 {
+  background: radial-gradient(circle at 40% 40%, #e07070 0%, #b04040 100%);
+}
+
+[data-theme="paper"] .lb-logo,
+[data-theme="paper"] .field-watermark {
+  filter: sepia(.25) brightness(.95);
+}
+
+/* Убрать яркость текстуры стола paper */
+[data-theme="paper"] .table::after {
+  box-shadow:
+    inset 0 0 0 6px rgba(70, 50, 30, 0.55),
+    inset 0 0 0 7px rgba(140, 105, 55, 0.4),
+    inset 0 0 0 10px rgba(120, 85, 45, 0.5),
+    inset 0 0 28px 8px rgba(0,0,0,.25);
+}
+
+/* ---------- 🌈 ПЛАВНОЕ ПЕРЕКЛЮЧЕНИЕ ТЕМ ---------- */
+html,
+body,
+.table,
+.top-bar,
+.seat,
+.slot,
+.center,
+.deck-area,
+.actions,
+.hint,
+.lb-root,
+.lb-slot,
+.lb-team,
+.lb-code,
+.lb-start {
+  transition:
+    background-color .35s ease,
+    background-image .35s ease,
+    color .35s ease,
+    border-color .35s ease,
+    box-shadow .35s ease;
+}
+
+/* Отключаем transition для иконочных hover (чтобы не тормозило) */
+.icon-btn,
+.tb-btn,
+.action-center {
+  transition:
+    background .18s ease,
+    transform .15s ease,
+    box-shadow .18s ease;
+}
+
+/* ---------- ✨ Мягкая тень при переключении темы ---------- */
+html.theme-switching .table {
+  animation: themeFlash .5s ease-out;
+}
+@keyframes themeFlash {
+  0%   { opacity: .7; }
+  100% { opacity: 1; }
+}
+
+/* ============================================================
+   🎨 v5 — Темы стола: сильнее контраст + лобби подхватывает тему
+   ============================================================ */
+
+/* ---------- 🌈 ИГРА: усиленные градиенты для каждой темы ---------- */
+
+/* CLASSIC — зелёное сукно */
+[data-theme="classic"] .table {
+  background-image:
+    radial-gradient(ellipse 80% 65% at 50% 45%,
+      rgba(22, 84, 63, 1) 0%,
+      rgba(11, 61, 46, 1) 55%,
+      rgba(4, 26, 19, 1) 100%),
+    radial-gradient(circle at 50% 50%,
+      transparent 35%,
+      rgba(0, 0, 0, .4) 100%);
+}
+
+/* DARK — тёмно-синий с холодной венетой */
+[data-theme="dark"] .table {
+  background-image:
+    radial-gradient(ellipse 80% 65% at 50% 45%,
+      rgba(24, 42, 68, 1) 0%,
+      rgba(13, 27, 42, 1) 55%,
+      rgba(5, 10, 20, 1) 100%),
+    radial-gradient(circle at 50% 50%,
+      transparent 35%,
+      rgba(0, 0, 0, .5) 100%);
+}
+
+/* NEON — фиолетовый с cyan-венетой (заметно отличается!) */
+[data-theme="neon"] .table {
+  background-image:
+    radial-gradient(ellipse 80% 65% at 50% 45%,
+      rgba(40, 0, 90, 1) 0%,
+      rgba(15, 0, 45, 1) 55%,
+      rgba(0, 0, 0, 1) 100%),
+    radial-gradient(circle at 50% 50%,
+      transparent 35%,
+      rgba(0, 229, 255, .18) 100%);
+}
+
+/* PAPER — тёплый бежевый, мягче чем было */
+[data-theme="paper"] .table {
+  background-image:
+    radial-gradient(ellipse 80% 65% at 50% 45%,
+      rgba(245, 235, 215, 1) 0%,
+      rgba(232, 220, 192, 1) 55%,
+      rgba(212, 196, 160, 1) 100%),
+    radial-gradient(circle at 50% 50%,
+      transparent 35%,
+      rgba(120, 90, 50, .18) 100%);
+}
+
+/* ---------- 🌈 ЛОББИ: подхватывает тему стола ---------- */
+
+[data-theme="classic"] .table.lobby-mode {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(60, 130, 100, .35) 0%, transparent 70%),
+    linear-gradient(160deg, #0a1f18 0%, #0b3d2e 50%, #041a13 100%);
+}
+[data-theme="dark"] .table.lobby-mode {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(60, 100, 180, .28) 0%, transparent 70%),
+    linear-gradient(160deg, #050a14 0%, #0d1b2a 50%, #0a0e13 100%);
+}
+[data-theme="neon"] .table.lobby-mode {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(0, 229, 255, .22) 0%, transparent 65%),
+    radial-gradient(ellipse at 50% 100%, rgba(255, 0, 180, .18) 0%, transparent 65%),
+    linear-gradient(160deg, #05001a 0%, #140030 50%, #000000 100%);
+}
+[data-theme="paper"] .table.lobby-mode {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(184, 134, 11, .15) 0%, transparent 70%),
+    linear-gradient(160deg, #f4ecd8 0%, #e8dcc0 50%, #d4c4a0 100%);
+}
+[data-theme="paper"] .table.lobby-mode .lb-logo {
+  border-color: rgba(139, 105, 20, .7);
+  filter: sepia(.2);
+}
+[data-theme="paper"] .table.lobby-mode .lb-code {
+  color: #333;
+  background: linear-gradient(135deg, #d4ac0d, #b8860b);
+}
+[data-theme="paper"] .table.lobby-mode .lb-leave {
+  background: rgba(180, 60, 60, .15);
+  color: #8a2020;
+  border-color: rgba(139, 40, 40, .4);
+}
+[data-theme="paper"] .table.lobby-mode .lb-langs {
+  background: rgba(0, 0, 0, .08);
+}
+[data-theme="paper"] .table.lobby-mode .lb-team {
+  background: rgba(255,255,255,.55);
+  border-color: rgba(0,0,0,.12);
+}
+[data-theme="paper"] .table.lobby-mode .lb-team-hd { color: #4a7a3a; }
+[data-theme="paper"] .table.lobby-mode .lb-team-hd.b { color: #a04040; }
+[data-theme="paper"] .table.lobby-mode .lb-slot:not(.empty) {
+  background: rgba(255,255,255,.7);
+}
+[data-theme="paper"] .table.lobby-mode .lb-slot.empty {
+  border-color: rgba(0,0,0,.15);
+  background: rgba(0,0,0,.02);
+}
+[data-theme="paper"] .table.lobby-mode .lb-slot.empty .lb-name { color: #888; }
+[data-theme="paper"] .table.lobby-mode .lb-status {
+  background: rgba(0,0,0,.06);
+  color: #444;
+}
+[data-theme="paper"] .table.lobby-mode .lb-status::after { color: #888; }
+[data-theme="paper"] .table.lobby-mode .lb-hint { color: #555; background: rgba(0,0,0,.05); }
+[data-theme="paper"] .table.lobby-mode .lb-code-label { color: #555; }
