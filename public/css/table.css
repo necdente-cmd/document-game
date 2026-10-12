@@ -3680,3 +3680,12 @@ html.theme-switching .table {
   inset: -3px;
   border-radius: 10px;
 }
+
+/* ============================================================
+   🔧 FIX v8: козырная карта под колодой не дёргается
+   ============================================================ */
+.trump-under .card {
+  animation: none !important;
+  transform: rotate(90deg) !important;
+  transform-origin: center center !important;
+}
