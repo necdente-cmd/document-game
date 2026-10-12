@@ -985,9 +985,9 @@ export function renderTable(app, navigate) {
 
   const overlays = buildOverlays();
 
-  // 🎯 Индикатор хода в центре поля
+    // 🎯 Индикатор хода в центре поля — только для новичков
   let turnIndicator = '';
-  if (s.field && s.field.attacker !== undefined && s.field.defender !== undefined) {
+  if (!veteran && s.field && s.field.attacker !== undefined && s.field.defender !== undefined) {
     const attackerName = s.players.find(p => p.seat === s.field.attacker)?.name || '?';
     const defenderName = s.players.find(p => p.seat === s.field.defender)?.name || '?';
 
