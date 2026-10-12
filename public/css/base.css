@@ -85,15 +85,15 @@
   --text: #fff;
 }
 [data-theme="paper"] {
-  --bg: #f4ecd8;
-  --felt: #e8dcc0;
-  --felt-light: #f5e8d3;
-  --felt-dark: #d4c4a0;
-  --wood: #d4a574;
-  --wood-light: #e6bd8a;
-  --wood-dark: #8b6a3d;
-  --acc: #b8860b;
-  --text: #333;
+  --bg: #2a2419;
+  --felt: #c9bea0;
+  --felt-light: #d4c8ab;
+  --felt-dark: #a89b7a;
+  --wood: #8b6a3d;
+  --wood-light: #a88450;
+  --wood-dark: #5a4326;
+  --acc: #7a5c1a;
+  --text: #2a2419;
 }
 
 [data-scale="small"]  { --scale: 0.85; }

@@ -14,7 +14,6 @@ export function openSettings(onClose) {
 
   const s = state.server || { swapUsedByTeam: [false, false] };
   const scale = document.documentElement.dataset.scale || 'medium';
-  const curTheme = document.documentElement.dataset.theme || 'classic';
   const curLang = getLang();
   const curMode = loadMode();
 
@@ -70,28 +69,6 @@ export function openSettings(onClose) {
     </div>
 
     <div class="settings-section">
-      <h4>${t('settings.themeTitle')} <span style="font-weight:400;opacity:.6;font-size:11px;">${t('settings.themeHint')}</span></h4>
-      <div class="theme-grid" id="settingsThemePick">
-        <div class="theme-preview ${curTheme==='classic'?'sel':''}" data-theme-val="classic">
-          <div class="tp-inner"></div>
-          <div class="tp-label">${t('create.themeClassic')}</div>
-        </div>
-        <div class="theme-preview ${curTheme==='dark'?'sel':''}" data-theme-val="dark">
-          <div class="tp-inner"></div>
-          <div class="tp-label">${t('create.themeDark')}</div>
-        </div>
-        <div class="theme-preview ${curTheme==='neon'?'sel':''}" data-theme-val="neon">
-          <div class="tp-inner"></div>
-          <div class="tp-label">${t('create.themeNeon')}</div>
-        </div>
-        <div class="theme-preview ${curTheme==='paper'?'sel':''}" data-theme-val="paper">
-          <div class="tp-inner"></div>
-          <div class="tp-label">${t('create.themePaper')}</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="settings-section">
       <h4>${t('settings.history')}</h4>
       <button class="menu-btn" id="openHistory">${t('settings.openHistory')}</button>
     </div>
@@ -118,7 +95,6 @@ export function openSettings(onClose) {
       state.mode = val;
       [...panel.querySelectorAll('#settingsModePick .mode-card')].forEach(x =>
         x.classList.toggle('sel', x === modeEl));
-      // Перерисовать стол — подсказки переключатся сразу
       if (onClose) onClose();
       return;
     }
@@ -153,16 +129,6 @@ export function openSettings(onClose) {
       if (state.server?.opts) state.server.opts.scale = val;
       const opts = JSON.parse(localStorage.getItem('opts') || '{}');
       opts.scale = val;
-      localStorage.setItem('opts', JSON.stringify(opts));
-      return;
-    }
-    const th = e.target.closest('[data-theme-val]');
-    if (th) {
-      const val = th.dataset.themeVal;
-      import('../state.js').then(m => m.applyTheme(val));
-      [...panel.querySelectorAll('.theme-preview')].forEach(x => x.classList.toggle('sel', x === th));
-      const opts = JSON.parse(localStorage.getItem('opts') || '{}');
-      opts.theme = val;
       localStorage.setItem('opts', JSON.stringify(opts));
       return;
     }

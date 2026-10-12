@@ -186,16 +186,57 @@
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   width: 70%; max-width: 420px;
-  opacity: 0.11;
   pointer-events: none;
   user-select: none;
   z-index: 1;
-  filter: blur(0.3px);
   will-change: opacity;
+
+  /* 🌫 Плавное растворение краёв — работает во всех темах */
+  -webkit-mask-image: radial-gradient(
+    ellipse 65% 65% at 50% 50%,
+    rgba(0,0,0,1) 0%,
+    rgba(0,0,0,.85) 35%,
+    rgba(0,0,0,.35) 65%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 65% 65% at 50% 50%,
+    rgba(0,0,0,1) 0%,
+    rgba(0,0,0,.85) 35%,
+    rgba(0,0,0,.35) 65%,
+    transparent 100%
+  );
+
+  /* Базовый blend — мягко смешивается с фоном стола */
+  mix-blend-mode: soft-light;
+  filter: blur(0.5px) saturate(.85);
 }
+
+/* 🌈 Тема CLASSIC — тёплый зелёный оттенок */
+[data-theme="classic"] .field-watermark {
+  opacity: 0.16;
+  filter: blur(0.5px) saturate(.85) hue-rotate(20deg);
+}
+
+/* 🌈 Тема DARK — приглушённый холодный */
+[data-theme="dark"] .field-watermark {
+  opacity: 0.13;
+  filter: blur(0.6px) saturate(.7) hue-rotate(180deg);
+  mix-blend-mode: screen;
+}
+
+/* 🌈 Тема NEON — циановое свечение */
+[data-theme="neon"] .field-watermark {
+  opacity: 0.18;
+  filter: blur(1px) saturate(1.4) hue-rotate(160deg) brightness(1.3);
+  mix-blend-mode: screen;
+}
+
+/* 🌈 Тема PAPER — сепия, как отпечаток на бумаге */
 [data-theme="paper"] .field-watermark {
-  opacity: 0.09;
-  filter: blur(0.3px) sepia(0.15);
+  opacity: 0.14;
+  filter: blur(0.4px) sepia(.65) saturate(.5) contrast(1.05);
+  mix-blend-mode: multiply;
 }
 
 /* ==================== КОЛОДА + КОЗЫРЬ ==================== */
@@ -3400,16 +3441,16 @@ html.theme-switching .table {
       rgba(0, 229, 255, .18) 100%);
 }
 
-/* PAPER — тёплый бежевый, мягче чем было */
+/* PAPER — приглушённый пергамент, без яркого центра */
 [data-theme="paper"] .table {
   background-image:
-    radial-gradient(ellipse 80% 65% at 50% 45%,
-      rgba(245, 235, 215, 1) 0%,
-      rgba(232, 220, 192, 1) 55%,
-      rgba(212, 196, 160, 1) 100%),
+    radial-gradient(ellipse 100% 90% at 50% 50%,
+      rgba(212, 200, 171, 1) 0%,
+      rgba(201, 190, 160, 1) 50%,
+      rgba(168, 155, 122, 1) 100%),
     radial-gradient(circle at 50% 50%,
-      transparent 35%,
-      rgba(120, 90, 50, .18) 100%);
+      transparent 45%,
+      rgba(60, 45, 20, .22) 100%);
 }
 
 /* ---------- 🌈 ЛОББИ: подхватывает тему стола ---------- */
