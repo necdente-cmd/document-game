@@ -3595,3 +3595,88 @@ html.theme-switching .table {
   right: auto !important;
   z-index: 30 !important;
 }
+
+/* ============================================================
+   🔧 FIX v7: карты в руке ровные + бейджи в нижний угол
+   ============================================================ */
+
+/* 1. Hover-подъём — ТОЛЬКО на ПК с мышью */
+@media (hover: hover) and (pointer: fine) {
+  .hand .card:hover {
+    translate: 0 -12px;
+    scale: 1.05;
+    filter:
+      drop-shadow(0 10px 20px rgba(0,0,0,.65))
+      drop-shadow(0 0 14px rgba(241,196,15,.5));
+    z-index: 100;
+  }
+}
+
+/* 2. На тачах — никакого подъёма от :hover */
+.hand .card:hover {
+  /* отменяется для тач-устройств */
+}
+@media (hover: none) {
+  .hand .card:hover {
+    translate: 0 0 !important;
+    scale: 1 !important;
+  }
+}
+
+/* 3. .sel (выбранная) — не поднимаем, только жёлтое свечение */
+.hand .card.sel {
+  translate: 0 0 !important;
+  scale: 1 !important;
+  filter:
+    drop-shadow(0 8px 16px rgba(0,0,0,.6))
+    drop-shadow(0 0 16px rgba(241,196,15,.9))
+    drop-shadow(0 0 6px rgba(241,196,15,.6)) !important;
+  z-index: 90;
+}
+
+/* 4. .can-beat (может побить) — тоже не поднимаем */
+.hand .card.can-beat {
+  translate: 0 0 !important;
+}
+
+/* 5. 🎴 ★ КОЗЫРЬ — в НИЖНИЙ ЛЕВЫЙ угол (не перекрывает ранг) */
+.hand .card[data-trump="1"]::before {
+  content: '★';
+  position: absolute;
+  bottom: 3px;
+  left: 3px;
+  top: auto !important;
+  right: auto !important;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f1c40f, #d4ac0d);
+  color: #000;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 15px;
+  text-align: center;
+  z-index: 20;
+  box-shadow:
+    0 1px 4px rgba(0,0,0,.7),
+    0 0 6px rgba(241,196,15,.5);
+  pointer-events: none;
+}
+
+/* Neon-тема — циановая ★ в нижнем левом */
+[data-theme="neon"] .hand .card[data-trump="1"]::before {
+  background: linear-gradient(135deg, #00e5ff, #0099cc);
+  box-shadow: 0 1px 4px rgba(0,0,0,.7), 0 0 8px rgba(0,229,255,.8);
+}
+
+/* Бумага — тёмно-золотая */
+[data-theme="paper"] .hand .card[data-trump="1"]::before {
+  background: linear-gradient(135deg, #a8842e, #7a5c1a);
+  color: #fff;
+}
+
+/* 6. ⚠ ЗЕЛЁНЫЙ контур «может побить» — без подъёма */
+.hand .card.can-beat::after {
+  inset: -3px;
+  border-radius: 10px;
+}
