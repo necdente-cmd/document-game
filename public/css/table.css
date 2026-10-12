@@ -2681,7 +2681,7 @@
     drop-shadow(0 8px 16px rgba(0,0,0,.7))
     drop-shadow(0 3px 6px rgba(0,0,0,.5))
     drop-shadow(0 1px 2px rgba(0,0,0,.4));
-  transition: filter .25s ease, transform .25s ease;
+  /* ⚠ БЕЗ transition — иначе конфликтует с fieldIn и дёргает */
 }
 .slot .card:first-child {
   filter:
@@ -3059,7 +3059,6 @@
 /* ---------- 💥 RIPPLE-ЭФФЕКТ на кнопках ---------- */
 .icon-btn,
 .tb-btn,
-.action-center,
 .extra-actions button,
 .lb-btn,
 .lb-leave,
@@ -3074,6 +3073,12 @@
 .tut-btn,
 .emoji-bar button {
   position: relative;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* action-center — оставляем absolute, иначе уедет влево */
+.action-center {
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
 }
