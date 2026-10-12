@@ -1,4 +1,4 @@
-// 🎤 Голосовой чат (WebRTC mesh) — с авто-восстановлением
+// 🎤 Голосовой чат (WebRTC mesh) — с авто-восстановлением v2
 import { state } from './state.js';
 import { socket } from './socket.js';
 import { toastOk, toastErr, toastInfo } from './ui/toast.js';
@@ -21,11 +21,12 @@ let localAnalyser = null;
 let localData = null;
 let audioCtx = null;
 let speakingTimer = null;
+let watchdogTimer = null;
 let bound = false;
 let hiddenAt = 0;
 let restoring = false;
 
-// 🔓 Разблокировка аудио на мобильных
+// ==================== 🔓 АУДИО КОНТЕКСТ ====================
 export function unlockAudio() {
   try {
     if (!audioCtx) {
@@ -54,7 +55,10 @@ export function unlockAudio() {
 
 // ==================== ВКЛЮЧЕНИЕ ====================
 export async function enableVoice() {
-  if (state.voiceActive && localStream && streamIsLive()) return true;
+  if (state.voiceActive && localStream && streamIsLive()) {
+    startWatchdog();
+    return true;
+  }
 
   unlockAudio();
 
@@ -109,6 +113,7 @@ export async function enableVoice() {
   socket.emit('voice-enabled');
   console.log('[voice] 📤 voice-enabled sent');
   startSpeakingDetection();
+  startWatchdog();
   return true;
 }
 
@@ -141,6 +146,7 @@ export function disableVoice() {
     localStream = null;
   }
   if (speakingTimer) { clearInterval(speakingTimer); speakingTimer = null; }
+  if (watchdogTimer) { clearInterval(watchdogTimer); watchdogTimer = null; }
 
   state.voiceSpeakingSeats = [];
   window.dispatchEvent(new CustomEvent('voice-speaking-change'));
@@ -210,6 +216,68 @@ function startSpeakingDetection() {
   }, 200);
 }
 
+// ==================== 🐕 WATCHDOG ====================
+function startWatchdog() {
+  if (watchdogTimer) clearInterval(watchdogTimer);
+  watchdogTimer = setInterval(async () => {
+    if (!state.voiceActive) return;
+
+    // 1. Local stream жив?
+    if (!streamIsLive()) {
+      console.warn('[voice] 🐕 local stream dead → restart');
+      await restartVoice();
+      return;
+    }
+
+    // 2. Local tracks muted? (Android иногда так делает в фоне)
+    if (localStream) {
+      const tracks = localStream.getAudioTracks();
+      const allMuted = tracks.length > 0 && tracks.every(t => t.muted && !t.enabled);
+      // Если все треки «muted» но мы точно не глушили — попробуем перезапуск
+      if (allMuted && state.micOn) {
+        console.warn('[voice] 🐕 all tracks muted → restart');
+        await restartVoice();
+        return;
+      }
+    }
+
+    // 3. Remote audio elements: paused ли?
+    for (const [id, el] of audioElements) {
+      if (el.paused && el.srcObject) {
+        console.warn(`[voice] 🐕 audio element ${id} paused → resume`);
+        try {
+          await el.play();
+        } catch (e) {
+          // Если не удалось — пересоздаём peer
+          console.warn(`[voice] 🐕 resume failed for ${id}, recreate peer`);
+          cleanupPeer(id);
+          initiateOffer(id);
+        }
+      }
+    }
+
+    // 4. ICE state каждого peer
+    for (const [id, entry] of peers) {
+      const st = entry.pc.iceConnectionState;
+      if (st === 'failed') {
+        console.warn(`[voice] 🐕 ICE failed ${id} → restartIce`);
+        try { entry.pc.restartIce(); } catch {}
+        // Если через 3 сек не восстановится — пересоздадим
+        setTimeout(() => {
+          const p = peers.get(id);
+          if (p && p.pc.iceConnectionState === 'failed') {
+            cleanupPeer(id);
+            if (state.voiceActive) initiateOffer(id);
+          }
+        }, 3000);
+      } else if (st === 'disconnected') {
+        console.warn(`[voice] 🐕 ICE disconnected ${id} → restartIce`);
+        try { entry.pc.restartIce(); } catch {}
+      }
+    }
+  }, 2000);
+}
+
 // ==================== PEER ====================
 function createPeer(playerId) {
   if (peers.has(playerId)) return peers.get(playerId);
@@ -244,21 +312,15 @@ function createPeer(playerId) {
     el.srcObject = stream;
     if (el.setSinkId) el.setSinkId('').catch(() => {});
 
-    const playPromise = el.play();
-    if (playPromise) {
-      playPromise.then(() => {
-        console.log(`[voice] ✅ playing ${playerId}`);
-      }).catch((e) => {
-        console.error(`[voice] ❌ play error ${playerId}:`, e.name);
-        const tryPlay = () => {
-          el.play().then(() => {
-            console.log(`[voice] ✅ playing retry ${playerId}`);
-            document.removeEventListener('click', tryPlay);
-          }).catch(() => {});
-        };
-        document.addEventListener('click', tryPlay);
-      });
-    }
+    const tryPlay = () => {
+      el.play()
+        .then(() => console.log(`[voice] ✅ playing ${playerId}`))
+        .catch((e) => {
+          console.error(`[voice] ❌ play error ${playerId}:`, e.name);
+          setTimeout(() => { el.play().catch(() => {}); }, 500);
+        });
+    };
+    tryPlay();
 
     try {
       const ctx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
@@ -284,12 +346,9 @@ function createPeer(playerId) {
 
   pc.oniceconnectionstatechange = () => {
     console.log(`[voice] ❄ ICE ${playerId}: ${pc.iceConnectionState}`);
+    // watchdog сам разберётся, но на 'failed' можно сразу
     if (pc.iceConnectionState === 'failed' && state.voiceActive) {
-      console.warn(`[voice] ❌ ICE failed ${playerId}, retry`);
-      cleanupPeer(playerId);
-      setTimeout(() => {
-        if (state.voiceActive) initiateOffer(playerId);
-      }, 2000);
+      try { pc.restartIce(); } catch {}
     }
   };
 
@@ -429,7 +488,6 @@ export function bindVoiceSocket() {
   socket.on('voice-peer-joined', async ({ playerId }) => {
     console.log('[voice] 👋 peer joined:', playerId);
     if (!state.voiceActive) return;
-    // ✨ ФИКС: всегда инициируем оффер
     if (!peers.has(playerId)) {
       try { await initiateOffer(playerId); } catch (e) {}
     }
@@ -446,7 +504,6 @@ export function bindVoiceSocket() {
   });
 
   socket.on('disconnect', () => {
-    // НЕ закрываем peer-ы сразу, попробуем восстановить
     console.log('[voice] ⚠ socket disconnect');
   });
 
@@ -454,16 +511,24 @@ export function bindVoiceSocket() {
     if (state.voiceActive) {
       console.log('[voice] ♻ socket reconnected');
       if (!streamIsLive()) {
-        // Микрофон мёртв — полный перезапуск
         await restartVoice();
       } else {
-        // Микрофон жив — просто переотправляем voice-enabled
         socket.emit('voice-enabled');
+        // Пересоздать все peer-ы, т.к. signalling мог порваться
+        setTimeout(() => {
+          for (const [id, entry] of peers) {
+            const st = entry.pc.iceConnectionState;
+            if (st === 'failed' || st === 'disconnected' || st === 'closed') {
+              cleanupPeer(id);
+              if (state.voiceActive) initiateOffer(id);
+            }
+          }
+        }, 800);
       }
     }
   });
 
-  // ==================== 🔄 ВОЗВРАТ ИЗ ФОНА ====================
+  // ==================== 👀 ВОЗВРАТ ИЗ ФОНА ====================
   document.addEventListener('visibilitychange', async () => {
     if (document.visibilityState === 'hidden') {
       hiddenAt = Date.now();
@@ -475,9 +540,8 @@ export function bindVoiceSocket() {
 
     if (!state.voiceActive && !state.micOn) return;
 
-    // Если были в фоне > 2 сек и голос был активен — проверяем
     if (hiddenMs > 2000) {
-      await new Promise(r => setTimeout(r, 500)); // дать системе время отдать микрофон
+      await new Promise(r => setTimeout(r, 500));
 
       if (!streamIsLive()) {
         console.log('[voice] 🔄 mic dead, restart');
@@ -485,11 +549,17 @@ export function bindVoiceSocket() {
         if (ok) toastOk('🎤 Голос восстановлен');
         else toastErr('🎤 Микрофон отвалился — нажми 🎤');
       } else if (state.voiceActive) {
-        // Микрофон жив — переотправляем voice-enabled
+        // Переотправляем voice-enabled
         socket.emit('voice-enabled');
         // Размораживаем audio
         for (const [id, el] of audioElements) {
           el.play().catch(() => {});
+        }
+        // Проверяем треки — если все muted, перезапускаем
+        const tracks = localStream ? localStream.getAudioTracks() : [];
+        if (tracks.length && tracks.every(t => t.muted) && state.micOn) {
+          console.log('[voice] 🔄 all tracks muted after visible, restart');
+          await restartVoice();
         }
       }
     }
@@ -500,8 +570,40 @@ export function bindVoiceSocket() {
     if (!streamIsLive()) {
       console.log('[voice] 🔄 focus: mic dead, restart');
       restartVoice();
+    } else {
+      // Разморозить audio
+      for (const [id, el] of audioElements) {
+        if (el.paused) el.play().catch(() => {});
+      }
     }
   });
+
+  // ==================== 📡 СЕТЬ ====================
+  window.addEventListener('online', () => {
+    console.log('[voice] 📡 online');
+    if (!state.voiceActive) return;
+    // Сеть вернулась — пересоздаём всех peer-ов
+    for (const id of [...peers.keys()]) cleanupPeer(id);
+    setTimeout(() => {
+      if (state.voiceActive) socket.emit('voice-enabled');
+    }, 500);
+  });
+
+  window.addEventListener('offline', () => {
+    console.log('[voice] 📡 offline');
+  });
+
+  if (navigator.connection && navigator.connection.addEventListener) {
+    navigator.connection.addEventListener('change', () => {
+      console.log('[voice] 📡 network change:', navigator.connection.effectiveType);
+      if (!state.voiceActive) return;
+      // Смена сети → ICE сломается, пересоздаём peer-ы
+      for (const id of [...peers.keys()]) cleanupPeer(id);
+      setTimeout(() => {
+        if (state.voiceActive) socket.emit('voice-enabled');
+      }, 800);
+    });
+  }
 }
 
 // ==================== 🔍 ДИАГНОСТИКА ====================
