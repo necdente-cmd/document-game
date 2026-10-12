@@ -21,8 +21,6 @@ let sortMode = 0;
 let infoOpen = false;
 let iconsVisible = false;
 let iconsTimer = null;
-let iconsRightVisible = false;
-let iconsRightTimer = null;
 
 // 🎴 6 режимов сортировки
 const SORT_MODES = [
@@ -209,7 +207,7 @@ function playPendingFieldFly() {
   });
 }
 
-// ==================== ЛЕВАЯ ПАНЕЛЬ (игра) ====================
+// ==================== ЛЕВАЯ ПАНЕЛЬ (все иконки) ====================
 function ensureSwipeIcons() {
   let el = document.getElementById('swipeIcons');
   if (!el) {
@@ -219,23 +217,25 @@ function ensureSwipeIcons() {
     el.innerHTML = `
       <button class="icon-btn" id="refreshBtn" title="Refresh">🔄</button>
       <button class="icon-btn" id="sortBtn" title="Sort">↕️</button>
+      <button class="icon-btn" id="micBtn" title="${t('settings.mic')}">🎤</button>
       <button class="icon-btn" id="emojiToggle" title="Emoji">😀</button>
       <button class="icon-btn" id="chatBtn" title="${t('chat.title')}">💬</button>
       <button class="icon-btn" id="debugBtn" title="Диагностика">🧪</button>
     `;
     document.body.appendChild(el);
   }
-  let micBtn = document.getElementById('micBtn');
-  if (!micBtn) {
-    micBtn = document.createElement('button');
-    micBtn.id = 'micBtn';
-    micBtn.title = t('settings.mic');
-    el.insertBefore(micBtn, el.querySelector('#chatBtn'));
+
+  const micBtn = document.getElementById('micBtn');
+  if (micBtn) {
+    micBtn.className = 'icon-btn ' + (
+      state.voiceActive ? (state.micOn ? 'voice-on' : 'voice-muted') : ''
+    );
+    micBtn.textContent = state.voiceActive ? (state.micOn ? '🎤' : '🔇') : '🎤';
   }
-  micBtn.className = 'icon-btn ' + (
-    state.voiceActive ? (state.micOn ? 'voice-on' : 'voice-muted') : ''
-  );
-  micBtn.textContent = state.voiceActive ? (state.micOn ? '🎤' : '🔇') : '🎤';
+  const emojiBtn = document.getElementById('emojiToggle');
+  if (emojiBtn) {
+    emojiBtn.classList.toggle('active', !!state.emojiOpen);
+  }
 
   let trig = document.getElementById('swipeTrigger');
   if (!trig) {
@@ -269,118 +269,40 @@ function hideSwipeIcons() {
   if (iconsTimer) { clearTimeout(iconsTimer); iconsTimer = null; }
 }
 
-// ==================== 🎤😀 ПРАВАЯ ПАНЕЛЬ ====================
-function ensureSwipeIconsRight() {
-  let el = document.getElementById('swipeIconsRight');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'swipeIconsRight';
-    el.className = 'swipe-icons-right';
-    el.innerHTML = `
-      <button class="icon-btn" id="micBtnRight" title="${t('settings.mic')}">🎤</button>
-      <button class="icon-btn" id="emojiToggleRight" title="Emoji">😀</button>
-    `;
-    document.body.appendChild(el);
-  }
-  const micBtn = document.getElementById('micBtnRight');
-  if (micBtn) {
-    micBtn.className = 'icon-btn ' + (
-      state.voiceActive ? (state.micOn ? 'voice-on' : 'voice-muted') : ''
-    );
-    micBtn.textContent = state.voiceActive ? (state.micOn ? '🎤' : '🔇') : '🎤';
-  }
-  const emojiBtn = document.getElementById('emojiToggleRight');
-  if (emojiBtn) {
-    emojiBtn.classList.toggle('active', !!state.emojiOpen);
-  }
-
-  let trig = document.getElementById('swipeTriggerRight');
-  if (!trig) {
-    trig = document.createElement('button');
-    trig.id = 'swipeTriggerRight';
-    trig.className = 'swipe-trigger-right';
-    trig.textContent = '‹';
-    document.body.appendChild(trig);
-  }
-  return el;
-}
-
-function showSwipeIconsRight() {
-  const el = document.getElementById('swipeIconsRight');
-  const trig = document.getElementById('swipeTriggerRight');
-  if (!el) return;
-  iconsRightVisible = true;
-  el.classList.add('show');
-  if (trig) trig.classList.add('hidden');
-  if (iconsRightTimer) clearTimeout(iconsRightTimer);
-  iconsRightTimer = setTimeout(hideSwipeIconsRight, 5000);
-}
-
-function hideSwipeIconsRight() {
-  const el = document.getElementById('swipeIconsRight');
-  const trig = document.getElementById('swipeTriggerRight');
-  if (!el) return;
-  iconsRightVisible = false;
-  el.classList.remove('show');
-  if (trig) trig.classList.remove('hidden');
-  if (iconsRightTimer) { clearTimeout(iconsRightTimer); iconsRightTimer = null; }
-}
-
 let swipeSetupDone = false;
 function setupSwipe() {
   if (swipeSetupDone) return;
   swipeSetupDone = true;
   let startX = 0, started = false;
-  let startXRight = 0, startedRight = false;
   document.addEventListener('touchstart', (e) => {
     if (e.target.closest('.card')) return;
     if (e.target.closest('.swipe-icons')) return;
-    if (e.target.closest('.swipe-icons-right')) return;
     if (e.target.closest('.emoji-bar')) return;
     if (e.target.closest('.chat-panel')) return;
     if (e.target.closest('.info-modal')) return;
     if (e.target.closest('.swipe-trigger')) return;
-    if (e.target.closest('.swipe-trigger-right')) return;
     if (e.target.closest('.top-bar')) return;
     const x = e.touches[0].clientX;
-    const w = window.innerWidth;
     if (x < 40) { startX = x; started = true; }
-    if (x > w - 40) { startXRight = x; startedRight = true; }
   }, { passive: true });
   document.addEventListener('touchmove', (e) => {
-    if (started) {
-      const dx = e.touches[0].clientX - startX;
-      if (dx > 50) { showSwipeIcons(); started = false; }
-      else if (dx < -30 && iconsVisible) { hideSwipeIcons(); started = false; }
-    }
-    if (startedRight) {
-      const dx = startXRight - e.touches[0].clientX;
-      if (dx > 50) { showSwipeIconsRight(); startedRight = false; }
-      else if (dx < -30 && iconsRightVisible) { hideSwipeIconsRight(); startedRight = false; }
-    }
+    if (!started) return;
+    const dx = e.touches[0].clientX - startX;
+    if (dx > 50) { showSwipeIcons(); started = false; }
+    else if (dx < -30 && iconsVisible) { hideSwipeIcons(); started = false; }
   }, { passive: true });
-  document.addEventListener('touchend', () => { started = false; startedRight = false; }, { passive: true });
+  document.addEventListener('touchend', () => { started = false; }, { passive: true });
   document.addEventListener('click', (e) => {
-    if (iconsVisible) {
-      if (!e.target.closest('.swipe-icons') &&
-          !e.target.closest('.emoji-bar') &&
-          !e.target.closest('.chat-panel') &&
-          !e.target.closest('.info-modal') &&
-          !e.target.closest('.swipe-trigger')) {
-        hideSwipeIcons();
-      }
-    }
-    if (iconsRightVisible) {
-      if (!e.target.closest('.swipe-icons-right') &&
-          !e.target.closest('.emoji-bar') &&
-          !e.target.closest('.swipe-trigger-right')) {
-        hideSwipeIconsRight();
-      }
-    }
+    if (!iconsVisible) return;
+    if (e.target.closest('.swipe-icons')) return;
+    if (e.target.closest('.emoji-bar')) return;
+    if (e.target.closest('.chat-panel')) return;
+    if (e.target.closest('.info-modal')) return;
+    if (e.target.closest('.swipe-trigger')) return;
+    hideSwipeIcons();
   }, true);
   document.addEventListener('click', (e) => {
     if (e.target.closest('#swipeTrigger')) showSwipeIcons();
-    if (e.target.closest('#swipeTriggerRight')) showSwipeIconsRight();
   }, true);
 }
 
@@ -667,40 +589,6 @@ function renderLobby(s, meP, isHost) {
   `;
 }
 
-// ==================== ПРИВЯЗКА ПРАВОЙ ПАНЕЛИ ====================
-function bindSwipeIconsRightHandlers(app, navigate) {
-  const micBtn = document.getElementById('micBtnRight');
-  if (micBtn) micBtn.onclick = async () => {
-    playSound('button');
-    unlockAudio();
-    if (!state.voiceActive) {
-      const ok = await enableVoice();
-      if (ok) {
-        state.micOn = true;
-        setMicOn(true);
-        try { localStorage.setItem('micOn', '1'); } catch {}
-        toastOk(t('toast.micOn'));
-      } else {
-        toastErr(t('toast.micError'));
-      }
-    } else {
-      state.micOn = !state.micOn;
-      setMicOn(state.micOn);
-      try { localStorage.setItem('micOn', state.micOn ? '1' : '0'); } catch {}
-    }
-    hideSwipeIconsRight();
-    renderTable(app, navigate);
-  };
-
-  const emojiBtn = document.getElementById('emojiToggleRight');
-  if (emojiBtn) emojiBtn.onclick = () => {
-    playSound('button');
-    hideSwipeIconsRight();
-    state.emojiOpen = !state.emojiOpen;
-    renderTable(app, navigate);
-  };
-}
-
 // ==================== ГЛАВНЫЙ РЕНДЕР ====================
 export function renderTable(app, navigate) {
   const s = state.server;
@@ -796,10 +684,15 @@ export function renderTable(app, navigate) {
       </div>
     `;
 
-    const swipeEl = document.getElementById('swipeIcons');
-    if (swipeEl) swipeEl.classList.remove('show');
+    // Левая панель доступна в лобби
+    ensureSwipeIcons();
+    bindSwipeIconHandlers(app, navigate);
     const trigEl = document.getElementById('swipeTrigger');
-    if (trigEl) trigEl.classList.add('hidden');
+    if (trigEl) trigEl.classList.remove('hidden');
+    if (iconsVisible) {
+      const swipeEl = document.getElementById('swipeIcons');
+      if (swipeEl) swipeEl.classList.add('show');
+    }
 
     const g = id => document.getElementById(id);
 
@@ -866,14 +759,6 @@ export function renderTable(app, navigate) {
       });
     } else {
       state.swapPick = null;
-    }
-
-    // 🎤😀 Правая панель в лобби
-    ensureSwipeIconsRight();
-    bindSwipeIconsRightHandlers(app, navigate);
-    if (iconsRightVisible) {
-      const elR = document.getElementById('swipeIconsRight');
-      if (elR) elR.classList.add('show');
     }
 
     // 😀 Обработка эмодзи-панели в лобби
@@ -1163,15 +1048,9 @@ export function renderTable(app, navigate) {
 
   ensureSwipeIcons();
   bindSwipeIconHandlers(app, navigate);
-  ensureSwipeIconsRight();
-  bindSwipeIconsRightHandlers(app, navigate);
   if (iconsVisible) {
     const el = document.getElementById('swipeIcons');
     if (el) el.classList.add('show');
-  }
-  if (iconsRightVisible) {
-    const elR = document.getElementById('swipeIconsRight');
-    if (elR) elR.classList.add('show');
   }
 
   const err = (m) => toastErr(m);
