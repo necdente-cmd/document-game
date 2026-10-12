@@ -3799,3 +3799,49 @@ html.theme-switching .table {
     drop-shadow(0 0 16px rgba(241,196,15,.95))
     drop-shadow(0 0 6px rgba(46,204,113,.7)) !important;
 }
+
+/* ============================================================
+   🔧 FIX v11: ЖЁСТКИЙ — карты в руке НЕ СДВИГАЮТСЯ вообще
+   ============================================================ */
+
+/* Максимальная специфичность + !important чтобы перебить всё */
+html body .hand .card,
+html body .hand .card:hover,
+html body .hand .card:active,
+html body .hand .card.sel,
+html body .hand .card.can-beat,
+html body .hand .card.doc,
+html body .hand .card.opp-doc,
+html body .hand .card.dragging,
+html body .hand .card.selected {
+  translate: 0 0 !important;
+  scale: 1 !important;
+}
+
+/* Отключаем transform-хуки через CSS (инлайн не трогаем — он задаёт веер) */
+html body .hand .card:hover,
+html body .hand .card:active {
+  transform: none;
+  /* важно: убираем translateY который был в v1 */
+}
+
+/* .sel — только filter (свечение), БЕЗ сдвига */
+html body .hand .card.sel {
+  filter:
+    drop-shadow(0 6px 14px rgba(0,0,0,.6))
+    drop-shadow(0 0 16px rgba(241,196,15,.95))
+    drop-shadow(0 0 4px rgba(241,196,15,.7)) !important;
+}
+
+/* .can-beat — только свечение */
+html body .hand .card.can-beat {
+  filter:
+    drop-shadow(0 6px 14px rgba(0,0,0,.55))
+    drop-shadow(0 0 12px rgba(46,204,113,.9))
+    drop-shadow(0 0 4px rgba(46,204,113,.6)) !important;
+}
+
+/* Убираем зелёный контур ::after у can-beat — только свечение */
+html body .hand .card.can-beat::after {
+  display: none !important;
+}
