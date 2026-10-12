@@ -3689,3 +3689,40 @@ html.theme-switching .table {
   transform: rotate(90deg) !important;
   transform-origin: center center !important;
 }
+
+/* ============================================================
+   🔧 FIX v9: карты на столе не дёргаются + не прыгают при тапе
+   ============================================================ */
+
+/* Убираем ЛЮБЫЕ анимации и transition на картах в слотах поля */
+.slot .card {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Анимацию появления оставляем ТОЛЬКО когда реально новая карта */
+.slot.new-card .card {
+  animation: fieldIn .22s ease-out !important;
+}
+
+/* Убираем любые hover-эффекты (они и вызывают прыжки на тапе) */
+.slot.tappable .card:first-child {
+  transition: none !important;
+  transform: none !important;
+}
+.slot.tappable:hover .card:first-child {
+  transform: none !important;
+}
+.slot.tappable:active .card:first-child {
+  transform: none !important;
+}
+
+/* Контейнеры slot тоже без transition */
+.slot {
+  transition: none !important;
+}
+
+/* При тапе на цель — подсветка только через outline/filter, без сдвига */
+.slot.selected-target {
+  transform: none !important;
+}
