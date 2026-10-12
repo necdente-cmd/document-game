@@ -3845,3 +3845,47 @@ html body .hand .card.can-beat {
 html body .hand .card.can-beat::after {
   display: none !important;
 }
+
+/* ============================================================
+   🔧 FIX v13: карты в руке ровно стоят
+   ============================================================ */
+
+html body .hand .card,
+html body .hand .card:hover,
+html body .hand .card:active,
+html body .hand .card.sel,
+html body .hand .card.can-beat,
+html body .hand .card.sel.can-beat,
+html body .hand .card.doc,
+html body .hand .card.opp-doc,
+html body .hand .card.dragging {
+  translate: 0 0 !important;
+  scale: 1 !important;
+}
+
+@media (hover: none), (pointer: coarse) {
+  html body .hand .card:hover,
+  html body .hand .card:active {
+    translate: 0 0 !important;
+    scale: 1 !important;
+    filter: none !important;
+  }
+}
+
+html body .hand .card.sel {
+  filter:
+    drop-shadow(0 6px 14px rgba(0,0,0,.6))
+    drop-shadow(0 0 16px rgba(241,196,15,.95))
+    drop-shadow(0 0 4px rgba(241,196,15,.7)) !important;
+}
+
+html body .hand .card.can-beat {
+  filter:
+    drop-shadow(0 6px 14px rgba(0,0,0,.55))
+    drop-shadow(0 0 12px rgba(46,204,113,.9))
+    drop-shadow(0 0 4px rgba(46,204,113,.6)) !important;
+}
+
+html body .hand .card.can-beat::after {
+  display: none !important;
+}
