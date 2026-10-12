@@ -2534,3 +2534,179 @@
     drop-shadow(0 0 16px rgba(241,196,15,.5)) !important;
   transform: scale(1.1) rotate(2deg) !important;
 }
+
+/* ============================================================
+   🎨 POLISH v2 — Сиденья + Поле боя
+   ============================================================ */
+
+/* ---------- 👥 Сиденья: плавная смена состояния ---------- */
+.seat .state {
+  transition: color .3s ease, opacity .3s ease, transform .25s cubic-bezier(.34,1.56,.64,1);
+  animation: stateIn .35s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes stateIn {
+  0%   { opacity: 0; transform: translateY(-4px) scale(.85); }
+  100% { opacity: .9; transform: translateY(0) scale(1); }
+}
+
+.seat .state.beat    { text-shadow: 0 0 8px rgba(46,204,113,.8); }
+.seat .state.think   { text-shadow: 0 0 8px rgba(241,196,15,.8); }
+.seat .state.move    { text-shadow: 0 0 8px rgba(52,152,219,.8); }
+.seat .state.pickup  {
+  text-shadow: 0 0 8px rgba(231,76,60,.9);
+  animation: pickupPulse .9s ease-in-out infinite;
+}
+@keyframes pickupPulse {
+  0%, 100% { opacity: .75; }
+  50%      { opacity: 1; }
+}
+
+/* ---------- 👥 Активный игрок — сильнее подсвечен ---------- */
+.seat.active {
+  outline: 3px solid var(--acc);
+  box-shadow: 0 0 24px rgba(241,196,15,.7), inset 0 0 12px rgba(241,196,15,.15);
+  animation: activeSeatPulse 1.6s ease-in-out infinite;
+}
+@keyframes activeSeatPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(241,196,15,.5), inset 0 0 10px rgba(241,196,15,.1); }
+  50%      { box-shadow: 0 0 32px rgba(241,196,15,.9), inset 0 0 16px rgba(241,196,15,.25); }
+}
+
+/* Стрелка-указатель от активного сиденья к центру стола */
+.seat.active::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 0;
+  border: 10px solid transparent;
+  animation: arrowBlink 1.2s ease-in-out infinite;
+  z-index: 10;
+}
+@keyframes arrowBlink {
+  0%, 100% { opacity: .55; }
+  50%      { opacity: 1; }
+}
+.seat.top.active::after {
+  bottom: -18px; left: 50%;
+  transform: translateX(-50%);
+  border-top-color: var(--acc);
+}
+.seat.left.active::after {
+  right: -18px; top: 50%;
+  transform: translateY(-50%);
+  border-left-color: var(--acc);
+}
+.seat.right.active::after {
+  left: -18px; top: 50%;
+  transform: translateY(-50%);
+  border-right-color: var(--acc);
+}
+
+/* ---------- 👥 Индикатор «отошёл» ---------- */
+.seat.offline {
+  opacity: .65;
+  border: 2px dashed rgba(231,76,60,.7);
+  background: rgba(60,10,10,.65);
+  position: relative;
+}
+.seat.offline::before {
+  content: '⏳';
+  position: absolute;
+  top: -10px;
+  right: -8px;
+  font-size: 18px;
+  animation: offlineSpin 2.5s linear infinite;
+  filter: drop-shadow(0 0 6px rgba(231,76,60,.9));
+  z-index: 5;
+}
+@keyframes offlineSpin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.seat.offline .avatar {
+  filter: grayscale(.8) brightness(.6);
+}
+
+/* ---------- 🎯 Поле боя: тени под картами глубже ---------- */
+.slot .card {
+  filter:
+    drop-shadow(0 8px 16px rgba(0,0,0,.7))
+    drop-shadow(0 3px 6px rgba(0,0,0,.5))
+    drop-shadow(0 1px 2px rgba(0,0,0,.4));
+  transition: filter .25s ease, transform .25s ease;
+}
+.slot .card:first-child {
+  filter:
+    drop-shadow(0 10px 20px rgba(0,0,0,.75))
+    drop-shadow(0 4px 8px rgba(0,0,0,.55))
+    drop-shadow(0 1px 2px rgba(0,0,0,.4));
+}
+.slot.tappable:hover .card:first-child {
+  filter:
+    drop-shadow(0 12px 22px rgba(0,0,0,.8))
+    drop-shadow(0 0 12px rgba(241,196,15,.6));
+  transform: translateY(-3px);
+}
+
+/* ---------- 🎯 Плавное появление битой карты ---------- */
+.slot .card.beaten {
+  animation:
+    beatenGlow 2s ease-in-out infinite,
+    beatenIn .45s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes beatenIn {
+  0% {
+    opacity: 0;
+    transform: rotate(0deg) scale(1.15);
+    filter: drop-shadow(0 20px 30px rgba(0,0,0,.8)) brightness(1.4);
+  }
+  60% {
+    opacity: 1;
+    transform: rotate(7deg) scale(.98);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(5deg) scale(1);
+  }
+}
+
+/* ---------- 🎯 Индикатор хода в центре поля ---------- */
+.turn-indicator {
+  position: absolute;
+  top: -34px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 14px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 20;
+  animation: turnIndicatorIn .4s cubic-bezier(.34,1.56,.64,1);
+  box-shadow: 0 4px 16px rgba(0,0,0,.6);
+}
+@keyframes turnIndicatorIn {
+  0%   { opacity: 0; transform: translateX(-50%) scale(.6); }
+  100% { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+.turn-indicator.attack {
+  background: linear-gradient(135deg, #3498db, #2874a6);
+  color: #fff;
+}
+.turn-indicator.defend {
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+  color: #000;
+}
+.turn-indicator.yours {
+  background: linear-gradient(135deg, #f1c40f, #d4ac0d);
+  color: #000;
+  animation:
+    turnIndicatorIn .4s cubic-bezier(.34,1.56,.64,1),
+    yoursPulse 1.5s ease-in-out infinite .4s;
+}
+@keyframes yoursPulse {
+  0%, 100% { box-shadow: 0 4px 16px rgba(241,196,15,.5); }
+  50%      { box-shadow: 0 4px 24px rgba(241,196,15,1); }
+}
