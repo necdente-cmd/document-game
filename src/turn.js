@@ -1,7 +1,6 @@
 // 🔐 Генератор временных паролей для TURN-сервера
 import crypto from 'crypto';
 
-// Тот же секрет, что в /etc/turnserver.conf
 const TURN_SECRET = 'ea76643603637b537c80f876fb67f78f22fad62fe9bac387cff47b79aff7d59d';
 const TURN_TTL = 86400; // 24 часа
 
@@ -14,18 +13,28 @@ export function getIceServers() {
   const password = hmac.digest('base64');
 
   return [
-    // STUN
+    // STUN — три провайдера для надёжности
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    // TURN UDP
+    { urls: 'stun:stun.cloudflare.com:3478' },
+
+    // TURN UDP (3478)
     {
       urls: 'turn:document-game.duckdns.org:3478?transport=udp',
       username,
       credential: password,
     },
-    // TURN TCP (fallback для сетей, где UDP заблокирован)
+
+    // TURN TCP (3478)
     {
       urls: 'turn:document-game.duckdns.org:3478?transport=tcp',
+      username,
+      credential: password,
+    },
+
+    // TURN over TLS (5349) — критично для мобильных сетей
+    {
+      urls: 'turns:document-game.duckdns.org:5349?transport=tcp',
       username,
       credential: password,
     },
