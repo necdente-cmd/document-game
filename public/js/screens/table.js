@@ -366,6 +366,32 @@ function sortHand(hand, myDoc, trumpSuit) {
   return arr;
 }
 
+// 🎴 Помечаем козыри на картах в руке маленьким значком
+function markTrumpCards(trumpSuit) {
+  if (!trumpSuit) return;
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.hand .card').forEach(el => {
+      const suit = el.dataset.suit || el.getAttribute('data-suit');
+      if (suit === trumpSuit) {
+        el.setAttribute('data-trump', '1');
+        return;
+      }
+      // Fallback — ищем масть в img src
+      if (!suit) {
+        const img = el.querySelector('img');
+        if (img && img.src) {
+          // Проверяем вхождение символа масти в URL (если карты названы как 6S.png, 7H.png и т.п.)
+          const suitMap = { '♠': 'S', '♥': 'H', '♦': 'D', '♣': 'C' };
+          const code = suitMap[trumpSuit];
+          if (code && new RegExp(`[/_-]${code}(\\.|_|-|$)`).test(img.src)) {
+            el.setAttribute('data-trump', '1');
+          }
+        }
+      }
+    });
+  });
+}
+
 // ==================== 📊 INFO MODAL ====================
 function showInfoModal() {
   const s = state.server;
@@ -684,7 +710,6 @@ export function renderTable(app, navigate) {
       </div>
     `;
 
-    // Левая панель доступна в лобби
     ensureSwipeIcons();
     bindSwipeIconHandlers(app, navigate);
     const trigEl = document.getElementById('swipeTrigger');
@@ -761,7 +786,6 @@ export function renderTable(app, navigate) {
       state.swapPick = null;
     }
 
-    // 😀 Обработка эмодзи-панели в лобби
     const ebLobby = document.getElementById('emojiBar');
     if (ebLobby) {
       clearTimeout(window.__emojiTimer);
@@ -860,9 +884,10 @@ export function renderTable(app, navigate) {
         `<div class="card back ${isDealing ? 'deal' : ''}" style="top:${i*2}px;left:${i*2}px;z-index:${10+i}">
           <img src="${backPath(s.opts)}" alt="•" draggable="false">
         </div>`).join('');
+      const deckCount = (s.deck && s.deck.length) || 0;
       deckArea = `
         <div class="deck-area">
-          <div class="deck-wrapper">
+          <div class="deck-wrapper" data-count="${deckCount > 0 ? deckCount : ''}">
             <div class="deck-stack">${stack}</div>
             ${s.trumpCard ? `<div class="trump-under">${cardHtml(s.trumpCard)}</div>` : ''}
           </div>
@@ -1045,6 +1070,7 @@ export function renderTable(app, navigate) {
   playPendingFly();
   playPendingFieldFly();
   playDealAnimation();
+  markTrumpCards(s.trumpSuit);
 
   ensureSwipeIcons();
   bindSwipeIconHandlers(app, navigate);
