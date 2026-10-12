@@ -2347,20 +2347,21 @@
    🎨 POLISH v1 — Карты в руке + Колода/Козырь
    ============================================================ */
 
-/* ---------- 🃏 Карты в руке ---------- */
+/* ---------- 🃏 Карты в руке (v2: translate/scale — не ломает веер) ---------- */
 .hand .card {
   transition:
-    transform .22s cubic-bezier(.34,1.56,.64,1),
-    filter .2s ease-out,
-    box-shadow .2s ease-out;
-  will-change: transform, filter;
+    translate .22s cubic-bezier(.34,1.56,.64,1),
+    scale .22s cubic-bezier(.34,1.56,.64,1),
+    filter .2s ease-out;
+  will-change: translate, scale, filter;
   border-radius: 8px;
   overflow: hidden;
 }
 
-/* Подсветка при наведении (мышь) */
+/* Подсветка при наведении (мышь) — НЕ ломает инлайновый transform веера */
 .hand .card:hover {
-  transform: translateY(-14px) scale(1.06);
+  translate: 0 -14px;
+  scale: 1.06;
   filter:
     drop-shadow(0 12px 22px rgba(0,0,0,.65))
     drop-shadow(0 0 14px rgba(241,196,15,.5));
@@ -2369,20 +2370,28 @@
 
 /* При тапе / нажатии (тач) */
 .hand .card:active {
-  transform: translateY(-18px) scale(1.08);
+  translate: 0 -18px;
+  scale: 1.08;
   filter:
     drop-shadow(0 14px 26px rgba(0,0,0,.7))
     drop-shadow(0 0 20px rgba(241,196,15,.7));
   z-index: 100;
 }
 
-/* Своя карта, выбранная (selected в state) */
-.hand .card.selected {
-  transform: translateY(-22px) scale(1.04);
+/* Своя карта, выбранная */
+.hand .card.sel {
+  translate: 0 -22px;
+  scale: 1.04;
   filter:
     drop-shadow(0 12px 22px rgba(0,0,0,.7))
     drop-shadow(0 0 18px rgba(241,196,15,.85));
   z-index: 90;
+}
+
+/* При перетаскивании — фиксируем, чтобы не дёргалось */
+.hand .card.dragging {
+  translate: 0 0;
+  scale: 1;
 }
 
 /* ---------- ✨ Подсветка «может побить» ---------- */
