@@ -3554,3 +3554,44 @@ html.theme-switching .table {
 [data-theme="paper"] .top-bar .tb-score b { color: #d4ac0d !important; }
 [data-theme="paper"] .top-bar .tb-sep { color: #a89878 !important; }
 [data-theme="paper"] .top-bar .tb-parity { color: #e8dfc4 !important; }
+
+/* ============================================================
+   🔧 FIX v6: возвращаем action-center вправо + убираем дёрганье карт
+   ============================================================ */
+
+/* 🎯 Основная кнопка действия — ЖЁСТКО справа внизу */
+.action-center {
+  position: absolute !important;
+  bottom: calc(100px * var(--scale)) !important;
+  right: calc(8px * var(--scale)) !important;
+  left: auto !important;
+  top: auto !important;
+  z-index: 30 !important;
+}
+
+/* 🛑 Убираем transition на картах в центре — они дёргаются из-за конфликта с fieldIn */
+.center .card {
+  transition: none !important;
+}
+
+/* Только для новых карт — оставляем анимацию появления */
+.slot.new-card .card {
+  animation: fieldIn .25s ease-out;
+}
+
+/* 🎴 Карты в руке — transition оставляем (там веер и hover) */
+.hand .card {
+  transition:
+    translate .22s cubic-bezier(.34,1.56,.64,1),
+    scale .22s cubic-bezier(.34,1.56,.64,1),
+    filter .2s ease-out !important;
+}
+
+/* 🎯 Extra-actions — слева, как было */
+.extra-actions {
+  position: absolute !important;
+  bottom: calc(100px * var(--scale)) !important;
+  left: calc(8px * var(--scale)) !important;
+  right: auto !important;
+  z-index: 30 !important;
+}
