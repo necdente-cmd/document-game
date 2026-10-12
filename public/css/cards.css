@@ -21,7 +21,6 @@
   -webkit-user-drag: none;
 }
 .card.sel {
-  transform: translateY(-30px) scale(1.05);
   z-index: 20;
   box-shadow: 0 0 0 4px var(--acc), 0 6px 16px rgba(0,0,0,.8);
 }

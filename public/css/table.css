@@ -2407,32 +2407,50 @@
 }
 
 /* Подсветка при наведении (мышь) — НЕ ломает инлайновый transform веера */
-.hand .card:hover {
-  translate: 0 -14px;
-  scale: 1.06;
+.hand .card:hover,
+.hand .card:active,
+.hand .card.sel {
+  /* Отключено — карты не должны двигаться */
+  translate: 0 0;
+  scale: 1;
+}
+.hand .card.sel {
   filter:
-    drop-shadow(0 12px 22px rgba(0,0,0,.65))
-    drop-shadow(0 0 14px rgba(241,196,15,.5));
-  z-index: 100;
+    drop-shadow(0 6px 14px rgba(0,0,0,.6))
+    drop-shadow(0 0 16px rgba(241,196,15,.95))
+    drop-shadow(0 0 4px rgba(241,196,15,.7));
+  z-index: 90;
 }
 
 /* При тапе / нажатии (тач) */
-.hand .card:active {
-  translate: 0 -18px;
-  scale: 1.08;
+.hand .card:hover,
+.hand .card:active,
+.hand .card.sel {
+  /* Отключено — карты не должны двигаться */
+  translate: 0 0;
+  scale: 1;
+}
+.hand .card.sel {
   filter:
-    drop-shadow(0 14px 26px rgba(0,0,0,.7))
-    drop-shadow(0 0 20px rgba(241,196,15,.7));
-  z-index: 100;
+    drop-shadow(0 6px 14px rgba(0,0,0,.6))
+    drop-shadow(0 0 16px rgba(241,196,15,.95))
+    drop-shadow(0 0 4px rgba(241,196,15,.7));
+  z-index: 90;
 }
 
 /* Своя карта, выбранная */
+.hand .card:hover,
+.hand .card:active,
 .hand .card.sel {
-  translate: 0 -22px;
-  scale: 1.04;
+  /* Отключено — карты не должны двигаться */
+  translate: 0 0;
+  scale: 1;
+}
+.hand .card.sel {
   filter:
-    drop-shadow(0 12px 22px rgba(0,0,0,.7))
-    drop-shadow(0 0 18px rgba(241,196,15,.85));
+    drop-shadow(0 6px 14px rgba(0,0,0,.6))
+    drop-shadow(0 0 16px rgba(241,196,15,.95))
+    drop-shadow(0 0 4px rgba(241,196,15,.7));
   z-index: 90;
 }
 
