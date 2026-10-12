@@ -366,27 +366,13 @@ function sortHand(hand, myDoc, trumpSuit) {
   return arr;
 }
 
-// 🎴 Помечаем козыри на картах в руке маленьким значком
+// 🎴 Помечаем козыри на картах в руке (золотой ★)
 function markTrumpCards(trumpSuit) {
   if (!trumpSuit) return;
   requestAnimationFrame(() => {
     document.querySelectorAll('.hand .card').forEach(el => {
-      const suit = el.dataset.suit || el.getAttribute('data-suit');
-      if (suit === trumpSuit) {
+      if (el.dataset.suit === trumpSuit) {
         el.setAttribute('data-trump', '1');
-        return;
-      }
-      // Fallback — ищем масть в img src
-      if (!suit) {
-        const img = el.querySelector('img');
-        if (img && img.src) {
-          // Проверяем вхождение символа масти в URL (если карты названы как 6S.png, 7H.png и т.п.)
-          const suitMap = { '♠': 'S', '♥': 'H', '♦': 'D', '♣': 'C' };
-          const code = suitMap[trumpSuit];
-          if (code && new RegExp(`[/_-]${code}(\\.|_|-|$)`).test(img.src)) {
-            el.setAttribute('data-trump', '1');
-          }
-        }
       }
     });
   });
@@ -582,13 +568,13 @@ function renderLobby(s, meP, isHost) {
       <div class="lb-code-label">${t('lobby.roomCode')}</div>
       <button class="lb-code" id="roomCode">${esc(s.id)}</button>
 
-      <div class="lb-teams">
-        <div class="lb-team">
+            <div class="lb-teams">
+        <div class="lb-team ${allReady ? 'all-ready' : ''}">
           <div class="lb-team-hd">★ ${t('lobby.teamA')}</div>
           ${renderSlot(0, teamA[0], 'a')}
           ${renderSlot(2, teamA[1], 'a')}
         </div>
-        <div class="lb-team">
+        <div class="lb-team ${allReady ? 'all-ready' : ''}">
           <div class="lb-team-hd b">✗ ${t('lobby.teamB')}</div>
           ${renderSlot(1, teamB[0], 'b')}
           ${renderSlot(3, teamB[1], 'b')}
@@ -999,6 +985,21 @@ export function renderTable(app, navigate) {
 
   const overlays = buildOverlays();
 
+  // 🎯 Индикатор хода в центре поля
+  let turnIndicator = '';
+  if (s.field && s.field.attacker !== undefined && s.field.defender !== undefined) {
+    const attackerName = s.players.find(p => p.seat === s.field.attacker)?.name || '?';
+    const defenderName = s.players.find(p => p.seat === s.field.defender)?.name || '?';
+
+    if (canDefend) {
+      turnIndicator = `<div class="turn-indicator yours defend">🛡️ ${esc(defenderName)} ${t('state.beat')}</div>`;
+    } else if (isAttacker || isPartnerOfAttacker) {
+      turnIndicator = `<div class="turn-indicator yours attack">🎯 ${esc(attackerName)} ${t('state.move')}</div>`;
+    } else {
+      turnIndicator = `<div class="turn-indicator attack">🎯 ${esc(attackerName)} ${t('state.move')}</div>`;
+    }
+  }
+
   const handCount = s.myHand.length;
   const isEven = handCount > 0 && handCount % 2 === 0;
   const parityIcon = handCount === 0 ? '—' : (isEven ? '✅' : '❌');
@@ -1037,6 +1038,7 @@ export function renderTable(app, navigate) {
 
       ${seats}
       <div class="center">
+        ${turnIndicator}
         ${fieldHtml}
       </div>
 

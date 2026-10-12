@@ -2710,3 +2710,269 @@
   0%, 100% { box-shadow: 0 4px 16px rgba(241,196,15,.5); }
   50%      { box-shadow: 0 4px 24px rgba(241,196,15,1); }
 }
+
+/* ============================================================
+   🎨 POLISH v3 — Top-bar + Лобби
+   ============================================================ */
+
+/* ---------- 📊 TOP-BAR: разделители и подсветка ---------- */
+.top-bar {
+  gap: 6px;
+  padding: 6px 8px;
+  min-height: 46px;
+}
+
+.tb-item {
+  position: relative;
+  padding: 5px 10px;
+  border-radius: 10px;
+  transition: background .18s ease, transform .15s ease;
+  cursor: default;
+}
+.tb-item:hover {
+  background: rgba(255,255,255,.12);
+}
+.tb-item:active {
+  transform: scale(.97);
+}
+
+/* Тонкая разделительная полоска между группами */
+.tb-item + .tb-item::before,
+.tb-item + .tb-btn::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 25%;
+  height: 50%;
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(255,255,255,.22) 30%,
+    rgba(255,255,255,.22) 70%,
+    transparent
+  );
+  pointer-events: none;
+}
+[data-theme="paper"] .tb-item + .tb-item::before,
+[data-theme="paper"] .tb-item + .tb-btn::before {
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(0,0,0,.18) 30%,
+    rgba(0,0,0,.18) 70%,
+    transparent
+  );
+}
+.tb-spacer + .tb-item::before,
+.tb-spacer + .tb-btn::before {
+  display: none;
+}
+
+/* Красивее цифры */
+.tb-hand {
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+}
+.tb-score b {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Кнопки top-bar — крупнее и с hover */
+.tb-btn {
+  width: 38px;
+  height: 38px;
+  font-size: 18px;
+  transition: background .18s ease, transform .15s ease, box-shadow .18s;
+}
+.tb-btn:hover {
+  background: rgba(255,255,255,.16);
+  box-shadow: 0 0 12px rgba(241,196,15,.3);
+}
+.tb-btn:active {
+  transform: scale(.92);
+  background: rgba(255,255,255,.22);
+}
+
+/* ---------- 🏠 ЛОББИ: анимация «ждём игроков» ---------- */
+.lb-status {
+  position: relative;
+  padding: 8px 20px;
+  border-radius: 12px;
+  background: rgba(0,0,0,.35);
+  font-weight: 700;
+  letter-spacing: .5px;
+  transition: background .25s;
+  min-width: 120px;
+  text-align: center;
+}
+.lb-status::after {
+  content: '● ● ●';
+  display: block;
+  font-size: 10px;
+  letter-spacing: 4px;
+  margin-top: 2px;
+  color: #6a6a7a;
+  animation: lobbyDots 1.6s ease-in-out infinite;
+}
+@keyframes lobbyDots {
+  0%, 100% { opacity: .35; }
+  50%      { opacity: 1; }
+}
+
+/* ---------- 🏠 ЛОББИ: пустые слоты ---------- */
+.lb-slot.empty {
+  position: relative;
+  opacity: 1;
+  border: 1.5px dashed rgba(255,255,255,.22);
+  background: rgba(255,255,255,.02);
+  animation: emptySlotBreath 2.4s ease-in-out infinite;
+}
+@keyframes emptySlotBreath {
+  0%, 100% {
+    border-color: rgba(255,255,255,.18);
+    background: rgba(255,255,255,.02);
+  }
+  50% {
+    border-color: rgba(120, 170, 255, .45);
+    background: rgba(120, 170, 255, .06);
+  }
+}
+.lb-slot.empty .lb-name {
+  color: #6a6a7a;
+  font-style: italic;
+}
+.lb-slot.empty::after {
+  content: '👤';
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  opacity: .4;
+}
+
+/* ---------- 🏠 ЛОББИ: занятые слоты — плавная подсветка ---------- */
+.lb-slot {
+  transition: background .2s ease, box-shadow .2s ease, transform .15s ease;
+}
+.lb-slot:not(.empty) {
+  background: rgba(20, 30, 55, .55);
+  border: 1px solid rgba(255,255,255,.06);
+}
+.lb-slot.me {
+  background: linear-gradient(90deg, rgba(100, 180, 255, .18), rgba(100, 180, 255, .06));
+  box-shadow: inset 0 0 0 1.5px rgba(100, 180, 255, .75);
+}
+.lb-slot.clickable:hover {
+  background: rgba(255,255,255,.08);
+  transform: scale(1.015);
+}
+.lb-slot.picked {
+  animation: slotPickedPulse 1.2s ease-in-out infinite;
+}
+@keyframes slotPickedPulse {
+  0%, 100% { box-shadow: inset 0 0 0 2px rgba(255,200,100,.7), 0 0 10px rgba(255,200,100,.4); }
+  50%      { box-shadow: inset 0 0 0 2px rgba(255,200,100,1), 0 0 18px rgba(255,200,100,.8); }
+}
+
+/* ---------- 🏠 ЛОББИ: «Готов» индикатор у команды ---------- */
+.lb-team {
+  transition: border-color .3s ease, background .3s ease, box-shadow .3s;
+}
+.lb-team.all-ready {
+  border-color: rgba(77, 201, 93, .7);
+  background: rgba(46, 204, 113, .05);
+  box-shadow: 0 0 16px rgba(46, 204, 113, .25);
+}
+.lb-team.all-ready .lb-team-hd::after {
+  content: ' ✓';
+  color: #4dc95d;
+  font-weight: 900;
+  animation: readyPop .4s cubic-bezier(.34,1.56,.64,1);
+}
+.lb-team:nth-child(2).all-ready {
+  border-color: rgba(201, 77, 77, .7);
+  background: rgba(231, 76, 60, .05);
+  box-shadow: 0 0 16px rgba(231, 76, 60, .25);
+}
+.lb-team:nth-child(2).all-ready .lb-team-hd::after {
+  color: #e07070;
+}
+@keyframes readyPop {
+  0%   { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.4); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* ---------- 🏠 ЛОББИ: код комнаты — пульс и копирование ---------- */
+.lb-code {
+  position: relative;
+  overflow: hidden;
+  transition: transform .15s ease, box-shadow .25s ease;
+}
+.lb-code::after {
+  content: '📋';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  opacity: .6;
+  transition: opacity .2s, transform .2s;
+  pointer-events: none;
+}
+.lb-code:hover {
+  box-shadow: 0 6px 20px rgba(0, 180, 230, .55), 0 0 0 2px rgba(77, 217, 255, .35);
+}
+.lb-code:hover::after {
+  opacity: 1;
+  transform: translateY(-50%) scale(1.15);
+}
+.lb-code:active {
+  transform: scale(.98);
+}
+
+/* ---------- 🏠 ЛОББИ: кнопка «Начать игру» ---------- */
+.lb-start {
+  position: relative;
+  transition: transform .15s ease, box-shadow .25s ease;
+  animation: startBtnReady 2.4s ease-in-out infinite;
+}
+@keyframes startBtnReady {
+  0%, 100% { box-shadow: 0 4px 14px rgba(77, 201, 93, 0.4); }
+  50%      { box-shadow: 0 4px 22px rgba(77, 201, 93, 0.75), 0 0 0 4px rgba(77, 201, 93, .18); }
+}
+.lb-start:hover {
+  transform: translateY(-1px);
+}
+.lb-start:active {
+  transform: translateY(1px) scale(.98);
+}
+
+/* ---------- 🏠 ЛОББИ: заголовок команды ---------- */
+.lb-team-hd {
+  position: relative;
+  transition: color .3s;
+}
+
+/* ---------- 🏠 ЛОББИ: анимация «ждём хоста» ---------- */
+.lb-hint {
+  font-style: italic;
+  padding: 6px 14px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.04);
+  animation: hintSoftPulse 3s ease-in-out infinite;
+}
+@keyframes hintSoftPulse {
+  0%, 100% { opacity: .7; }
+  50%      { opacity: 1; }
+}
+
+/* ---------- 📱 Адаптив ---------- */
+@media (max-width: 380px) {
+  .top-bar { min-height: 42px; padding: 5px 6px; gap: 3px; }
+  .tb-item { padding: 4px 6px; }
+  .tb-btn { width: 34px; height: 34px; font-size: 16px; }
+  .lb-status::after { letter-spacing: 3px; }
+}
