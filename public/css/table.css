@@ -3521,3 +3521,31 @@ html.theme-switching .table {
 [data-theme="paper"] .table.lobby-mode .lb-bot-btn-remove {
   background: linear-gradient(135deg, #7a2020, #b84a4a) !important;
 }
+
+/* ============================================================
+   🌈 PAPER — top-bar override (жёстко тёмный)
+   ============================================================ */
+[data-theme="paper"] .top-bar {
+  background: rgba(20, 16, 10, 0.95) !important;
+  border-bottom: 1px solid rgba(168, 132, 46, 0.25) !important;
+  color: #e8dfc4 !important;
+  backdrop-filter: blur(10px);
+}
+[data-theme="paper"] .top-bar .tb-btn {
+  color: #e8dfc4 !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+[data-theme="paper"] .top-bar .tb-btn:active {
+  background: rgba(168, 132, 46, 0.25) !important;
+}
+[data-theme="paper"] .top-bar .tb-item {
+  color: #e8dfc4 !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+[data-theme="paper"] .top-bar .tb-ico { color: #e8dfc4 !important; }
+[data-theme="paper"] .top-bar .tb-hand { color: #a8842e !important; }
+[data-theme="paper"] .top-bar .tb-my { color: #d4ac0d !important; }
+[data-theme="paper"] .top-bar .tb-opp { color: #e07070 !important; }
+[data-theme="paper"] .top-bar .tb-score b { color: #d4ac0d !important; }
+[data-theme="paper"] .top-bar .tb-sep { color: #a89878 !important; }
+[data-theme="paper"] .top-bar .tb-parity { color: #e8dfc4 !important; }
