@@ -830,3 +830,176 @@ body.shake {
   font-size: 15px;
   line-height: 1.65;
 }
+
+/* ============================================================
+   🌈 PAPER — create screen + welcome (тёмная версия)
+   ============================================================ */
+
+/* Окно создания игры */
+[data-theme="paper"] .cr-page {
+  background: linear-gradient(160deg, #14100a 0%, #1e1812 50%, #0d0a06 100%) !important;
+}
+[data-theme="paper"] .cr-header {
+  background: rgba(20, 16, 10, 0.95) !important;
+  border-bottom-color: rgba(168, 132, 46, 0.2) !important;
+}
+[data-theme="paper"] .cr-title { color: #e8dfc4 !important; }
+[data-theme="paper"] .cr-back {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #e8dfc4 !important;
+}
+[data-theme="paper"] .cr-back:active { background: rgba(255, 255, 255, 0.12) !important; }
+
+[data-theme="paper"] .cr-section {
+  background: rgba(30, 24, 18, 0.7) !important;
+  border-color: rgba(168, 132, 46, 0.18) !important;
+}
+[data-theme="paper"] .cr-sec-title { color: #a89878 !important; }
+
+[data-theme="paper"] .cr-input {
+  background: rgba(0, 0, 0, 0.45) !important;
+  color: #e8dfc4 !important;
+  border-color: rgba(168, 132, 46, 0.25) !important;
+}
+[data-theme="paper"] .cr-input:focus {
+  border-color: #d4ac0d !important;
+  box-shadow: 0 0 0 3px rgba(212, 172, 13, 0.2) !important;
+}
+[data-theme="paper"] .cr-input::placeholder { color: #6a5a3a !important; }
+
+[data-theme="paper"] .cr-footer {
+  background: linear-gradient(0deg, rgba(13, 10, 6, 0.98) 70%, rgba(13, 10, 6, 0)) !important;
+}
+[data-theme="paper"] .cr-create {
+  background: linear-gradient(135deg, #a8842e, #7a5c1a) !important;
+  color: #1a1408 !important;
+  box-shadow: 0 4px 14px rgba(168, 132, 46, 0.4) !important;
+}
+
+/* Выбор ступеней документов (docset) */
+[data-theme="paper"] .docset-card {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(168, 132, 46, 0.2) !important;
+}
+[data-theme="paper"] .docset-card.sel {
+  background: rgba(212, 172, 13, 0.15) !important;
+  border-color: #d4ac0d !important;
+}
+[data-theme="paper"] .docset-name { color: #e8dfc4 !important; }
+[data-theme="paper"] .docset-card.sel .docset-name { color: #d4ac0d !important; }
+[data-theme="paper"] .step-chip {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(168, 132, 46, 0.25) !important;
+  color: #e8dfc4 !important;
+}
+[data-theme="paper"] .docset-card.sel .step-chip {
+  background: rgba(212, 172, 13, 0.2) !important;
+  border-color: rgba(212, 172, 13, 0.5) !important;
+  color: #d4ac0d !important;
+}
+[data-theme="paper"] .step-arrow { color: rgba(232, 223, 196, 0.35) !important; }
+
+/* Предпросмотр тем */
+[data-theme="paper"] .theme-preview .tp-label { color: #e8dfc4 !important; }
+[data-theme="paper"] .theme-preview.sel {
+  border-color: #d4ac0d !important;
+  box-shadow: 0 0 14px rgba(212, 172, 13, 0.5) !important;
+}
+
+/* Выбор карт / рубашки / колоды */
+[data-theme="paper"] .choice {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(168, 132, 46, 0.25) !important;
+  color: #e8dfc4 !important;
+}
+[data-theme="paper"] .choice.sel {
+  border-color: #d4ac0d !important;
+  background: rgba(212, 172, 13, 0.15) !important;
+}
+
+/* Аватар-пикер */
+[data-theme="paper"] .avatar-picker {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+[data-theme="paper"] .avatar-preview-wrap {
+  background: rgba(0, 0, 0, 0.35) !important;
+}
+[data-theme="paper"] .avatar-upload-btn {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(168, 132, 46, 0.25) !important;
+  color: #e8dfc4 !important;
+}
+[data-theme="paper"] .avatar-choice {
+  border-color: transparent !important;
+}
+[data-theme="paper"] .avatar-choice.sel {
+  border-color: #d4ac0d !important;
+  box-shadow: 0 0 16px rgba(212, 172, 13, 0.6) !important;
+}
+
+/* ============================================================
+   🌈 PAPER — welcome screen
+   ============================================================ */
+[data-theme="paper"] .wl-page {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(168, 132, 46, 0.15) 0%, transparent 60%),
+    linear-gradient(160deg, #14100a 0%, #1e1812 50%, #0d0a06 100%) !important;
+}
+[data-theme="paper"] .wl-title { color: #e8dfc4 !important; }
+[data-theme="paper"] .wl-sub { color: #a89878 !important; }
+[data-theme="paper"] .wl-btn-tertiary {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(168, 132, 46, 0.3) !important;
+  color: #e8dfc4 !important;
+}
+[data-theme="paper"] .wl-ico {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(168, 132, 46, 0.25) !important;
+  color: #e8dfc4 !important;
+}
+[data-theme="paper"] .wl-footer { color: #6a5a3a !important; }
+
+/* ============================================================
+   🌈 PAPER — join screen
+   ============================================================ */
+[data-theme="paper"] .jn-page {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(168, 132, 46, 0.12) 0%, transparent 60%),
+    linear-gradient(160deg, #14100a 0%, #1e1812 50%, #0d0a06 100%) !important;
+}
+[data-theme="paper"] .jn-title { color: #e8dfc4 !important; }
+[data-theme="paper"] .jn-back {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(168, 132, 46, 0.25) !important;
+  color: #e8dfc4 !important;
+}
+[data-theme="paper"] .jn-label { color: #a89878 !important; }
+[data-theme="paper"] .jn-input {
+  background: rgba(0, 0, 0, 0.4) !important;
+  color: #e8dfc4 !important;
+  border-color: rgba(168, 132, 46, 0.25) !important;
+}
+[data-theme="paper"] .jn-input::placeholder { color: #6a5a3a !important; }
+[data-theme="paper"] .jn-input:focus {
+  border-color: #d4ac0d !important;
+  box-shadow: 0 0 0 3px rgba(212, 172, 13, 0.18) !important;
+}
+[data-theme="paper"] .jn-input-code { color: #d4ac0d !important; }
+[data-theme="paper"] .jn-footer {
+  background: linear-gradient(0deg, rgba(13, 10, 6, 0.98) 70%, rgba(13, 10, 6, 0)) !important;
+}
+[data-theme="paper"] .jn-btn-primary {
+  background: linear-gradient(135deg, #a8842e, #7a5c1a) !important;
+  color: #1a1408 !important;
+}
+
+/* ============================================================
+   🌈 PAPER — splash
+   ============================================================ */
+[data-theme="paper"] .splash {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(168, 132, 46, 0.2) 0%, transparent 60%),
+    linear-gradient(160deg, #14100a 0%, #1e1812 50%, #0d0a06 100%) !important;
+}
+[data-theme="paper"] .splash-title { color: #d4ac0d !important; }
+[data-theme="paper"] .splash-sub { color: #a89878 !important; }
