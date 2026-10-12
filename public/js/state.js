@@ -34,8 +34,25 @@ export function saveMe(me) {
   if (me) localStorage.setItem('me', JSON.stringify(me));
   else localStorage.removeItem('me');
 }
-export function applyTheme(theme) { document.documentElement.dataset.theme = theme || 'classic'; }
-export function applyScale(scale) { document.documentElement.dataset.scale = scale || 'medium'; }
+
+// 🎨 Плавное переключение темы
+export function applyTheme(theme) {
+  const newTheme = theme || 'classic';
+  const current = document.documentElement.dataset.theme;
+  if (current === newTheme) return;
+
+  document.documentElement.dataset.theme = newTheme;
+  document.documentElement.classList.add('theme-switching');
+  clearTimeout(window.__themeTimer);
+  window.__themeTimer = setTimeout(() => {
+    document.documentElement.classList.remove('theme-switching');
+  }, 500);
+}
+
+export function applyScale(scale) {
+  document.documentElement.dataset.scale = scale || 'medium';
+}
+
 export function loadOpts() {
   try { return JSON.parse(localStorage.getItem('opts') || '{}'); } catch { return {}; }
 }
