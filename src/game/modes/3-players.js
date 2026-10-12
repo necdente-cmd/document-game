@@ -3,7 +3,12 @@ import { nextActiveSlot, playerAtSlot } from '../../utils.js';
 
 export const KEY = '3p';
 
-// Партнёр вышедшего чередует два слота команды
+/**
+ * Возвращает СЛОТ для следующей атаки игрока.
+ * Если партнёр в игре — свой слот.
+ * Если партнёр вышел — чередование 0 ↔ 2 (или 1 ↔ 3).
+ * НЕ обновляет teamPairLastSlot — это делает afterPickup/afterBito.
+ */
 export function getAttackerSlot(r, playerSeat) {
   const partnerSeat = partnerOf(playerSeat);
   const partner = r.players[partnerSeat];
@@ -12,11 +17,10 @@ export function getAttackerSlot(r, playerSeat) {
   const team = teamOf(playerSeat);
   const pair = team === 0 ? [0, 2] : [1, 3];
   const last = r.teamPairLastSlot?.[team] ?? null;
-
-  if (last == null) return pair[0];
-  return pair[0] === last ? pair[1] : pair[0];
+  return last != null ? last : pair[0];
 }
 
+// Сравнение двух пар (неупорядоченное)
 function samePair(a, b) {
   if (!a || !b) return false;
   const sa = [...a].sort((x, y) => x - y);
@@ -24,6 +28,28 @@ function samePair(a, b) {
   return sa[0] === sb[0] && sa[1] === sb[1];
 }
 
+/**
+ * Явный выбор следующего защитника.
+ * Идёт по кругу от (fromSlot + 1), пропускает:
+ *   - вышедших игроков (out)
+ *   - слоты из excludeSeats
+ * Возвращает slot защитника или null, если никого.
+ */
+function pickNextDefender(r, fromSlot, excludeSeats) {
+  if (!excludeSeats) excludeSeats = new Set();
+  for (let step = 1; step <= 4; step++) {
+    const slot = (fromSlot + step) % 4;
+    const p = r.players.find(x => x.seat === slot);
+    if (!p || p.out) continue;
+    if (excludeSeats.has(slot)) continue;
+    return slot;
+  }
+  return null;
+}
+
+/**
+ * После БИТО в 3p.
+ */
 export function afterBito(r, defender, defenderSlot, attackerSeat) {
   let fromSlot = defenderSlot != null ? defenderSlot : defender.seat;
 
@@ -51,30 +77,23 @@ export function afterBito(r, defender, defenderSlot, attackerSeat) {
   if (duelDone) {
     r.lastDuelPair = null;
 
-    // Чередование слотов команды защитника (независимо от партнёра)
+    // Чередуем слот атакующего
     const team = teamOf(defender.seat);
     const pair = team === 0 ? [0, 2] : [1, 3];
     const last = r.teamPairLastSlot?.[team] ?? null;
-
-    const newAttackerSlot = last == null
-      ? pair[0]
-      : (pair[0] === last ? pair[1] : pair[0]);
+    const usedSlot = last != null ? last : pair[0];
+    const newAttackerSlot = usedSlot === pair[0] ? pair[1] : pair[0];
 
     if (r.teamPairLastSlot) {
       r.teamPairLastSlot[team] = newAttackerSlot;
     }
 
-    // Исключаем участников завершённой дуэли
+    // Исключаем обоих участников завершённой дуэли
     const excludeSeats = new Set([defender.seat]);
     if (attackerSeat != null) excludeSeats.add(attackerSeat);
 
-    let nextSlot = nextActiveSlot(r, newAttackerSlot, defender.seat);
-    if (nextSlot != null) {
-      const nextSeat = playerAtSlot(r, nextSlot)?.seat;
-      if (excludeSeats.has(nextSeat)) {
-        nextSlot = nextActiveSlot(r, nextSlot, defender.seat);
-      }
-    }
+    // ЯВНЫЙ выбор следующего защитника
+    const nextSlot = pickNextDefender(r, newAttackerSlot, excludeSeats);
 
     return {
       turnSeat: defender.seat,
@@ -88,9 +107,9 @@ export function afterBito(r, defender, defenderSlot, attackerSeat) {
   // === КОНТРАТАКА ===
   r.lastDuelPair = currentPair ? [...currentPair] : null;
 
-  // Слот защитника для контратаки — через getAttackerSlot (учитывает партнёра)
   const contrSlot = getAttackerSlot(r, defender.seat);
   const team = teamOf(defender.seat);
+
   if (r.teamPairLastSlot) {
     r.teamPairLastSlot[team] = contrSlot;
   }
@@ -104,6 +123,9 @@ export function afterBito(r, defender, defenderSlot, attackerSeat) {
   };
 }
 
+/**
+ * После ПОДНЯТИЯ карт защитником.
+ */
 export function afterPickup(r, defenderSeat, attackerSeat) {
   r.lastDuelPair = null;
 
@@ -111,20 +133,26 @@ export function afterPickup(r, defenderSeat, attackerSeat) {
   const partner = r.players[partnerSeat];
   const turnSeat = (partner && !partner.out) ? partnerSeat : attackerSeat;
 
-  // Чередование слотов для команды
-  const team = teamOf(turnSeat);
-  const pair = team === 0 ? [0, 2] : [1, 3];
-  const last = r.teamPairLastSlot?.[team] ?? null;
+  let attackerSlot;
 
-  const attackerSlot = last == null
-    ? pair[0]
-    : (pair[0] === last ? pair[1] : pair[0]);
+  if (partner && !partner.out) {
+    attackerSlot = turnSeat;
+  } else {
+    const team = teamOf(turnSeat);
+    const pair = team === 0 ? [0, 2] : [1, 3];
+    const last = r.teamPairLastSlot?.[team] ?? null;
+    const usedSlot = last != null ? last : pair[0];
+    attackerSlot = usedSlot === pair[0] ? pair[1] : pair[0];
 
-  if (r.teamPairLastSlot) {
-    r.teamPairLastSlot[team] = attackerSlot;
+    if (r.teamPairLastSlot) {
+      r.teamPairLastSlot[team] = attackerSlot;
+    }
   }
 
-  const nextSlot = nextActiveSlot(r, attackerSlot, turnSeat);
+  // Явный выбор защитника (только тех, кто не out и не сам атакующий)
+  const excludeSeats = new Set([turnSeat]);
+  const nextSlot = pickNextDefender(r, attackerSlot, excludeSeats);
+
   return {
     turnSeat,
     attackerSlot,
