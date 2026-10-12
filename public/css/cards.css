@@ -8,7 +8,8 @@
   padding: 0;
   flex: 0 0 auto;
   box-shadow: 0 3px 6px rgba(0,0,0,.55);
-  transition: transform .12s, box-shadow .12s;
+  /* transition только на box-shadow — убрано transform .12s */
+  transition: box-shadow .12s;
   user-select: none;
   position: relative;
 }
@@ -21,6 +22,7 @@
   -webkit-user-drag: none;
 }
 .card.sel {
+  /* transform убран — иначе сдвигает карту в руке вверх */
   z-index: 20;
   box-shadow: 0 0 0 4px var(--acc), 0 6px 16px rgba(0,0,0,.8);
 }
@@ -87,10 +89,12 @@
   margin-left: calc(var(--card-w) / -2);
   pointer-events: auto;
   transform-origin: center bottom;
-  transition: transform .25s ease-out;
+  /* ⚡ УБРАН transition на transform .25s — он давал «прыжки»
+     при перерисовке веера после тапа на карту стола */
+  transition: box-shadow .12s ease-out;
   cursor: grab;
   touch-action: none;
-  will-change: transform;
+  will-change: auto;
 }
 .hand .card:active { cursor: grabbing; }
 
