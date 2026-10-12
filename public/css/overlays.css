@@ -14,7 +14,13 @@
   max-width: 92vw;
   box-shadow: 0 10px 40px rgba(0,0,0,.7);
 }
-[data-theme="paper"] .overlay { background: rgba(255,255,255,.97); color: #333; }
+[data-theme="paper"] .overlay {
+  background: rgba(26, 20, 8, .97);
+  color: #e8dfc4;
+  border-color: #a8842e;
+}
+[data-theme="paper"] .ov-title { color: #d4ac0d; }
+[data-theme="paper"] .ov-wait { color: #a89878; }
 .ov-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; color: #f1c40f; }
 [data-theme="paper"] .ov-title { color: #b8860b; }
 .ov-cards { display: flex; gap: 8px; justify-content: center; margin-bottom: 14px; flex-wrap: wrap; }
@@ -132,7 +138,14 @@
   flex-direction: column;
   gap: 8px;
 }
-[data-theme="paper"] .settings-panel { background: rgba(255,255,255,.98); color: #333; }
+[data-theme="paper"] .settings-panel {
+  background: rgba(20, 16, 10, .98);
+  color: #e8dfc4;
+}
+[data-theme="paper"] .settings-panel .close-btn { color: #e8dfc4; }
+[data-theme="paper"] .settings-panel h3 { color: #e8dfc4; }
+[data-theme="paper"] .settings-panel h4 { color: #a89878; }
+[data-theme="paper"] .settings-section { border-bottom-color: rgba(168, 132, 46, .18); }
 .settings-panel.open { transform: translateX(0); }
 .settings-panel h3 { margin: 0 0 12px; font-size: 20px; }
 .settings-panel .close-btn {
@@ -269,7 +282,19 @@
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
 }
-[data-theme="paper"] .chat-panel { background: rgba(255,255,255,.98); color: #333; }
+[data-theme="paper"] .chat-panel {
+  background: rgba(20, 16, 10, .98);
+  color: #e8dfc4;
+}
+[data-theme="paper"] .chat-head { border-bottom-color: rgba(168, 132, 46, .18); }
+[data-theme="paper"] .chat-input { border-top-color: rgba(168, 132, 46, .18); }
+[data-theme="paper"] .chat-input input {
+  background: rgba(255, 255, 255, .06);
+  color: #e8dfc4;
+}
+[data-theme="paper"] .chat-input input::placeholder { color: #a89878; }
+[data-theme="paper"] .chat-msg .author { color: #d4ac0d; }
+[data-theme="paper"] .chat-msg .time { color: #a89878; }
 .chat-panel.open { transform: translateY(0); }
 .chat-head {
   padding: 12px 16px;
@@ -369,7 +394,13 @@
   max-height: 80vh;
   overflow-y: auto;
 }
-[data-theme="paper"] .simple-modal-inner { background: #fff; color: #333; }
+[data-theme="paper"] .simple-modal-inner {
+  background: #1a1408;
+  color: #e8dfc4;
+  border: 1px solid rgba(168, 132, 46, .3);
+}
+[data-theme="paper"] .simple-modal-inner h3 { color: #e8dfc4; }
+[data-theme="paper"] .simple-modal-inner .body { color: #c8b898; }
 .simple-modal-inner h3 { margin: 0 0 12px; }
 .simple-modal-inner .body { font-size: 14px; line-height: 1.6; }
 .simple-modal-inner .close-btn {
@@ -1199,4 +1230,159 @@
   .champ-btn-primary, .champ-btn-secondary {
     padding: 12px 18px; font-size: 14px;
   }
+}
+
+/* ============================================================
+   🌈 PAPER — тёмная версия для всех панелей
+   ============================================================ */
+
+/* Настройки */
+[data-theme="paper"] .settings-panel {
+  background: rgba(20, 16, 10, .98);
+  color: #e8dfc4;
+}
+[data-theme="paper"] .settings-panel .close-btn { color: #e8dfc4; }
+[data-theme="paper"] .settings-panel h3 { color: #e8dfc4; }
+[data-theme="paper"] .settings-panel h4 { color: #a89878; }
+[data-theme="paper"] .settings-section { border-bottom-color: rgba(168, 132, 46, .18); }
+[data-theme="paper"] .scale-row button {
+  border-color: rgba(168, 132, 46, .25);
+  background: rgba(255, 255, 255, .04);
+  color: #e8dfc4;
+}
+[data-theme="paper"] .scale-row button.sel {
+  border-color: #d4ac0d;
+  background: rgba(212, 172, 13, .18);
+  color: #d4ac0d;
+}
+[data-theme="paper"] .menu-btn {
+  background: rgba(255, 255, 255, .06);
+  color: #e8dfc4;
+}
+[data-theme="paper"] .menu-btn:active { background: rgba(255, 255, 255, .12); }
+[data-theme="paper"] .menu-btn.danger { background: rgba(200, 50, 50, .75); color: #fff; }
+[data-theme="paper"] .lang-btn {
+  border-color: rgba(168, 132, 46, .25);
+  background: rgba(255, 255, 255, .04);
+  color: #e8dfc4;
+}
+[data-theme="paper"] .lang-btn.sel {
+  border-color: #d4ac0d;
+  background: rgba(212, 172, 13, .18);
+  color: #d4ac0d;
+}
+[data-theme="paper"] .toggle {
+  background: rgba(255, 255, 255, .12);
+}
+
+/* Чат */
+[data-theme="paper"] .chat-panel {
+  background: rgba(20, 16, 10, .98);
+  color: #e8dfc4;
+}
+[data-theme="paper"] .chat-head { border-bottom-color: rgba(168, 132, 46, .18); }
+[data-theme="paper"] .chat-input { border-top-color: rgba(168, 132, 46, .18); }
+[data-theme="paper"] .chat-input input {
+  background: rgba(255, 255, 255, .06);
+  color: #e8dfc4;
+}
+[data-theme="paper"] .chat-input input::placeholder { color: #a89878; }
+[data-theme="paper"] .chat-msg .author { color: #d4ac0d; }
+[data-theme="paper"] .chat-msg .time { color: #a89878; }
+
+/* Простые модалки (диагностика voice) */
+[data-theme="paper"] .simple-modal-inner {
+  background: #1a1408;
+  color: #e8dfc4;
+  border: 1px solid rgba(168, 132, 46, .3);
+}
+[data-theme="paper"] .simple-modal-inner h3 { color: #e8dfc4; }
+[data-theme="paper"] .simple-modal-inner .body { color: #c8b898; }
+
+/* Инфо-модалка (📊) */
+[data-theme="paper"] .info-modal-inner {
+  background: #1a1408;
+  color: #e8dfc4;
+  border-color: #a8842e;
+}
+[data-theme="paper"] .info-modal-inner h3 { color: #d4ac0d; }
+[data-theme="paper"] .info-row { border-bottom-color: rgba(168, 132, 46, .18); }
+[data-theme="paper"] .info-row b { color: #d4ac0d; }
+[data-theme="paper"] .info-modal-close {
+  background: #a8842e;
+  color: #1a1408;
+}
+
+/* Оверлеи (свап, передача доков) */
+[data-theme="paper"] .overlay {
+  background: rgba(26, 20, 8, .97);
+  color: #e8dfc4;
+  border-color: #a8842e;
+}
+[data-theme="paper"] .ov-title { color: #d4ac0d; }
+[data-theme="paper"] .ov-wait { color: #a89878; }
+
+/* История */
+[data-theme="paper"] .history-row {
+  border-bottom-color: rgba(168, 132, 46, .18);
+  color: #e8dfc4;
+}
+
+/* Почта */
+[data-theme="paper"] .mail-item {
+  background: rgba(255, 255, 255, .04);
+  border-left-color: rgba(168, 132, 46, .5);
+}
+[data-theme="paper"] .mail-item.unread {
+  background: rgba(212, 172, 13, .08);
+  border-left-color: #d4ac0d;
+}
+[data-theme="paper"] .mail-title { color: #d4ac0d; }
+[data-theme="paper"] .mail-body { color: #c8b898; }
+[data-theme="paper"] .mail-new { background: #d4ac0d; color: #1a1408; }
+[data-theme="paper"] .mail-date { color: #a89878; }
+
+/* О разработчике */
+[data-theme="paper"] .about-row {
+  border-color: rgba(168, 132, 46, .18);
+}
+[data-theme="paper"] .about-row b { color: #d4ac0d; }
+
+/* Тосты */
+[data-theme="paper"] .toast {
+  background: rgba(26, 20, 8, .95);
+  color: #e8dfc4;
+}
+
+/* Чемпион */
+[data-theme="paper"] .champ-overlay {
+  background: rgba(10, 8, 4, .95);
+  color: #e8dfc4;
+}
+[data-theme="paper"] .champ-title { color: #d4ac0d; text-shadow: 0 0 20px rgba(212, 172, 13, .5); }
+[data-theme="paper"] .champ-av > div:first-child { border-color: #d4ac0d; }
+[data-theme="paper"] .champ-av-name { color: #d4ac0d; }
+[data-theme="paper"] .champ-tile {
+  background: rgba(255, 255, 255, .06);
+  border-color: rgba(168, 132, 46, .3);
+}
+[data-theme="paper"] .champ-tile-lbl { color: #d4ac0d; }
+[data-theme="paper"] .champ-btn-secondary {
+  background: rgba(255, 255, 255, .08);
+  color: #e8dfc4;
+  border-color: rgba(168, 132, 46, .3);
+}
+
+/* Туториал */
+[data-theme="paper"] .tut-modal {
+  background: linear-gradient(160deg, #1a1408 0%, #14100a 100%);
+  border-color: #a8842e;
+}
+[data-theme="paper"] .tut-title { color: #e8dfc4; }
+[data-theme="paper"] .tut-text { color: rgba(232, 223, 196, .85); }
+[data-theme="paper"] .tut-skip { background: rgba(255, 255, 255, .08); color: #e8dfc4; }
+[data-theme="paper"] .tut-btn-back {
+  background: rgba(255, 255, 255, .08);
+  color: #e8dfc4;
+  border-color: rgba(168, 132, 46, .3);
 }
