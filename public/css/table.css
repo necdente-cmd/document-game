@@ -3726,3 +3726,76 @@ html.theme-switching .table {
 .slot.selected-target {
   transform: none !important;
 }
+
+/* ============================================================
+   🔧 FIX v10: карты в руке только СВЕТЯТСЯ (без подъёма/спуска)
+   ============================================================ */
+
+/* Отключаем transition на translate/scale — оставляем только filter */
+.hand .card,
+.hand .card.sel,
+.hand .card.can-beat,
+.hand .card.doc,
+.hand .card.opp-doc,
+.hand .card.selected {
+  transition: filter .18s ease-out !important;
+  translate: none !important;
+  scale: none !important;
+}
+
+/* Убираем hover/active подъём на тач-устройствах */
+@media (hover: none) {
+  .hand .card:hover,
+  .hand .card:active {
+    translate: none !important;
+    scale: none !important;
+    filter: none !important;
+  }
+}
+
+/* На ПК hover — только свечение, без сдвига */
+@media (hover: hover) and (pointer: fine) {
+  .hand .card:hover {
+    translate: none !important;
+    scale: none !important;
+    filter:
+      drop-shadow(0 8px 18px rgba(0,0,0,.65))
+      drop-shadow(0 0 14px rgba(241,196,15,.5)) !important;
+  }
+  .hand .card:active {
+    translate: none !important;
+    scale: none !important;
+    filter:
+      drop-shadow(0 8px 18px rgba(0,0,0,.7))
+      drop-shadow(0 0 18px rgba(241,196,15,.75)) !important;
+  }
+}
+
+/* .sel (выбранная) — только жёлтое свечение */
+.hand .card.sel {
+  filter:
+    drop-shadow(0 6px 14px rgba(0,0,0,.6))
+    drop-shadow(0 0 16px rgba(241,196,15,.95))
+    drop-shadow(0 0 4px rgba(241,196,15,.7)) !important;
+}
+
+/* .can-beat (может побить) — только зелёное свечение */
+.hand .card.can-beat {
+  filter:
+    drop-shadow(0 6px 14px rgba(0,0,0,.55))
+    drop-shadow(0 0 12px rgba(46,204,113,.9))
+    drop-shadow(0 0 4px rgba(46,204,113,.6)) !important;
+}
+
+/* Убираем зелёный контур ::after у .can-beat — оставляем только свечение */
+.hand .card.can-beat::after {
+  display: none !important;
+}
+
+/* Если и .sel, и .can-beat одновременно — показываем жёлтое (приоритет) */
+.hand .card.sel.can-beat {
+  filter:
+    drop-shadow(0 6px 14px rgba(0,0,0,.6))
+    drop-shadow(0 0 16px rgba(241,196,15,.95))
+    drop-shadow(0 0 6px rgba(46,204,113,.7)) !important;
+}
