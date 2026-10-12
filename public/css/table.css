@@ -2397,11 +2397,8 @@
 
 /* ---------- 🃏 Карты в руке (v2: translate/scale — не ломает веер) ---------- */
 .hand .card {
-  transition:
-    translate .22s cubic-bezier(.34,1.56,.64,1),
-    scale .22s cubic-bezier(.34,1.56,.64,1),
-    filter .2s ease-out;
-  will-change: translate, scale, filter;
+  transition: filter .18s ease-out;
+  will-change: auto;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -3906,4 +3903,17 @@ html body .hand .card.can-beat {
 
 html body .hand .card.can-beat::after {
   display: none !important;
+}
+
+/* ============================================================
+   🔧 FIX: карты в руке всегда absolute (иначе .can-beat уводит в поток)
+   ============================================================ */
+.hand .card,
+.hand .card.can-beat,
+.hand .card.sel,
+.hand .card.doc,
+.hand .card.opp-doc,
+.hand .card.deal,
+.hand .card.dragging {
+  position: absolute !important;
 }
